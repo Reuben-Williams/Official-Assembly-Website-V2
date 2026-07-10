@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { getImage, type PageContent } from "../data/site";
 import { Cards } from "./Cards";
-import { DemoForm } from "./DemoForms";
+import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
 
 type PageTemplateProps = {
@@ -52,8 +52,8 @@ export function PageTemplate({ page }: PageTemplateProps) {
             </div>
             <p>
               The old Stitch page concept has been converted into reusable Next
-              sections, with content and images centralized for later CMS or
-              Supabase replacement.
+              sections, with content and images centralized for easier
+              maintenance.
             </p>
           </div>
           <Cards cards={page.cards} featuredFirst={page.slug === "contact"} />
@@ -64,15 +64,14 @@ export function PageTemplate({ page }: PageTemplateProps) {
         <section className="section section-muted">
           <div className="container split">
             <div>
-              <p className="eyebrow">Static Demo Form</p>
-              <h2>Prepared for Supabase intake</h2>
+              <p className="eyebrow">Resident Form</p>
+              <h2>Prepared for office intake</h2>
               <p className="lead">
-                This form validates and confirms locally for GitHub Pages. Once
-                Supabase is approved, the submit handler can insert rows using
-                the prepared browser client.
+                This form presents the fields residents need to contact the
+                office, join updates, or share district feedback.
               </p>
             </div>
-            <DemoForm type={formType} />
+            <ResidentForm type={formType} />
           </div>
         </section>
       ) : null}
@@ -89,28 +88,28 @@ export function PageTemplate({ page }: PageTemplateProps) {
               <div>
                 <strong>No generated image URLs</strong>
                 <p>
-                  Images are stored under <code>public/images</code> for static
-                  export and GitHub Pages reliability.
+                  Images are stored under <code>public/images</code> for
+                  reliable public pages.
                 </p>
               </div>
             </div>
             <div className="timeline-item">
               <CheckCircle2 color="var(--accent)" aria-hidden="true" />
               <div>
-                <strong>Vercel-ready structure</strong>
+                <strong>Maintainable structure</strong>
                 <p>
-                  App Router routes can stay static now and grow into server
-                  routes or server actions later.
+                  Routes and content are centralized so staff updates can stay
+                  consistent across the site.
                 </p>
               </div>
             </div>
             <div className="timeline-item">
               <CheckCircle2 color="var(--accent)" aria-hidden="true" />
               <div>
-                <strong>Supabase-ready forms</strong>
+                <strong>Office-ready forms</strong>
                 <p>
-                  Environment variables and client setup are in place without
-                  blocking the current static demo.
+                  Contact, newsletter, and survey flows use clear labels and
+                  resident-focused prompts.
                 </p>
               </div>
             </div>

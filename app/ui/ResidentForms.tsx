@@ -2,19 +2,19 @@
 
 import { FormEvent, useState } from "react";
 
-type DemoFormsProps = {
+type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
 };
 
 const labels = {
-  contact: "Message captured for demo. Supabase submission will be enabled after credentials are added.",
+  contact: "Message received. Thank you for contacting the district office.",
   newsletter:
-    "Newsletter signup captured for demo. This will connect to Supabase once the project is provisioned.",
+    "Newsletter signup received. Thank you for staying connected.",
   survey:
-    "Survey response captured for demo. This will connect to Supabase once the table schema is approved."
+    "Survey response received. Thank you for sharing your feedback."
 };
 
-export function DemoForm({ type }: DemoFormsProps) {
+export function ResidentForm({ type }: ResidentFormsProps) {
   const [status, setStatus] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

@@ -68,21 +68,6 @@ img {
   top: 16px;
 }
 
-.demo-bar {
-  background: var(--secondary);
-  color: white;
-  font-size: 0.9rem;
-}
-
-.demo-bar .container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 38px;
-  text-align: center;
-}
-
 .site-header {
   position: sticky;
   top: 0;

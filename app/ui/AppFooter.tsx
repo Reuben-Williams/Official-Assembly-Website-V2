@@ -11,7 +11,7 @@ export function AppFooter() {
           <p>{siteConfig.tagline}</p>
         </div>
         <div>
-          <h3>Demo Routes</h3>
+          <h3>Site Sections</h3>
           {pages.slice(0, 5).map((page) => (
             <p key={page.href}>
               <Link href={page.href}>{page.navLabel}</Link>
@@ -19,9 +19,9 @@ export function AppFooter() {
           ))}
         </div>
         <div>
-          <h3>Deployment</h3>
-          <p>GitHub Pages static export is configured.</p>
-          <p>Vercel and Supabase environment scaffolding is ready.</p>
+          <h3>Office Access</h3>
+          <p>Residents can find resources, updates, and contact options.</p>
+          <p>Content is organized for clear public communication.</p>
         </div>
       </div>
     </footer>

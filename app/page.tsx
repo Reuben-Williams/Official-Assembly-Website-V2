@@ -55,7 +55,7 @@ export default function HomePage() {
             <p>
               The Stitch concepts have been consolidated into a maintainable
               Next.js site with reusable components, real local images, and
-              deployment settings for a client-facing demo.
+              clear public-facing district office pages.
             </p>
           </div>
           <Cards cards={home.cards} featuredFirst />
@@ -69,36 +69,36 @@ export default function HomePage() {
             caption="Community and small business engagement"
           />
           <div>
-            <p className="eyebrow">Deployment Path</p>
-            <h2>Static demo now, full stack later</h2>
+            <p className="eyebrow">Office Workflow</p>
+            <h2>Built for clear constituent service</h2>
             <div className="timeline">
               <div className="timeline-item">
                 <CheckCircle2 color="var(--accent)" aria-hidden="true" />
                 <div>
-                  <strong>GitHub Pages</strong>
+                  <strong>Public Information</strong>
                   <p>
-                    Static export, repository base path, and Pages workflow are
-                    configured for the public demo URL.
+                    Residents can quickly find office updates, resources,
+                    voting information, and contact options.
                   </p>
                 </div>
               </div>
               <div className="timeline-item">
                 <CheckCircle2 color="var(--accent)" aria-hidden="true" />
                 <div>
-                  <strong>Vercel</strong>
+                  <strong>Service Requests</strong>
                   <p>
-                    App Router structure can move to Vercel when the final
-                    domain is confirmed.
+                    Contact, newsletter, and feedback flows are organized for
+                    efficient staff review.
                   </p>
                 </div>
               </div>
               <div className="timeline-item">
                 <CheckCircle2 color="var(--accent)" aria-hidden="true" />
                 <div>
-                  <strong>Supabase</strong>
+                  <strong>Community Updates</strong>
                   <p>
-                    Environment variables and the browser client are prepared
-                    for forms, newsletter subscriptions, and survey responses.
+                    News, event posts, and local photos are presented in a
+                    consistent district office style.
                   </p>
                 </div>
               </div>

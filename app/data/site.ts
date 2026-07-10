@@ -56,13 +56,8 @@ export type PageContent = {
 export const siteConfig = {
   officeName: "Office of Assemblywoman Carmen Morales",
   representativeName: "Carmen Morales",
-  githubPagesRepo: "Official-Assembly-Website-V2",
-  githubHttps: "https://github.com/Reuben-Williams/Official-Assembly-Website-V2.git",
-  githubSsh: "git@github.com:Reuben-Williams/Official-Assembly-Website-V2.git",
   tagline:
-    "A constituent-first district website for services, civic updates, voting information, and community connection.",
-  demoNotice:
-    "Demo preview while final domain, Vercel hosting, and Supabase data connections are being confirmed."
+    "A constituent-first district website for services, civic updates, voting information, and community connection."
 };
 
 export const imageAssets: ImageAsset[] = [
@@ -139,14 +134,14 @@ export const pages: PageContent[] = [
     href: "/",
     navLabel: "Home",
     title: "Constituent Services, Legislative Updates, and Community Access",
-    eyebrow: "Official District Demo",
+    eyebrow: "Official District Office",
     description:
       "A polished public-facing hub for residents to request help, follow Assembly updates, find civic resources, and stay connected with the district office.",
     imageKey: "hero",
     cards: [
       {
         title: "Get Help From the Office",
-        text: "Route constituent questions to the right office workflow and prepare future Supabase-backed case intake.",
+        text: "Route constituent questions to the right office workflow and prepare clear intake for resident needs.",
         icon: HeartHandshake,
         href: "/contact"
       },
@@ -316,12 +311,12 @@ export const pages: PageContent[] = [
     title: "Contact the Assemblywoman",
     eyebrow: "Office Access",
     description:
-      "A clear contact page for resident messages, office locations, service requests, social channels, and future Supabase intake.",
+      "A clear contact page for resident messages, office locations, service requests, and social channels.",
     imageKey: "meeting",
     cards: [
       {
         title: "Send a Message",
-        text: "Static demo form today; ready to connect to `contact_messages` in Supabase.",
+        text: "A direct message form for residents who need help from the district office.",
         icon: Mail
       },
       {
@@ -343,7 +338,7 @@ export const pages: PageContent[] = [
     title: "Newsletter Signup",
     eyebrow: "Stay Informed",
     description:
-      "Collect opt-ins for district updates, event reminders, legislative notes, and emergency alerts after Supabase is enabled.",
+      "Collect opt-ins for district updates, event reminders, legislative notes, and emergency alerts.",
     imageKey: "eventGroup",
     cards: [
       {
@@ -352,8 +347,8 @@ export const pages: PageContent[] = [
         icon: Megaphone
       },
       {
-        title: "Future Supabase Table",
-        text: "Prepared for a `newsletter_subscribers` table with email, ZIP code, topics, and consent timestamp.",
+        title: "Subscriber Preferences",
+        text: "Collect email, ZIP code, update topics, and consent details in one straightforward flow.",
         icon: CheckCircle2
       }
     ]
@@ -365,7 +360,7 @@ export const pages: PageContent[] = [
     title: "District Feedback Survey",
     eyebrow: "Resident Voice",
     description:
-      "Invite residents to share priorities and service concerns in a form that can later persist to Supabase.",
+      "Invite residents to share priorities and service concerns with the district office.",
     imageKey: "outdoorVisit",
     cards: [
       {
@@ -387,17 +382,17 @@ export const pages: PageContent[] = [
     title: "Social Media Feed",
     eyebrow: "Digital Updates",
     description:
-      "A demo feed layout for short posts, event photos, public-service graphics, and legislative media.",
+      "A feed layout for short posts, event photos, public-service graphics, and legislative media.",
     imageKey: "capitol",
     cards: [
       {
         title: "Post Highlights",
-        text: "Use a structured content feed now, then replace with CMS or Supabase rows later.",
+        text: "Use a structured content feed for updates, statements, photos, and public-service posts.",
         icon: Newspaper
       },
       {
         title: "Local Photos",
-        text: "Photos are served from the repository so the GitHub Pages demo remains self-contained.",
+        text: "Photos are organized locally so district updates remain consistent and easy to maintain.",
         icon: Users
       }
     ]
