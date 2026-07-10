@@ -1,0 +1,13 @@
+.env
+.env*.local
+.next/
+out/
+node_modules/
+coverage/
+*.tsbuildinfo
+dev-server.*.log
+asw_carmenmorales/
+morales4assembly/
+stitch_assembly_district_constituent_portal/
+asw_carmenmorales_contact_sheet.jpg
+morales4assembly_contact_sheet.jpg
