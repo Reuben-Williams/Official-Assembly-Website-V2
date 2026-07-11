@@ -127,6 +127,34 @@ img {
   outline: none;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 10px 13px;
+}
+
+.language-toggle:hover,
+.language-toggle:focus-visible {
+  background: var(--surface-muted);
+  outline: none;
+}
+
 .cta-link {
   display: inline-flex;
   align-items: center;
@@ -568,5 +596,29 @@ h3 {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .nav-shell {
+    gap: 12px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .language-toggle {
+    justify-content: center;
+    min-width: 44px;
+    padding: 10px;
+  }
+
+  .language-toggle span {
+    display: none;
   }
 }

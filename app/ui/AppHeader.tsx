@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Landmark, Menu } from "lucide-react";
 
 import { pages, siteConfig } from "../data/site";
+import { LanguageToggle } from "./LanguageToggle";
 
 const navPages = pages.filter((page) =>
   ["/", "/about", "/resources", "/news", "/community", "/voting"].includes(
@@ -29,9 +30,12 @@ export function AppHeader() {
             ))}
           </nav>
 
-          <Link className="cta-link nav-cta" href="/contact">
-            Contact Office
-          </Link>
+          <div className="header-actions">
+            <LanguageToggle />
+            <Link className="cta-link nav-cta" href="/contact">
+              Contact Office
+            </Link>
+          </div>
 
           <details className="mobile-menu">
             <summary className="mobile-summary" aria-label="Open menu">

@@ -10,6 +10,8 @@ type PageProps = {
   }>;
 };
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return pages
     .filter((page) => page.slug)
