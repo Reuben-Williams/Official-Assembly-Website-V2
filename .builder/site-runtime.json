@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "siteDataPlaneSiteId": "a3f57b25-df25-4d98-9ff6-a4a3f3a00a68",
+  "expectedSiteKey": "official-assembly-website-v2",
+  "installationManifestSha256": "31ce3d27e8ad7a716b49b4f851f1671d15efd3c57e9abd048ecd6f9b261e8788",
+  "configLoaderContract": "installation-client-config-v1",
+  "durableStoreContract": "supabase-command-receipts-v1",
+  "leaseContract": "site-installation-run-lease-v1",
+  "leaseSeconds": 120,
+  "invocationTimeoutSeconds": 30,
+  "scheduledInvocationContract": "direct-in-process-v1",
+  "handlerRegistrySha256": "b0aaa01b56141f9a3040134a1becea3f6e7f439d50bdde54aedc6b44ea4531ee",
+  "workerVersion": "1.0.1",
+  "reachabilityEvidenceRevision": "dpl_8arUSdG3XFuxpnfYrZGqxkTr47XG"
+}

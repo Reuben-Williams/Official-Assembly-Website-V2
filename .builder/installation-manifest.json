@@ -1,17 +1,29 @@
 {
   "version": 1,
   "packages": {
-    "@reuben-williams/core": "0.1.0",
-    "@reuben-williams/editor": "0.1.0",
-    "@reuben-williams/forms": "0.1.0",
-    "@reuben-williams/next": "0.1.0"
+    "@reuben-williams/core": "0.2.1",
+    "@reuben-williams/editor": "0.2.1",
+    "@reuben-williams/forms": "0.2.1",
+    "@reuben-williams/growth-core": "0.2.1",
+    "@reuben-williams/growth-customers": "0.2.1",
+    "@reuben-williams/growth-dashboard": "0.2.1",
+    "@reuben-williams/growth-leads": "0.2.1",
+    "@reuben-williams/next": "0.2.1"
   },
   "schemas": {
-    "forms": 2
+    "forms": 2,
+    "growth": 1
   },
   "routes": [
     "/admin/editor",
+    "/admin/editor/customers",
+    "/admin/editor/dashboard",
+    "/admin/editor/leads",
     "/api/builder",
-    "/api/builder/forms/[formKey]/submit"
-  ]
+    "/api/builder/session",
+    "/api/forms/[formKey]",
+    "/api/growth/[...path]",
+    "/api/platform/installations/run"
+  ],
+  "workerVersion": "1.0.1"
 }
