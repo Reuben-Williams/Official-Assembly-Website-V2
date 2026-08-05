@@ -1,20 +1,40 @@
-const isGithubPages = process.env.GITHUB_PAGES === "true";
-const repoName = "Official-Assembly-Website-V2";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
-  trailingSlash: true,
-  images: {
-    unoptimized: true
+  poweredByHeader: false,
+  reactStrictMode: true,
+  webpack(config) {
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      ".js": [".ts", ".tsx", ".js"],
+      ".jsx": [".tsx", ".jsx"]
+    };
+    return config;
   },
-  basePath: isGithubPages ? `/${repoName}` : "",
-  assetPrefix: isGithubPages ? `/${repoName}/` : undefined,
-  env: {
-    NEXT_PUBLIC_BASE_PATH: isGithubPages ? `/${repoName}` : "",
-    NEXT_PUBLIC_SITE_URL: isGithubPages
-      ? `https://reuben-williams.github.io/${repoName}`
-      : process.env.NEXT_PUBLIC_SITE_URL
+  transpilePackages: [
+    "@reuben-williams/canonical-json",
+    "@reuben-williams/content",
+    "@reuben-williams/core",
+    "@reuben-williams/editor",
+    "@reuben-williams/entitlements",
+    "@reuben-williams/feature-registry",
+    "@reuben-williams/forms",
+    "@reuben-williams/growth-core",
+    "@reuben-williams/growth-customers",
+    "@reuben-williams/growth-dashboard",
+    "@reuben-williams/growth-leads",
+    "@reuben-williams/next"
+  ],
+  async headers() {
+    return [{
+      source: "/:path*",
+      headers: [
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" }
+      ]
+    }];
   }
 };
 

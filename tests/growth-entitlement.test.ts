@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+
+import { isGrowthModuleOperational } from "../lib/growth/server";
+
+describe("growth module activation", () => {
+  it("recognizes the platform's fail-closed default marker on an active configured module", () => {
+    expect(
+      isGrowthModuleOperational({
+        setup_status: "configured",
+        entitlement_state: "active",
+        disabled_by_default: true
+      })
+    ).toBe(true);
+  });
+
+  it("rejects missing, incomplete, or inactive module state", () => {
+    expect(isGrowthModuleOperational(null)).toBe(false);
+    expect(
+      isGrowthModuleOperational({
+        setup_status: "setup_required",
+        entitlement_state: "active",
+        disabled_by_default: true
+      })
+    ).toBe(false);
+    expect(
+      isGrowthModuleOperational({
+        setup_status: "configured",
+        entitlement_state: "suspended",
+        disabled_by_default: true
+      })
+    ).toBe(false);
+  });
+});

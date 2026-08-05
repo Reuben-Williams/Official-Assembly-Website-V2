@@ -1,136 +1,71 @@
-"use client";
+import Script from "next/script";
+import { BuilderForm, UnavailableFormFallback } from "@reuben-williams/next/forms";
 
-import { FormEvent, useState } from "react";
+import { siteConfig } from "../data/site";
+import {
+  createSupabasePublishedFormRepository,
+  getManagedFormDefinition,
+  loadManagedFormProjection
+} from "../../lib/builder/forms";
+import { getBuilderAdminClient, resolveBuilderSiteId } from "../../lib/supabase/admin";
 
 type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
 };
 
-const labels = {
-  contact: "Message received. Thank you for contacting the district office.",
-  newsletter:
-    "Newsletter signup received. Thank you for staying connected.",
-  survey:
-    "Survey response received. Thank you for sharing your feedback."
-};
+function Unavailable() {
+  return (
+    <div className="form-panel" data-builder-form-unavailable="true">
+      <UnavailableFormFallback
+        businessName="the District 34 office"
+        phone={siteConfig.phoneE164}
+      />
+    </div>
+  );
+}
 
-export function ResidentForm({ type }: ResidentFormsProps) {
-  const [status, setStatus] = useState("");
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus(labels[type]);
-    event.currentTarget.reset();
-  }
-
-  if (type === "newsletter") {
+export async function ResidentForm({ type }: ResidentFormsProps) {
+  if (type === "survey" || !getManagedFormDefinition(type)) {
     return (
-      <form className="form-panel" onSubmit={handleSubmit}>
-        <div className="form-grid">
-          <div className="field">
-            <label htmlFor="newsletter-name">Full name</label>
-            <input id="newsletter-name" name="name" required />
-          </div>
-          <div className="field">
-            <label htmlFor="newsletter-email">Email address</label>
-            <input id="newsletter-email" name="email" required type="email" />
-          </div>
-          <div className="field">
-            <label htmlFor="newsletter-zip">ZIP code</label>
-            <input id="newsletter-zip" name="zip" inputMode="numeric" />
-          </div>
-          <div className="field">
-            <label htmlFor="newsletter-topic">Primary interest</label>
-            <select id="newsletter-topic" name="topic">
-              <option>District events</option>
-              <option>Legislative updates</option>
-              <option>Constituent services</option>
-            </select>
-          </div>
-        </div>
-        <button className="cta-link" type="submit">
-          Join Newsletter
-        </button>
-        {status ? <p className="form-note" role="status">{status}</p> : null}
-      </form>
+      <div className="form-panel" data-builder-form-unavailable="true">
+        <p role="status">
+          This survey is not accepting online responses. Call the district office or use the
+          official legislative contact options to share a priority.
+        </p>
+        <a className="cta-link" href={`tel:${siteConfig.phoneE164}`}>
+          Call {siteConfig.phoneDisplay}
+        </a>
+      </div>
     );
   }
 
-  if (type === "survey") {
-    return (
-      <form className="form-panel" onSubmit={handleSubmit}>
-        <div className="form-grid">
-          <div className="field">
-            <label htmlFor="survey-name">Full name</label>
-            <input id="survey-name" name="name" />
-          </div>
-          <div className="field">
-            <label htmlFor="survey-neighborhood">Neighborhood</label>
-            <input id="survey-neighborhood" name="neighborhood" required />
-          </div>
-          <div className="field">
-            <label htmlFor="survey-priority">Top priority</label>
-            <select id="survey-priority" name="priority">
-              <option>Affordability</option>
-              <option>Public safety</option>
-              <option>Schools and youth</option>
-              <option>Transportation</option>
-              <option>Healthcare</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="survey-contact">May the office follow up?</label>
-            <select id="survey-contact" name="followup">
-              <option>Yes</option>
-              <option>No</option>
-            </select>
-          </div>
-          <div className="field full">
-            <label htmlFor="survey-comments">Comments</label>
-            <textarea id="survey-comments" name="comments" />
-          </div>
-        </div>
-        <button className="cta-link" type="submit">
-          Submit Feedback
-        </button>
-        {status ? <p className="form-note" role="status">{status}</p> : null}
-      </form>
-    );
-  }
+  const client = getBuilderAdminClient();
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  if (!client || !turnstileSiteKey) return <Unavailable />;
+
+  const siteId = await resolveBuilderSiteId(client);
+  if (!siteId) return <Unavailable />;
+
+  const repository = createSupabasePublishedFormRepository({
+    client,
+    siteId,
+    businessName: siteConfig.officeName,
+    turnstileSiteKey
+  });
+  const result = await loadManagedFormProjection(type, { repository, siteId });
+  if (result.status !== "ready") return <Unavailable />;
 
   return (
-    <form className="form-panel" onSubmit={handleSubmit}>
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="contact-name">Full name</label>
-          <input id="contact-name" name="name" required />
-        </div>
-        <div className="field">
-          <label htmlFor="contact-email">Email address</label>
-          <input id="contact-email" name="email" required type="email" />
-        </div>
-        <div className="field">
-          <label htmlFor="contact-phone">Phone number</label>
-          <input id="contact-phone" name="phone" type="tel" />
-        </div>
-        <div className="field">
-          <label htmlFor="contact-topic">Topic</label>
-          <select id="contact-topic" name="topic">
-            <option>State agency assistance</option>
-            <option>Event invitation</option>
-            <option>Legislative feedback</option>
-            <option>General question</option>
-          </select>
-        </div>
-        <div className="field full">
-          <label htmlFor="contact-message">Message</label>
-          <textarea id="contact-message" name="message" required />
-        </div>
-      </div>
-      <button className="cta-link" type="submit">
-        Submit Message
-      </button>
-      {status ? <p className="form-note" role="status">{status}</p> : null}
-    </form>
+    <div className="form-panel">
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+      />
+      <BuilderForm
+        className="builder-public-form"
+        endpoint={`/api/forms/${result.projection.formKey}`}
+        projection={result.projection}
+      />
+    </div>
   );
 }

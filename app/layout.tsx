@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
+import { headers } from "next/headers";
 
 import "./globals.css";
 import { AppFooter } from "./ui/AppFooter";
 import { AppHeader } from "./ui/AppHeader";
 import { siteConfig } from "./data/site";
+import { BuilderContentBridge } from "./builder-content-bridge";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -23,20 +25,28 @@ export const metadata: Metadata = {
   )
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await headers();
   return (
     <html lang="en">
       <body className={publicSans.className}>
-        <a className="skip-link" href="#main">
+        <a
+          className="skip-link"
+          data-builder-region="global.accessibility.skip"
+          data-builder-kind="text"
+          data-i18n-key="global.skip"
+          href="#main"
+        >
           Skip to content
         </a>
         <AppHeader />
         <main id="main">{children}</main>
         <AppFooter />
+        <BuilderContentBridge />
       </body>
     </html>
   );

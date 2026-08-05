@@ -24,16 +24,19 @@ import {
 
 export type ImageAsset = {
   key: string;
+  regionId: string;
   src: string;
   alt: string;
 };
 
 export type Stat = {
+  id: string;
   value: string;
   label: string;
 };
 
 export type Card = {
+  id: string;
   title: string;
   text: string;
   icon: LucideIcon;
@@ -54,106 +57,127 @@ export type PageContent = {
 };
 
 export const siteConfig = {
-  officeName: "Office of Assemblywoman Carmen Morales",
+  officeName: "Office of Assemblywoman Carmen Theresa Morales",
   representativeName: "Carmen Morales",
+  districtLabel: "New Jersey Legislative District 34",
   tagline:
-    "A constituent-first district website for services, civic updates, voting information, and community connection."
+    "Constituent services, legislative information, voting resources, and district office access for New Jersey's 34th Legislative District.",
+  officeAddress: "152 Franklin Street, Belleville, NJ 07109",
+  phoneDisplay: "(973) 450-0484",
+  phoneE164: "+19734500484",
+  officialProfileUrl:
+    "https://www.njleg.state.nj.us/legislative-roster/491/assemblywoman-morales"
 };
 
 export const imageAssets: ImageAsset[] = [
   {
     key: "hero",
+    regionId: "media.hero",
     src: "/images/carmen-capitol-portrait.jpg",
-    alt: "Assemblywoman Carmen Morales with colleagues at the State House"
+    alt: "Assemblywoman Carmen Morales with legislative colleagues at the State House"
   },
   {
     key: "about",
+    regionId: "media.about",
     src: "/images/carmen-capitol-colleagues.jpg",
     alt: "Assemblywoman Carmen Morales meeting with legislative colleagues"
   },
   {
     key: "graduation",
+    regionId: "media.graduation",
     src: "/images/graduation-community.jpg",
     alt: "A graduate at a district graduation ceremony"
   },
   {
     key: "voteBoard",
+    regionId: "media.vote-board",
     src: "/images/assembly-vote-board.jpg",
-    alt: "New Jersey Assembly vote board showing the John R. Lewis Voter Empowerment Act"
+    alt: "New Jersey General Assembly electronic vote board"
   },
   {
     key: "clinic",
+    regionId: "media.clinic",
     src: "/images/expungement-clinic.jpg",
     alt: "Fresh Start expungement clinic event flyer"
   },
   {
     key: "coverage",
+    regionId: "media.coverage",
     src: "/images/rosy-bagolie-coverage.jpg",
-    alt: "Graphic announcing expanded coverage legislation"
+    alt: "Community health clinic event flyer"
   },
   {
     key: "eventGroup",
+    regionId: "media.event-group",
     src: "/images/community-event-group.jpg",
-    alt: "Community members gathered at an official district event"
+    alt: "Community members gathered at a district event"
   },
   {
     key: "outdoorVisit",
+    regionId: "media.outdoor-visit",
     src: "/images/outdoor-district-visit.jpg",
     alt: "Assemblywoman Carmen Morales visiting constituents outdoors"
   },
   {
     key: "business",
+    regionId: "media.business",
     src: "/images/small-business-roundtable.jpg",
     alt: "Small business roundtable with constituents at a local restaurant"
   },
   {
     key: "meeting",
+    regionId: "media.meeting",
     src: "/images/constituent-meeting.jpg",
-    alt: "Constituent meeting in a local community space"
+    alt: "Constituent meeting in a community space"
   },
   {
     key: "outreach",
+    regionId: "media.outreach",
     src: "/images/district-outreach.jpg",
-    alt: "District outreach event with community supporters"
+    alt: "District outreach event with community members"
   },
   {
     key: "capitol",
+    regionId: "media.capitol",
     src: "/images/capitol-visit.jpg",
     alt: "Constituents and officials during a capitol visit"
   }
 ];
 
 export const stats: Stat[] = [
-  { value: "Services", label: "State agency help, forms, referrals" },
-  { value: "Updates", label: "Legislation, alerts, and local events" },
-  { value: "Access", label: "Voting, office contact, and newsletter tools" }
+  { id: "services", value: "Services", label: "Help navigating New Jersey agencies" },
+  { id: "updates", value: "Updates", label: "Legislation and district information" },
+  { id: "access", value: "Access", label: "Office, voting, and contact resources" }
 ];
 
 export const pages: PageContent[] = [
   {
     href: "/",
     navLabel: "Home",
-    title: "Constituent Services, Legislative Updates, and Community Access",
-    eyebrow: "Official District Office",
+    title: "District 34 Constituent Services and Community Updates",
+    eyebrow: "New Jersey General Assembly - District 34",
     description:
-      "A polished public-facing hub for residents to request help, follow Assembly updates, find civic resources, and stay connected with the district office.",
+      "Find district office contact information, official legislative resources, voting guidance, and ways to request help with a New Jersey state agency.",
     imageKey: "hero",
     cards: [
       {
-        title: "Get Help From the Office",
-        text: "Route constituent questions to the right office workflow and prepare clear intake for resident needs.",
+        id: "office-help",
+        title: "Contact the District Office",
+        text: "Call or send a message when you need help navigating a New Jersey state agency or want to share a legislative concern.",
         icon: HeartHandshake,
         href: "/contact"
       },
       {
-        title: "Track Community Updates",
-        text: "Publish news, event announcements, service clinics, and urgent district notices in one consistent feed.",
+        id: "community-updates",
+        title: "Follow Legislative Activity",
+        text: "Use official New Jersey Legislature sources for sponsored bills, votes, committee work, and current public information.",
         icon: Newspaper,
         href: "/news"
       },
       {
+        id: "civic-resources",
         title: "Find Civic Resources",
-        text: "Give residents quick paths to voting, agency support, newsletter signup, and district feedback.",
+        text: "Go directly to official voting, state service, district office, and newsletter resources.",
         icon: Landmark,
         href: "/resources"
       }
@@ -163,33 +187,40 @@ export const pages: PageContent[] = [
     href: "/about",
     slug: "about",
     navLabel: "About",
-    title: "About the Assemblywoman",
-    eyebrow: "Public Service",
+    title: "About Assemblywoman Carmen Theresa Morales",
+    eyebrow: "Deputy Whip - District 34",
     description:
-      "Introduce Assemblywoman Carmen Morales with a professional biography, district priorities, committee work, and a record of community engagement.",
+      "Assemblywoman Morales has served in the New Jersey General Assembly since 2024 and represents District 34 in Essex County.",
     imageKey: "about",
     cards: [
       {
-        title: "District-Focused Leadership",
-        text: "Center local families, working people, schools, seniors, and small businesses in every public-facing message.",
+        id: "district-leadership",
+        title: "District 34",
+        text: "The district includes Belleville, Bloomfield, East Orange, Glen Ridge, Nutley, and Orange.",
         icon: Users
       },
       {
-        title: "Legislative Priorities",
-        text: "Highlight voting access, affordability, public safety, infrastructure, and responsive state services.",
-        icon: Scale
+        id: "legislative-priorities",
+        title: "Committee Service",
+        text: "The official legislative roster lists Higher Education, Appropriations, Science, Innovation and Technology, and the Joint Committee on the Public Schools.",
+        icon: Scale,
+        href: siteConfig.officialProfileUrl
       },
       {
-        title: "Community Presence",
-        text: "Use real event photography from the project folder instead of generated representative art.",
-        icon: BadgeCheck
+        id: "community-presence",
+        title: "Public Service",
+        text: "Her official biography lists a career in education and service as an Essex County College trustee from 2017 through 2023.",
+        icon: BadgeCheck,
+        href: siteConfig.officialProfileUrl
       }
     ],
     secondaryCards: [
       {
-        title: "Prepared for the final biography",
-        text: "The page is structured so confirmed biography, district number, committees, and office information can be edited in one data file.",
-        icon: FileText
+        id: "biography-readiness",
+        title: "Official biography and legislative record",
+        text: "Review the New Jersey Legislature profile for the current biography, committee assignments, sponsored bills, and member votes.",
+        icon: FileText,
+        href: siteConfig.officialProfileUrl
       }
     ]
   },
@@ -197,26 +228,32 @@ export const pages: PageContent[] = [
     href: "/resources",
     slug: "resources",
     navLabel: "Resources",
-    title: "District Resources and Services",
+    title: "District and State Resources",
     eyebrow: "Constituent Support",
     description:
-      "Organize common resident needs into clear service paths for agency navigation, forms, benefits, legal support, and local referrals.",
+      "Start with official state information, then contact the district office if you need help identifying the appropriate New Jersey agency.",
     imageKey: "clinic",
     cards: [
       {
+        id: "state-agency-assistance",
         title: "State Agency Assistance",
-        text: "Help residents prepare requests around unemployment, licensing, benefits, housing, and other state agency issues.",
-        icon: ClipboardList
+        text: "Contact the district office about an existing matter involving a New Jersey state agency.",
+        icon: ClipboardList,
+        href: "/contact"
       },
       {
-        title: "Fresh Start Clinics",
-        text: "Promote expungement clinics and other public-service events with verified local event graphics.",
-        icon: ShieldCheck
+        id: "fresh-start-clinics",
+        title: "Public Service Events",
+        text: "Watch district notices for verified office hours, clinics, and community events.",
+        icon: ShieldCheck,
+        href: "/news"
       },
       {
-        title: "Downloadable Forms",
-        text: "Reserve a future file library for consent forms, office request packets, and multilingual resources.",
-        icon: FileText
+        id: "downloadable-forms",
+        title: "Official New Jersey Services",
+        text: "Browse the State of New Jersey department and service directory for direct government resources.",
+        icon: FileText,
+        href: "https://www.nj.gov/nj/gov/deptserv/"
       }
     ]
   },
@@ -224,29 +261,35 @@ export const pages: PageContent[] = [
     href: "/news",
     slug: "news",
     navLabel: "News",
-    title: "Community News and Legislative Alerts",
-    eyebrow: "Updates",
+    title: "Legislative and District Updates",
+    eyebrow: "Official Sources",
     description:
-      "A clean alert and news page for office statements, bill updates, district visits, community programs, and urgent service notices.",
+      "Use the New Jersey Legislature record for current bills, votes, committees, and public proceedings. Site-managed posts are not yet available.",
     imageKey: "voteBoard",
     cards: [
       {
-        title: "Voting Rights Update",
-        text: "Feature legislative votes and explain what each measure means for district residents.",
+        id: "voting-rights-update",
+        title: "Sponsored Bills and Votes",
+        text: "Review the Assemblywoman's official roster page for current sponsored bills and member votes.",
         icon: Vote,
-        tag: "Legislation"
+        tag: "Legislature",
+        href: siteConfig.officialProfileUrl
       },
       {
-        title: "Expanded Coverage",
-        text: "Show public health and affordability announcements with a short resident-centered summary.",
+        id: "expanded-coverage",
+        title: "Committee Work",
+        text: "Check current committee assignments and schedules through the New Jersey Legislature.",
         icon: Bell,
-        tag: "Service Alert"
+        tag: "Committees",
+        href: "https://www.njleg.state.nj.us/committees/assembly-committees"
       },
       {
-        title: "District Events",
-        text: "Collect office hours, clinics, roundtables, and public meetings in a format ready for database-backed publishing.",
+        id: "district-events",
+        title: "District Notices",
+        text: "For current office hours and district event information, call the district office.",
         icon: CalendarDays,
-        tag: "Events"
+        tag: "District",
+        href: `tel:${siteConfig.phoneE164}`
       }
     ]
   },
@@ -254,26 +297,32 @@ export const pages: PageContent[] = [
     href: "/community",
     slug: "community",
     navLabel: "Community",
-    title: "Community Spotlight",
-    eyebrow: "Around the District",
+    title: "Around District 34",
+    eyebrow: "Community",
     description:
-      "Use real district photos to showcase local businesses, graduates, families, civic partners, and neighborhood events.",
+      "District 34 includes Belleville, Bloomfield, East Orange, Glen Ridge, Nutley, and Orange in Essex County.",
     imageKey: "business",
     cards: [
       {
-        title: "Small Business Roundtables",
-        text: "Share visits with business owners and residents, then connect them to resources and policy follow-up.",
-        icon: Handshake
+        id: "small-business-roundtables",
+        title: "Small Business Conversations",
+        text: "District conversations can help residents and business owners identify state resources and share policy concerns.",
+        icon: Handshake,
+        href: "/contact"
       },
       {
-        title: "Graduation and Youth",
-        text: "Highlight student milestones, school visits, and youth leadership moments from the district.",
-        icon: BookOpenCheck
+        id: "graduation-youth",
+        title: "Schools and Youth",
+        text: "The official roster lists Assemblywoman Morales as Chair of the Assembly Higher Education Committee.",
+        icon: BookOpenCheck,
+        href: siteConfig.officialProfileUrl
       },
       {
+        id: "constituent-conversations",
         title: "Constituent Conversations",
-        text: "Document listening sessions and recurring community meetings with clear next steps.",
-        icon: MessageSquareText
+        text: "Contact the district office to share a concern, ask a question, or request help with a state matter.",
+        icon: MessageSquareText,
+        href: "/contact"
       }
     ]
   },
@@ -281,26 +330,32 @@ export const pages: PageContent[] = [
     href: "/voting",
     slug: "voting",
     navLabel: "Voting",
-    title: "Voting Information Portal",
+    title: "Official New Jersey Voting Information",
     eyebrow: "Civic Access",
     description:
-      "Give residents a direct place to find registration guidance, election deadlines, polling information, and ballot education links.",
+      "Use official New Jersey election resources for registration, vote-by-mail, early voting, polling locations, and election dates.",
     imageKey: "outreach",
     cards: [
       {
-        title: "Register or Update",
-        text: "Point voters to official registration and address-update resources.",
-        icon: Vote
+        id: "register-update",
+        title: "Register or Update Your Record",
+        text: "Visit the New Jersey Division of Elections for registration and voter information.",
+        icon: Vote,
+        href: "https://www.nj.gov/state/elections/voter-registration.shtml"
       },
       {
+        id: "polling-information",
         title: "Find Polling Information",
-        text: "Prepare links for early voting, vote-by-mail, and election day polling locations.",
-        icon: MapPin
+        text: "Use the state's voter information portal for polling places and election resources.",
+        icon: MapPin,
+        href: "https://www.nj.gov/state/elections/vote.shtml"
       },
       {
-        title: "Know Your Rights",
-        text: "Explain voter access protections and support options in plain language.",
-        icon: ShieldCheck
+        id: "voter-rights",
+        title: "Voting Questions",
+        text: "For authoritative election guidance, use the Division of Elections contact and help resources.",
+        icon: ShieldCheck,
+        href: "https://www.nj.gov/state/elections/index.shtml"
       }
     ]
   },
@@ -308,26 +363,31 @@ export const pages: PageContent[] = [
     href: "/contact",
     slug: "contact",
     navLabel: "Contact",
-    title: "Contact the Assemblywoman",
+    title: "Contact the District Office",
     eyebrow: "Office Access",
     description:
-      "A clear contact page for resident messages, office locations, service requests, and social channels.",
+      `${siteConfig.officeAddress}. Call ${siteConfig.phoneDisplay} for district office assistance.`,
     imageKey: "meeting",
     cards: [
       {
-        title: "Send a Message",
-        text: "A direct message form for residents who need help from the district office.",
-        icon: Mail
+        id: "send-message",
+        title: "Call the Office",
+        text: `Speak with the district office at ${siteConfig.phoneDisplay}.`,
+        icon: Mail,
+        href: `tel:${siteConfig.phoneE164}`
       },
       {
+        id: "district-office",
         title: "District Office",
-        text: "Office address, phone, and hours are isolated for quick replacement once confirmed.",
+        text: siteConfig.officeAddress,
         icon: Building2
       },
       {
-        title: "Community Requests",
-        text: "Prepare routing for event invitations, agency assistance, and legislative feedback.",
-        icon: MessageSquareText
+        id: "community-requests",
+        title: "Legislative Contact Form",
+        text: "You can also use the official New Jersey Legislature contact form for the Assemblywoman.",
+        icon: MessageSquareText,
+        href: siteConfig.officialProfileUrl
       }
     ]
   },
@@ -335,20 +395,22 @@ export const pages: PageContent[] = [
     href: "/newsletter",
     slug: "newsletter",
     navLabel: "Newsletter",
-    title: "Newsletter Signup",
+    title: "District Newsletter",
     eyebrow: "Stay Informed",
     description:
-      "Collect opt-ins for district updates, event reminders, legislative notes, and emergency alerts.",
+      "A newsletter signup will be available after the district office approves the subscription policy and publishing workflow.",
     imageKey: "eventGroup",
     cards: [
       {
+        id: "district-updates",
         title: "District Updates",
-        text: "Let residents choose updates on legislation, community services, and events.",
+        text: "The planned newsletter will cover legislative information, public services, and district events.",
         icon: Megaphone
       },
       {
-        title: "Subscriber Preferences",
-        text: "Collect email, ZIP code, update topics, and consent details in one straightforward flow.",
+        id: "subscriber-preferences",
+        title: "Consent and Preferences",
+        text: "Signup requires explicit email consent and a published privacy policy before submissions can be accepted.",
         icon: CheckCircle2
       }
     ]
@@ -357,21 +419,25 @@ export const pages: PageContent[] = [
     href: "/survey",
     slug: "survey",
     navLabel: "Survey",
-    title: "District Feedback Survey",
+    title: "Share a District Priority",
     eyebrow: "Resident Voice",
     description:
-      "Invite residents to share priorities and service concerns with the district office.",
+      "The online survey is not accepting responses. Residents can share priorities directly with the district office by phone or through the official contact form.",
     imageKey: "outdoorVisit",
     cards: [
       {
-        title: "Issue Priorities",
-        text: "Capture resident interest in affordability, public safety, schools, transportation, and healthcare.",
-        icon: ClipboardList
+        id: "issue-priorities",
+        title: "Legislative Priorities",
+        text: "Share an issue or legislative concern through the district office contact options.",
+        icon: ClipboardList,
+        href: "/contact"
       },
       {
-        title: "Neighborhood Context",
-        text: "Add local context without requiring residents to navigate multiple office channels.",
-        icon: MapPin
+        id: "neighborhood-context",
+        title: "Local Context",
+        text: "Include your municipality and the state matter involved when asking the office for assistance.",
+        icon: MapPin,
+        href: "/contact"
       }
     ]
   },
@@ -379,20 +445,23 @@ export const pages: PageContent[] = [
     href: "/social",
     slug: "social",
     navLabel: "Social",
-    title: "Social Media Feed",
-    eyebrow: "Digital Updates",
+    title: "Public Information and Media",
+    eyebrow: "Official Updates",
     description:
-      "A feed layout for short posts, event photos, public-service graphics, and legislative media.",
+      "Site-managed social posts are not yet available. Use the official legislative profile for current public records and contact information.",
     imageKey: "capitol",
     cards: [
       {
-        title: "Post Highlights",
-        text: "Use a structured content feed for updates, statements, photos, and public-service posts.",
-        icon: Newspaper
+        id: "post-highlights",
+        title: "Official Legislative Profile",
+        text: "Find sponsored bills, votes, committee assignments, biography, and contact information.",
+        icon: Newspaper,
+        href: siteConfig.officialProfileUrl
       },
       {
-        title: "Local Photos",
-        text: "Photos are organized locally so district updates remain consistent and easy to maintain.",
+        id: "local-photos",
+        title: "District Media",
+        text: "This site uses the local image collection supplied with the website; no image is presented as proof of a specific service outcome.",
         icon: Users
       }
     ]
@@ -401,9 +470,7 @@ export const pages: PageContent[] = [
 
 export function getImage(key: string) {
   const asset = imageAssets.find((item) => item.key === key);
-  if (!asset) {
-    throw new Error(`Missing image asset: ${key}`);
-  }
+  if (!asset) throw new Error(`Missing image asset: ${key}`);
   return asset;
 }
 

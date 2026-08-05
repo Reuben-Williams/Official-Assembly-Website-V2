@@ -18,6 +18,75 @@
   --container: 1200px;
 }
 
+.admin-login {
+  min-height: 70vh;
+}
+
+.admin-login-panel {
+  margin-inline: auto;
+  max-width: 36rem;
+}
+
+.admin-login-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.editor-attachment-note {
+  align-items: center;
+  background: #fff7d6;
+  border: 1px solid #e2c45c;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+
+.editor-unavailable-workspace {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 100%;
+  padding: clamp(24px, 4vw, 48px);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.editor-unavailable-workspace h1,
+.editor-unavailable-workspace p {
+  margin: 0;
+}
+
+.editor-unavailable-workspace p:not(.eyebrow) {
+  max-width: 68ch;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.editor-live-data-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(20, 69, 73, 0.16);
+  background: #edf8f4;
+  color: #144549;
+  font-size: 0.82rem;
+}
+
+.editor-live-data-label strong,
+.editor-live-data-label span {
+  display: block;
+}
+
+.editor-live-data-label span {
+  color: #46666a;
+  text-align: right;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -539,6 +608,28 @@ h3 {
   color: white;
 }
 
+.footer .staff-portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 8px;
+  color: white;
+  font-weight: 800;
+  padding: 9px 14px;
+}
+
+.footer .staff-portal-link:hover,
+.footer .staff-portal-link:focus-visible {
+  border-color: white;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  outline: 3px solid rgba(255, 255, 255, 0.22);
+  outline-offset: 3px;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -581,6 +672,15 @@ h3 {
 }
 
 @media (max-width: 620px) {
+  .editor-live-data-label {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .editor-live-data-label span {
+    text-align: left;
+  }
+
   .container {
     width: min(var(--container), calc(100% - 24px));
   }

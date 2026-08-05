@@ -6,6 +6,7 @@ import type { ImageAsset } from "../data/site";
 type ImagePanelProps = {
   asset: ImageAsset;
   caption: string;
+  instance?: string;
   priority?: boolean;
   variant?: "hero" | "wide";
 };
@@ -13,6 +14,7 @@ type ImagePanelProps = {
 export function ImagePanel({
   asset,
   caption,
+  instance = "default",
   priority = false,
   variant = "wide"
 }: ImagePanelProps) {
@@ -20,7 +22,12 @@ export function ImagePanel({
   const src = `${basePath}${asset.src}`;
 
   return (
-    <div className={`image-card ${variant === "hero" ? "hero-image" : "wide-image"}`}>
+    <div
+      className={`image-card ${variant === "hero" ? "hero-image" : "wide-image"}`}
+      data-builder-instance={instance}
+      data-builder-kind="image"
+      data-builder-region={asset.regionId}
+    >
       <Image
         src={src}
         alt={asset.alt}

@@ -1,0 +1,19 @@
+{
+  "manifestVersion": 1,
+  "moduleId": "core.website",
+  "moduleVersion": "1.1.0",
+  "requirements": {
+    "packages": {
+      "@reuben-williams/core": "0.1.0",
+      "@reuben-williams/forms": "0.1.0",
+      "@reuben-williams/next": "0.1.0"
+    },
+    "schemas": {
+      "forms": 2
+    },
+    "routes": [
+      "/admin/editor",
+      "/api/builder"
+    ]
+  }
+}

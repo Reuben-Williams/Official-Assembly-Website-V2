@@ -1,18 +1,15 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+"use client";
 
-let browserClient: SupabaseClient | null = null;
+import { createBuilderBrowserClient } from "@reuben-williams/next/auth";
+
+let browserClient: ReturnType<typeof createBuilderBrowserClient> | null = null;
 
 export function getSupabaseBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    return null;
-  }
-
-  if (!browserClient) {
-    browserClient = createClient(url, anonKey);
-  }
-
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !publishableKey) return null;
+  browserClient ??= createBuilderBrowserClient({ url, publishableKey });
   return browserClient;
 }
