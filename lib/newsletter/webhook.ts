@@ -12,6 +12,8 @@ type Classification = {
   readonly incidentReason?: "unvalidated" | "mismatch" | "expired" | "provider_anomaly";
   readonly providerStatus?: string;
   readonly sentAt?: string;
+  readonly validationId?: string;
+  readonly classificationRequested?: boolean;
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -52,6 +54,7 @@ export async function handleResendNewsletterWebhook(
       readonly providerCreatedAt: string;
       readonly providerMessageId?: string;
       readonly providerBroadcastId?: string;
+      readonly recipient?: string;
     }) => Promise<Classification>;
     readonly reconcile: (input: {
       readonly siteId: string;
@@ -66,6 +69,8 @@ export async function handleResendNewsletterWebhook(
       readonly providerStatus?: string;
       readonly sentAt?: string;
       readonly digest: string;
+      readonly validationId?: string;
+      readonly classificationRequested?: boolean;
     }) => Promise<{ readonly disposition: "ignored" | "matched" | "incident"; readonly replayed: boolean }>;
   }
 ) {
@@ -98,6 +103,11 @@ export async function handleResendNewsletterWebhook(
   const providerBroadcastId = typeof event.data.broadcast_id === "string"
     ? event.data.broadcast_id.slice(0, 200)
     : undefined;
+  const recipient = typeof event.data.to === "string"
+    ? event.data.to.toLowerCase()
+    : Array.isArray(event.data.to) && typeof event.data.to[0] === "string"
+      ? event.data.to[0].toLowerCase()
+      : undefined;
 
   let classification: Classification | null = null;
   if (relevant(event.type)) {
@@ -107,7 +117,8 @@ export async function handleResendNewsletterWebhook(
         eventType: event.type,
         providerCreatedAt: event.createdAt,
         providerMessageId,
-        providerBroadcastId
+        providerBroadcastId,
+        recipient
       });
     } catch {
       return json(503, { status: "retryable" });
@@ -129,7 +140,9 @@ export async function handleResendNewsletterWebhook(
       incidentReason: classification?.incidentReason,
       providerStatus: classification?.providerStatus,
       sentAt: classification?.sentAt,
-      digest
+      digest,
+      validationId: classification?.validationId,
+      classificationRequested: classification?.classificationRequested
     });
     return json(200, { status: "accepted", disposition: result.disposition, replayed: result.replayed });
   } catch {

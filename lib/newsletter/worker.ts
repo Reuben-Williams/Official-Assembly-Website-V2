@@ -40,7 +40,10 @@ export function calculateNewsletterRetryAt(
   return new Date(now.getTime() + Math.round(baseMs * jitter));
 }
 
-type Handler = (job: NewsletterClaimedJob) => Promise<{ readonly code: string }>;
+type Handler = (job: NewsletterClaimedJob) => Promise<{
+  readonly code: string;
+  readonly alreadyCompleted?: boolean;
+}>;
 
 export async function runNewsletterWorker(input: {
   readonly repository: {
@@ -111,12 +114,14 @@ export async function runNewsletterWorker(input: {
             : input.handlers.broadcastAudit;
     try {
       const result = await handler(job);
-      await input.repository.complete({
-        job,
-        workerId: input.workerId,
-        fencingToken: job.fencingToken,
-        resultCode: /^[a-z][a-z0-9_]{0,63}$/.test(result.code) ? result.code : "completed"
-      });
+      if (!result.alreadyCompleted) {
+        await input.repository.complete({
+          job,
+          workerId: input.workerId,
+          fencingToken: job.fencingToken,
+          resultCode: /^[a-z][a-z0-9_]{0,63}$/.test(result.code) ? result.code : "completed"
+        });
+      }
       completed += 1;
     } catch (error) {
       const failure = error instanceof NewsletterJobFailure

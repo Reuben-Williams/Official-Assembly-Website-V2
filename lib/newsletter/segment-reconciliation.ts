@@ -3,7 +3,7 @@ import "server-only";
 import type { NewsletterClaimedJob } from "./worker";
 
 export function createNewsletterSegmentReconciliationHandler(input: {
-  readonly reconcile: (job: NewsletterClaimedJob) => Promise<void>;
+  readonly reconcile: (job: NewsletterClaimedJob) => Promise<unknown>;
 }) {
   return async (job: NewsletterClaimedJob) => {
     await input.reconcile(job);

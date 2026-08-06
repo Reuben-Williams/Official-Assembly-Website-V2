@@ -111,13 +111,19 @@ select ok(
 set local role service_role;
 insert into broadcast_results values (
   'matching_send',
-  public.builder_classify_newsletter_broadcast_v1(jsonb_build_object(
+  public.builder_reconcile_newsletter_webhook_v1(jsonb_build_object(
     'version', 1,
     'siteId', '34000000-0000-4000-8000-000000000001',
     'providerScopeId', 'resend-team-production',
+    'svixId', 'msg_matching_send',
+    'eventType', 'email.sent',
+    'providerCreatedAt', clock_timestamp(),
+    'providerMessageId', 'provider-message-matching-send',
     'providerBroadcastId', 'broadcast-draft-1',
     'validationId', (select (result->>'validationId')::uuid from broadcast_results where test_case = 'validation'),
     'digest', repeat('d', 64),
+    'disposition', 'matched',
+    'classificationRequested', true,
     'providerStatus', 'sent',
     'sentAt', (select validated_at from public.builder_newsletter_broadcast_validations where id = (select (result->>'validationId')::uuid from broadcast_results where test_case = 'validation')),
     'evidenceSource', 'audit',
@@ -126,8 +132,9 @@ insert into broadcast_results values (
 );
 reset role;
 
-select is((select result->>'disposition' from broadcast_results where test_case = 'matching_send'), 'consumed_matching', 'sent_at equal to validated_at is inside the half-open validation window');
+select is((select result->>'disposition' from broadcast_results where test_case = 'matching_send'), 'matched', 'sent_at equal to validated_at is atomically matched with its verified webhook receipt');
 select is((select state from public.builder_newsletter_broadcast_validations where provider_broadcast_id = 'broadcast-draft-1'), 'consumed_matching', 'a matching send consumes its validation exactly once');
+select is((select count(*) from public.builder_newsletter_webhook_receipts where svix_id = 'msg_matching_send'), 1::bigint, 'matching classification and receipt commit together');
 
 set local role service_role;
 insert into broadcast_results values (

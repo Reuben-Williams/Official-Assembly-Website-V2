@@ -298,8 +298,9 @@ export function createSupabaseNewsletterAuditData(client: SupabaseClient, siteId
         reconciled_at: reconciledAt.toISOString(),
         expires_at: new Date(reconciledAt.getTime() + 30 * 60 * 1_000).toISOString(),
         state: "ready"
-      });
-      if (insert.error) throw new Error("newsletter readiness unavailable");
+      }).select("id").single();
+      if (insert.error || !insert.data?.id) throw new Error("newsletter readiness unavailable");
+      return { readinessRevisionId: String(insert.data.id), audienceCount: eligibleIds.length };
     }
   };
 }

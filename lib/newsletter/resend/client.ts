@@ -3,7 +3,12 @@ import "server-only";
 import { Resend } from "resend";
 
 import { NEWSLETTER_CONFIRMATION_SUBJECT } from "../email/render-confirmation";
-import type { NewsletterContactProvider, NewsletterEmailProvider } from "./contracts";
+import type {
+  NewsletterBroadcastProvider,
+  NewsletterContactProvider,
+  NewsletterEmailProvider,
+  NewsletterProviderBroadcast
+} from "./contracts";
 
 export const NEWSLETTER_CONFIRMATION_SENDER =
   "Office of Assemblywoman Carmen Morales <newsletter@updates.assemblywomanmorales.com>";
@@ -105,6 +110,65 @@ export function createProductionNewsletterContactProvider(apiKey: string): Newsl
     async addSegment(input) {
       const result = await resend.contacts.segments.add({ contactId: input.id, segmentId: input.segmentId });
       if (result.error) throw new Error("provider mutation unavailable");
+    }
+  };
+}
+
+function providerBroadcast(value: {
+  readonly id: string;
+  readonly name: string;
+  readonly from: string | null;
+  readonly subject: string | null;
+  readonly reply_to: string[] | null;
+  readonly preview_text: string | null;
+  readonly html: string | null;
+  readonly text: string | null;
+  readonly segment_id: string | null;
+  readonly topic_id?: string | null;
+  readonly status: "draft" | "queued" | "sent";
+  readonly created_at: string;
+  readonly scheduled_at: string | null;
+  readonly sent_at: string | null;
+}): NewsletterProviderBroadcast {
+  return {
+    id: value.id,
+    name: value.name,
+    from: value.from ?? "",
+    subject: value.subject ?? "",
+    replyTo: value.reply_to ?? [],
+    previewText: value.preview_text ?? "",
+    html: value.html ?? "",
+    text: value.text ?? "",
+    segmentId: value.segment_id ?? "",
+    topicId: value.topic_id ?? "",
+    status: value.status,
+    createdAt: value.created_at,
+    scheduledAt: value.scheduled_at,
+    sentAt: value.sent_at
+  };
+}
+
+export function createProductionNewsletterBroadcastProvider(apiKey: string): NewsletterBroadcastProvider {
+  const resend = new Resend(apiKey);
+  return {
+    async get(id) {
+      const result = await resend.broadcasts.get(id);
+      if (result.error || !result.data) throw new Error("provider read unavailable");
+      return providerBroadcast(result.data);
+    },
+    async list(input) {
+      const result = await resend.broadcasts.list({ limit: input.limit, after: input.after });
+      if (result.error || !result.data) throw new Error("provider read unavailable");
+      const broadcasts = await Promise.all(result.data.data.map(async (item) => {
+        const detail = await resend.broadcasts.get(item.id);
+        if (detail.error || !detail.data) throw new Error("provider read unavailable");
+        return providerBroadcast(detail.data);
+      }));
+      return {
+        broadcasts,
+        hasMore: result.data.has_more,
+        after: result.data.has_more ? result.data.data.at(-1)?.id : undefined
+      };
     }
   };
 }

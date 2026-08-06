@@ -17,6 +17,8 @@ export function createNewsletterWebhookRepository(client: ConfirmationRpcClient)
       readonly providerStatus?: string;
       readonly sentAt?: string;
       readonly digest: string;
+      readonly validationId?: string;
+      readonly classificationRequested?: boolean;
     }) {
       const result = await client.rpc("builder_reconcile_newsletter_webhook_v1", {
         p_request: {
@@ -32,7 +34,9 @@ export function createNewsletterWebhookRepository(client: ConfirmationRpcClient)
           incidentReason: input.incidentReason,
           providerStatus: input.providerStatus,
           sentAt: input.sentAt,
-          digest: input.digest
+          digest: input.digest,
+          validationId: input.validationId,
+          classificationRequested: input.classificationRequested
         }
       });
       if (result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) {

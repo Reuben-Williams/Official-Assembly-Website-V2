@@ -7,6 +7,6 @@ export function createNewsletterBroadcastAuditHandler(input: {
 }) {
   return async (job: NewsletterClaimedJob) => {
     await input.audit(job);
-    return { code: "audit_complete" };
+    return { code: "audit_complete", alreadyCompleted: true };
   };
 }
