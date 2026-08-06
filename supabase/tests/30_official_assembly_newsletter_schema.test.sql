@@ -16,6 +16,10 @@ select has_table('public', 'builder_newsletter_staff_test_windows', 'staff test 
 select has_table('public', 'builder_newsletter_staff_test_observations', 'staff test observations exist');
 select has_table('public', 'builder_newsletter_broadcast_validations', 'broadcast validations exist');
 select has_table('public', 'builder_newsletter_broadcast_incidents', 'broadcast incidents exist');
+select has_column('public', 'builder_newsletter_jobs', 'provider_message_id', 'jobs retain bounded provider message evidence');
+select has_column('public', 'builder_newsletter_jobs', 'first_attempt_at', 'jobs retain the idempotency-window origin');
+select has_column('public', 'builder_newsletter_jobs', 'ambiguous_since', 'jobs retain ambiguity timing without payloads');
+select has_column('public', 'builder_newsletter_jobs', 'saga_phase', 'Contact synchronization can resume from a persisted phase');
 
 select ok(
   not exists (
