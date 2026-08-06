@@ -242,6 +242,7 @@ Subscription-scoped jobs require one site and one subscription and support:
 Site-scoped provider-maintenance jobs require one site, forbid a subscription or Broadcast validation, and support:
 
 - `newsletter.segment.reconcile`
+- `newsletter.contact.audit`
 
 Provider Broadcast audit jobs require one site and configured Resend team scope, forbid a subscription, and support:
 
@@ -251,7 +252,7 @@ Jobs contain identifiers and safe operational metadata only. They do not duplica
 
 The database tracks queued, leased, completed, retryable-failed, and terminal-failed states; attempt count; next-attempt time; lease owner; lease expiry; provider message/contact identifier; and a bounded non-sensitive failure code.
 
-The scheduled worker is a Node.js Vercel route protected by `CRON_SECRET`. It claims a bounded batch, applies exponential backoff with jitter, and stops retrying terminal policy failures. Immediate post-submission processing and scheduled processing use the same lease/fencing primitives but dispatch to their typed handlers. When `NEWSLETTER_EMAIL_ENABLED=false`, outbound confirmation/Contact mutation, mutating Segment reconciliation, and production validation handlers fail closed, but verified webhook processing plus read-only provider/Broadcast audits continue so disablement cannot erase withdrawal or incident evidence.
+The scheduled worker is a Node.js Vercel route protected by `CRON_SECRET`. It claims a bounded batch, applies exponential backoff with jitter, and stops retrying terminal policy failures. Immediate post-submission processing and scheduled processing use the same lease/fencing primitives but dispatch to their typed handlers. When `NEWSLETTER_EMAIL_ENABLED=false`, outbound confirmation/Contact mutation, mutating Segment reconciliation, and production validation handlers fail closed, but verified webhook processing, `newsletter.contact.audit`, and read-only Broadcast audits continue so disablement cannot erase withdrawal or incident evidence.
 
 Contact synchronization jobs persist saga phases such as `lookup`, `contact_ensured`, `topic_ensured`, `segment_ensured`, and `verified`. Topic withdrawal removes Segment membership and sets the District Newsletter Topic to `opt_out`. Global withdrawal performs those steps and preserves provider `unsubscribed: true`. The stored withdrawal origin is never collapsed or cleared by ordinary retry.
 
@@ -260,6 +261,8 @@ Only an authorized `newsletter.contact.reactivate_global` job may clear provider
 Approved deletion removes Segment membership, opts out the Topic, and deletes the provider Contact only when the operator has verified that the Contact has no other approved use in the dedicated team. Otherwise it retains the provider suppression/withdrawal marker while removing site-specific membership and properties.
 
 Resend's `contact.updated` webhook does not include Topic subscriptions. For every verified `contact.updated` event mapped to this site, the server retrieves the Contact, its Segment memberships, and `GET /contacts/:contact_id/topics` before opening the receipt/mutation transaction. Retrieval failure returns a retryable response and inserts no receipt. An observed District Newsletter `opt_out` moves an otherwise active record to `withdrawn_topic`, removes Segment eligibility, and can never be reversed by ordinary sync. A later provider-side `opt_in` does not reactivate a locally withdrawn record without a newer fresh-consent generation.
+
+The hourly `newsletter.contact.audit` job is provider-read-only and remains enabled during feature disablement. It walks every locally known provider Contact, retrieves Contact, Segment, and Topic state, and atomically records local withdrawal, global-unsubscribe, suppression, provider-removal, or drift evidence. It never creates/updates a provider Contact, changes Topic state, or changes Segment membership. When provider state requires a provider-side removal, it records the local record as non-eligible and leaves the outbound mutation queued but unclaimed until the feature is deliberately re-enabled; provider-native unsubscribe/suppression continues to protect delivery in the meantime. Cursor checkpoints resume the local Contact walk without treating an incomplete pass as successful.
 
 The reconciliation job runs at least hourly and immediately before every production Broadcast validation. It walks both sides: every Contact in the production Segment and every locally active/confirmed subscription with a provider Contact identifier. For each, it retrieves global unsubscribe, Segment membership, and Topic subscriptions. It removes unconfirmed, topic-withdrawn, globally withdrawn, expired, bounced, complained, suppressed, unknown, or other-site Contacts; transitions a local active record to `withdrawn_topic` when provider Topic state is `opt_out`; and verifies that every retained Contact is explicitly `opt_in` to the District Newsletter Topic. It never opts an ineligible or previously withdrawn Contact in merely because the Contact exists in Resend. A full successful walk records a signed, expiring readiness revision; any unreadable Contact/Topic state fails readiness closed and prevents Broadcast validation.
 
@@ -306,8 +309,9 @@ The protected validation control is available only to an authorized site owner/o
 2. retrieves the dashboard Broadcast and requires `draft` status with no provider schedule;
 3. verifies the fixed sender, production Segment, opt-out-by-default Topic, unsubscribe placeholder/footer, office-contact content, and approved Reply-To state;
 4. runs fresh Segment reconciliation and requires every provider member to map to an active, confirmed, non-withdrawn, non-suppressed Supabase subscription;
-5. canonicalizes the Broadcast fields and records a SHA-256 digest over sender, subject, preview text, HTML, text, Segment, Topic, and approved Reply-To state; and
-6. records the operator, Broadcast identifier, digest, readiness revision, audience count, validation time, and ten-minute expiry without retaining another message-body copy or creating any provider mutation.
+5. canonicalizes the Broadcast fields and calculates a SHA-256 digest over sender, subject, preview text, HTML, text, Segment, Topic, and approved Reply-To state;
+6. requires a `confirmed-test` observation for the same Broadcast identifier and exact digest within the preceding 24 hours; and
+7. records the operator, Broadcast identifier, confirmed-test observation, digest, readiness revision, audience count, validation time, and ten-minute expiry without retaining another message-body copy or creating any provider mutation.
 
 The production validation operation is itself non-dispatching. It may retrieve provider state and perform the Contact/Topic/Segment reconciliation already authorized by the subscription system, but it cannot create, update, schedule, copy, or send a Broadcast and cannot accept or derive a staff-recipient override. Deployment readiness uses the same validator in `activation-check` mode, which records a bounded audit result but is forbidden from creating a send-valid approval or staff-test window.
 
@@ -327,7 +331,7 @@ Broadcast validation records have valid, superseded, expired, provider-timing-pe
 
 Resend team access is limited to the smallest practical set of designated staff. Production Contacts, Segment membership, and Topic state are not operated manually. Final send authority necessarily remains with the staff members permitted to use the Resend dashboard. Because Resend's Member/Admin roles are coarse, the runbook, short validation window, audit, and incident lockout are required; a dashboard send that bypasses validation is an unauthorized operational event that the application detects rather than prevents.
 
-Before activation, the audit performs a full paginated inventory with `limit=100`, following `after` until `has_more=false`. Readiness fails if any Broadcast is scheduled or queued. Any previously sent Broadcast requires explicit human review and an approved historical-baseline record; an unexplained sent Broadcast fails activation. Existing drafts, including the staff-test draft, are recorded as baseline drafts and remain watched.
+Before activation, the audit performs a full paginated inventory with `limit=100`, following `after` until `has_more=false`. Readiness fails if any Broadcast is scheduled, queued, or sent; the dedicated Production team has no historical-send exception in this release. Existing drafts, including the staff-test draft, are recorded as baseline drafts and remain watched.
 
 After activation, every audit run starts at the newest page and paginates the complete dedicated-team inventory. Its `after` cursor is an in-progress checkpoint only: it advances after each page transaction commits, resumes after retry, and is cleared only when `has_more=false`. The next run restarts from the newest page, so status changes to an old draft cannot hide behind a creation-time high-water mark. Items are reprocessed idempotently. New items created ahead of an in-progress cursor are picked up when the next complete run restarts; webhooks provide the real-time path. A run is not marked successful unless every page was processed, all provisional staff tests due for recheck were classified, and every current validation/pending timing record was re-retrieved.
 
@@ -352,7 +356,7 @@ The site does not author, copy, schedule, or send Broadcast content. The private
 
 The webhook route reads the raw request body and verifies the Resend/Svix signature using `svix-id`, `svix-timestamp`, `svix-signature`, and `RESEND_WEBHOOK_SECRET` before parsing or mutating data.
 
-Webhook delivery is treated as at least once and not ordered. After signature verification and bounded normalization, the server first checks whether the `broadcast_id` already has a final test, matching-send, or incident disposition. If it does not, the server retrieves the bounded Broadcast fields from Resend before opening the database transaction; retrieval failure returns a retryable response and does not insert the webhook receipt. For a `contact.updated` event, the same pre-transaction phase also retrieves current Contact, Segment, and Topic state because the webhook payload does not contain Topic subscriptions.
+Webhook delivery is treated as at least once and not ordered. After signature verification and bounded normalization, the server may reuse a Broadcast-wide matching-send/incident disposition or a `confirmed-test` disposition only when it belongs to the exact same provider message identifier. A test disposition is message-scoped and never short-circuits provider retrieval for a new message/event. When no safe reusable disposition exists, the server retrieves the bounded Broadcast fields from Resend before opening the database transaction; retrieval failure returns a retryable response and does not insert the webhook receipt. For a `contact.updated` event, the same pre-transaction phase also retrieves current Contact, Segment, and Topic state because the webhook payload does not contain Topic subscriptions.
 
 One database RPC then atomically inserts the unique `svix-id` receipt, maps the configured provider team/site scope, and classifies the Broadcast as provisional staff test, matching production send, pending provider timing, or incident **before and independently of recipient-to-subscription mapping**. The test branch requires the preconfigured allowlist fingerprint, current test window, exact draft digest, `draft` status, and null `scheduled_at`/`sent_at`; it cannot consume a production validation. The production branch uses the exact validation and `sent_at` rules above. Every other send creates/replays the critical incident keyed by `(site_id, provider_broadcast_id)`, even when the recipient is unknown or belongs to no local subscription. The transaction then applies any valid monotonic subscription/job/Broadcast-observation transition and marks the receipt processed with its disposition. If any step fails, the entire transaction rolls back, allowing Resend's retry to apply the event. Concurrent webhook and audit classifications converge through the same row locks and unique constraints. A repeated processed identifier returns the recorded disposition without repeating mutations, while a different event for the same unauthorized Broadcast increments the same incident rather than creating another. No state exists in which a receipt is permanently deduplicated while its transition or required incident is missing.
 
@@ -413,7 +417,7 @@ Check constraints allow only confirmation/contact job kinds and require or forbi
 
 - job identifier;
 - required site identifier and provider-scope identifier;
-- kind: `segment_reconcile`;
+- kind: `segment_reconcile` or `contact_audit`;
 - saga phase or reconciliation cursor;
 - state, attempts, next-attempt time, terminal flag, and lease/fencing data;
 - bounded safe result/failure code; and
@@ -469,7 +473,7 @@ The verified webhook RPC and audit worker use the same atomic upsert keyed by `(
 - immutable validation and operator-command identifiers;
 - authorized operator and validation time;
 - required dashboard Broadcast identifier;
-- canonical content digest;
+- required confirmed-test observation identifier and canonical content digest;
 - Segment, Topic, sender, and approved Reply-To snapshot;
 - readiness revision, audience count, and readiness expiry;
 - fixed ten-minute `valid_until` time;
@@ -615,17 +619,17 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - Contact/Topic/Segment saga resumes after a timeout at every provider phase and reconciles ambiguous mutations before retry;
 - confirmation-send ambiguity inside and outside Resend's 24-hour idempotency window;
 - topic withdrawal, global withdrawal, authorized global reactivation, Segment removal, deletion, and non-automatic recovery after complaint, bounce, suppression removal, or Contact deletion;
-- `contact.updated` Topic read-through, retry without receipt on read failure, missed-webhook hourly reconciliation, and denial of ordinary re-opt-in after provider Topic withdrawal;
+- `contact.updated` Topic read-through, retry without receipt on read failure, feature-disabled hourly `newsletter.contact.audit`, and denial of ordinary re-opt-in after provider Topic withdrawal;
 - production validation enforces operator and content/readiness policy while creating no provider Broadcast mutation or send;
 - activation-check mode cannot create either a send-valid approval or a staff-test window;
 - the staff-test operation can open only the configured-allowlist test window and cannot create a production validation;
-- staff-test events require an exact allowlist fingerprint and unscheduled draft state, remain provisional for fifteen minutes, never consume production validation, and reclassify/incident if the Broadcast leaves draft state;
-- dashboard Broadcast to short-lived validation-digest binding, ten-minute expiry, supersession, and single consumption;
+- staff-test events require an exact allowlist fingerprint and unscheduled draft state, remain provisional for fifteen minutes, never consume production validation, reclassify/incident if the Broadcast leaves draft state, reuse test disposition only for the same provider message identifier, and never short-circuit retrieval for a new message;
+- production validation requires a confirmed test for the same Broadcast and exact digest within 24 hours, then binds that digest to a ten-minute window with supersession and single consumption;
 - half-open `validated_at <= sent_at < valid_until` enforcement using provider `sent_at` only, post-send validation rejection, queued-without-`sent_at` pending/retry, timing contradiction, post-validation content changes, expired approvals, duplicate observations, and scheduled-send rejection;
 - raw-body webhook signature verification, atomic receipt-plus-mutation, crash rollback, duplicate `svix-id`, and reordered distinct event IDs;
 - webhook `broadcast_id` mapping accepts an exact current dashboard validation and atomically incidents unvalidated, expired, scheduled, duplicate, or mismatched Broadcasts before recipient mapping;
 - different recipient webhooks and a scheduled audit for the same unauthorized provider Broadcast upsert one incident, preserve first-seen evidence, and increment the occurrence count;
-- activation baseline rejects queued/scheduled or unexplained sent Broadcasts, while complete newest-first paginated audit sweeps resume safely, restart from newest after completion, and detect status changes to old drafts;
+- activation baseline rejects every queued, scheduled, or sent Broadcast without exception, while complete newest-first paginated audit sweeps resume safely, restart from newest after completion, and detect status changes to old drafts;
 - critical incident lockout, schedule cancellation verification, provider-member restriction, key rotation, two-operator resolution, and refusal to re-enable when access cannot be contained;
 - unconfigured provider-team/site events are rejected without mutation, while unknown recipients still perform independent test/send classification and incident an unauthorized `broadcast_id` before their recipient transition is ignored;
 - no secret, token, email address, or provider payload appears in logs or public responses;
@@ -641,8 +645,9 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - confirmation generation consumption;
 - delivery-ordinal uniqueness, rolling address ledger, and 30-day `expired_pending` transition;
 - job lease, fencing, retry, and terminal failure behavior;
-- enforced subscription, site-maintenance, and site/team-audit job shapes, plus their leases, validation digest binding, duplicate command replay, and provider-state reconciliation;
-- staff-test window/observation isolation from production validations, keyed allowlist fingerprints, provisional reclassification, and retention without full recipient addresses;
+- enforced subscription, `segment_reconcile`/`contact_audit` site-maintenance, and site/team Broadcast-audit job shapes, plus their leases, validation digest binding, duplicate command replay, and provider-state reconciliation;
+- staff-test window/observation isolation from production validations, keyed allowlist fingerprints, provider-message-scoped disposition reuse, provisional reclassification, and retention without full recipient addresses;
+- production validation foreign-key binding to a confirmed test with the same Broadcast/digest inside the 24-hour test-validity window;
 - validation half-open expiry, provider-timing-pending transitions, single consumption, and post-send validation denial;
 - audit baseline, per-page cursor checkpoint, incomplete-sweep resume, next-run newest restart, and idempotent full-inventory reprocessing;
 - atomic webhook receipt/mutation, rollback/retry after injected crash, deduplication, and monotonic state precedence;
@@ -686,6 +691,8 @@ Acceptance verifies:
 - one authentic double-opt-in flow;
 - Resend Contact/Segment membership and explicit Topic opt-in;
 - Segment reconciliation removes every provider member not backed by an active confirmed Supabase subscription;
+- disabled-mode `newsletter.contact.audit` still observes and records Topic/global withdrawal without provider mutation;
+- the activation Broadcast inventory contains no scheduled, queued, or sent Broadcast;
 - activation-check mode rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator and returns safe digest/readiness evidence without creating a staff-test window, send-valid approval, provider Broadcast mutation, or send;
 - the separate staff-test operation rejects an unconfigured allowlist, maps only to configured staff inboxes, leaves the Broadcast as an unscheduled draft through the fifteen-minute audit recheck, and cannot satisfy a production validation;
 - short-lived dashboard validation, provider-`sent_at` timing, immediate-send policy, scheduled-send incidenting, content-digest mismatch, validation expiry, full-inventory audit detection, and incident containment/lockout have passed controlled provider-fake acceptance and, when provisioned, the wholly separate Preview Resend team;
@@ -707,7 +714,7 @@ Acceptance verifies:
 9. Deploy the verified revision to production with `NEWSLETTER_EMAIL_ENABLED=false`.
 10. Register the production Resend webhook for the approved events and enter `RESEND_WEBHOOK_SECRET` directly in Vercel.
 11. Set the production Segment/Topic identifiers, confirmation keyring, active key identifier, and canonical site URL.
-12. Run the non-mutating database/provider readiness and empty-Segment reconciliation checks.
+12. Run the non-mutating database/provider readiness checks, empty-Segment reconciliation, and complete activation Broadcast inventory; require zero scheduled, queued, or sent Broadcasts.
 13. Enable `NEWSLETTER_EMAIL_ENABLED`, create a fresh deployment, and perform the single authorized authentic signup.
 14. Verify confirmation, Contact/Topic/Segment membership, atomic webhook processing, withdrawal behavior, editor visibility, and public fallback.
 15. Compose a dashboard Broadcast in Resend, run `activation-check`, then run the separate `staff-test` operation to open the configured test window. Use Resend's test-delivery control only for those authorized staff inboxes and wait for the fifteen-minute audit recheck to confirm the Broadcast remained an unscheduled draft. Verify that no send-valid approval, provider Broadcast mutation, or production-Segment send occurred.
@@ -754,13 +761,13 @@ The newsletter is live only when all of the following are true:
 - the application never adds an address to the Resend production Segment before explicit confirmation, and every successful validation proves the Segment contained no ineligible member at that validation boundary;
 - confirmation link fragments are absent from request URLs/logs, session exchange is read-only, and confirmation POST is single-use;
 - confirmed contacts synchronize through a resumable saga into the District Newsletter Segment and explicit default-opt-out Topic opt-in;
-- `contact.updated` and scheduled reconciliation read actual Topic subscriptions, and ordinary retry never reverses a Topic withdrawal;
+- `contact.updated`, hourly Contact audit, and scheduled reconciliation read actual Topic subscriptions, including while outbound work is disabled, and ordinary retry never reverses a Topic withdrawal;
 - bidirectional Segment/Topic reconciliation removes every member without active confirmed Supabase eligibility and fails validation closed on unreadable provider state;
-- staff can compose, test, and immediately send a dashboard Broadcast in Resend without an editor send control, while the Staff Portal validates the exact Broadcast and audience no more than ten minutes before the intended send;
-- staff test delivery is allowlisted, remains distinct from production validation, and is confirmed only while the provider Broadcast stays an unscheduled draft;
+- staff can compose, test, and immediately send a dashboard Broadcast in Resend without an editor send control, while the Staff Portal requires a confirmed test of the exact Broadcast digest within 24 hours and validates that Broadcast/audience no more than ten minutes before the intended send;
+- staff test delivery is allowlisted and provider-message-scoped, remains distinct from production validation, is confirmed only while the provider Broadcast stays an unscheduled draft, and never suppresses retrieval for a later provider message;
 - only provider `sent_at` inside the half-open validation window can classify a production send as matching;
 - the product and runbook explicitly state that validation is point-in-time and that unauthorized or post-validation sends are detected, not technically prevented;
-- activation and recurring full paginated Broadcast inventories detect status changes to pre-existing drafts, while any incident locks validation until schedules, provider access, keys, audit, and two-operator recovery are verified;
+- activation permits no scheduled, queued, or sent Broadcast, and recurring full paginated inventories detect status changes to pre-existing drafts, while any incident locks validation until schedules, provider access, keys, audit, and two-operator recovery are verified;
 - every marketing Broadcast includes unsubscribe and office-contact information;
 - unsubscribe, bounce, complaint, failure, and suppression events are verified and reconciled safely;
 - provider failure produces retryable state and truthful UI rather than simulated success;
