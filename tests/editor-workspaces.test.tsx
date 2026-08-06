@@ -17,6 +17,7 @@ describe("production editor workspace registration", () => {
 
     expect(html).toContain("Overview");
     expect(html).toContain("Submissions");
+    expect(html).toContain("Forms");
     expect(html).toContain("Leads");
     expect(html).toContain("Customers");
     expect(html).toContain("data-growth-live-workspace");
@@ -27,8 +28,9 @@ describe("production editor workspace registration", () => {
     expect(html).not.toContain("sample data");
     expect(html).toContain("Posts use the provisioned live content store");
     expect(html).not.toContain("site-managed posts remain unavailable");
-    expect(html).toContain("Email, SMS, and AI actions remain unavailable");
-    expect(html).toContain("Providers unavailable");
+    expect(html).toContain("Newsletter email uses Resend");
+    expect(html).toContain("SMS and AI actions remain unavailable");
+    expect(html).toContain("Resend newsletter");
     expect(html).toContain("Survey unavailable");
     expect(html).toContain("<details");
     expect(html).toContain("Sign out and revoke editor session");

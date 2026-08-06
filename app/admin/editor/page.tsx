@@ -23,6 +23,7 @@ const EDITOR_WORKSPACES = new Set([
   "website.media",
   "website.history",
   "website.submissions",
+  "website.forms",
   "growth.dashboard",
   "growth.leads",
   "growth.customers"

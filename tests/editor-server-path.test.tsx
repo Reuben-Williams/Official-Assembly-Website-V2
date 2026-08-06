@@ -31,6 +31,20 @@ describe("server-owned editor path", () => {
     expect(page.props.initialPath).toBe("/404");
   });
 
+  it("preserves a direct Forms workspace return path", async () => {
+    const page = await AdminEditorPage({
+      searchParams: Promise.resolve({ workspace: "website.forms" })
+    });
+    expect(page.props.initialPath).toBe("/");
+
+    vi.mocked(authenticateBuilderRequest).mockResolvedValueOnce(null);
+    await expect(AdminEditorPage({
+      searchParams: Promise.resolve({ workspace: "website.forms" })
+    })).rejects.toThrow(
+      "REDIRECT:/admin/login?returnTo=%2Fadmin%2Feditor%3Fworkspace%3Dwebsite.forms"
+    );
+  });
+
   it("preserves a validated bookmarked page through staff sign-in", async () => {
     vi.mocked(authenticateBuilderRequest).mockResolvedValueOnce(null);
 

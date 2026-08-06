@@ -1,0 +1,120 @@
+// @vitest-environment jsdom
+
+import React, { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { NewsletterOperationsWorkspace } from "../app/admin/editor/newsletter-operations-workspace";
+import { createNewsletterOperationsClient } from "../lib/newsletter/operations-client";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const digest = "a".repeat(64);
+const status = {
+  version: 1 as const,
+  queuedJobs: 2,
+  openIncidents: 0,
+  confirmedTest: {
+    id: "34700000-0000-4000-8000-000000000001",
+    providerBroadcastId: "broadcast_1",
+    digest,
+    confirmedAt: "2026-08-06T18:00:00.000Z"
+  },
+  validation: {
+    id: "34400000-0000-4000-8000-000000000001",
+    providerBroadcastId: "broadcast_1",
+    digest,
+    audienceCount: 125,
+    validatedAt: "2026-08-06T18:01:00.000Z",
+    validUntil: "2026-08-06T18:11:00.000Z",
+    state: "valid",
+    readinessRevisionId: "34100000-0000-4000-8000-000000000001"
+  }
+};
+
+let host: HTMLDivElement;
+let root: Root;
+
+beforeEach(() => {
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+});
+
+afterEach(async () => {
+  await act(async () => root.unmount());
+  host.remove();
+  vi.unstubAllGlobals();
+});
+
+async function settle() {
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+}
+
+describe("newsletter operations workspace", () => {
+  it("shows bounded live status and owner-only operational controls", async () => {
+    const client = {
+      status: vi.fn(async () => status),
+      activationCheck: vi.fn(),
+      openStaffTestWindow: vi.fn(async () => ({ state: "open" as const, windowId: "window_1" })),
+      validate: vi.fn()
+    };
+    await act(async () => root.render(
+      <NewsletterOperationsWorkspace client={client} role="owner" />
+    ));
+    await settle();
+
+    expect(host.textContent).toContain("Newsletter operations");
+    expect(host.textContent).toContain("2 queued jobs");
+    expect(host.textContent).toContain("125 confirmed subscribers");
+    expect(host.textContent).toContain("aaaaaaaaaaaa…");
+    expect(host.textContent).not.toContain(digest);
+    expect(host.textContent).not.toContain("message body");
+    expect(host.querySelector('a[href="https://resend.com/broadcasts"]')?.textContent).toContain("Open Resend");
+    expect(Array.from(host.querySelectorAll("button")).map((button) => button.textContent)).toEqual(
+      expect.arrayContaining(["Run activation check", "Open staff test window", "Validate newsletter"])
+    );
+  });
+
+  it("keeps non-owner roles read-only and exposes loading and error states", async () => {
+    let rejectStatus!: (reason: Error) => void;
+    const client = {
+      status: vi.fn(() => new Promise<typeof status>((_, reject) => { rejectStatus = reject; })),
+      activationCheck: vi.fn(),
+      openStaffTestWindow: vi.fn(),
+      validate: vi.fn()
+    };
+    await act(async () => root.render(
+      <NewsletterOperationsWorkspace client={client} role="viewer" />
+    ));
+    expect(host.textContent).toContain("Loading live newsletter status");
+    expect(host.textContent).toContain("Read-only access");
+    expect(host.textContent).not.toContain("Open staff test window");
+    expect(host.textContent).not.toContain("Validate newsletter");
+
+    rejectStatus(new Error("secret provider payload"));
+    await settle();
+    expect(host.textContent).toContain("Newsletter status is temporarily unavailable");
+    expect(host.textContent).not.toContain("secret provider payload");
+  });
+
+  it("sends same-origin JSON mutations with the editor CSRF header", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ state: "open", windowId: "window_1" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createNewsletterOperationsClient(() => "csrf-token");
+    await client.openStaffTestWindow("broadcast_1", "34200000-0000-4000-8000-000000000001");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/newsletter/operations/staff-test",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: expect.objectContaining({
+          "content-type": "application/json",
+          "x-builder-csrf": "csrf-token"
+        })
+      })
+    );
+  });
+});
