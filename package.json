@@ -15,7 +15,8 @@
     "test:db": "supabase test db --local",
     "test:newsletter": "vitest run newsletter && npm run test:db && node scripts/check-newsletter-boundaries.mjs",
     "test:e2e": "npm run build && playwright test",
-    "verify:platform-migrations": "node scripts/verify-platform-migration-checksums.mjs"
+    "verify:platform-migrations": "node scripts/verify-platform-migration-checksums.mjs",
+    "verify:production-migrations": "node scripts/verify-production-migration-lineage.mjs"
   },
   "dependencies": {
     "@reuben-williams/content": "0.2.2",

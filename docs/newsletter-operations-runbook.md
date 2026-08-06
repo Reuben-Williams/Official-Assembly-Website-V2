@@ -108,14 +108,16 @@ Before enablement, an authorized reviewer must approve the notice and these exac
 
 ## Database migration gate
 
-1. Authenticate and link the Supabase CLI as a project owner.
-2. Run `npx supabase migration list --linked` and compare remote/local history.
-3. Stop on any missing, reordered, or remote-only migration. Do not repair history or push through a mismatch without review.
-4. Review the additive diff with `npx supabase db push --linked --dry-run`.
-5. Apply with `npx supabase db push --linked` only after the dry run contains the reviewed platform baseline and newsletter migrations.
-6. Run remote database lint/advisors, verify every newsletter table has RLS, and verify browser roles have no newsletter-table privileges.
-7. Confirm the service-role-only RPC grants and non-mutating public readiness RPC.
-8. Run the site installation/reconciliation workflow, then publish the exact managed newsletter form revision from the privacy gate.
+1. Run `npm run verify:production-migrations`. This pins the exact production lineage and rejects extra SQL files in the deployable directory.
+2. Treat `supabase/optional-platform-migrations` as provenance-only. Those modules are not approved for this production database and must not be moved into `supabase/migrations` without a separate review.
+3. Authenticate and link the Supabase CLI as a project owner.
+4. Run `npx supabase migration list --linked` and compare remote/local history.
+5. Stop on any missing, reordered, or remote-only migration. Do not repair history or push through a mismatch without review.
+6. Review the additive diff with `npx supabase db push --linked --dry-run`.
+7. Apply with `npx supabase db push --linked` only after the dry run contains exactly the three reviewed newsletter migrations.
+8. Run remote database lint/advisors, verify every newsletter table has RLS, and verify browser roles have no newsletter-table privileges.
+9. Confirm the service-role-only RPC grants and non-mutating public readiness RPC.
+10. Run the site installation/reconciliation workflow, then publish the exact managed newsletter form revision from the privacy gate.
 
 Do not reset, squash, drop, or destructively roll back the remote database. Corrections are additive roll-forward migrations.
 

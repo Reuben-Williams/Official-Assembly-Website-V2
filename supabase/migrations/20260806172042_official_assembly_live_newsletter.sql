@@ -1429,5 +1429,11 @@ to service_role;
 
 -- Bring the pre-existing reviewed-consent import onto the same immutable
 -- resolution rule as the new newsletter service surface.
-alter function public.builder_import_newsletter_consent_v1(jsonb)
-  set search_path = '';
+do $$
+begin
+  if to_regprocedure('public.builder_import_newsletter_consent_v1(jsonb)') is not null then
+    alter function public.builder_import_newsletter_consent_v1(jsonb)
+      set search_path = '';
+  end if;
+end;
+$$;
