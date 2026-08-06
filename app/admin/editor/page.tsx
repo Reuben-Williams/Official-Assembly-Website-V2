@@ -11,8 +11,39 @@ import { resolveEditorPagePath } from "./editor-path";
 export const dynamic = "force-dynamic";
 
 type AdminEditorPageProps = {
-  searchParams: Promise<{ path?: string | string[] }>;
+  searchParams: Promise<{
+    path?: string | string[];
+    workspace?: string | string[];
+  }>;
 };
+
+const EDITOR_WORKSPACES = new Set([
+  "website.pages",
+  "website.posts",
+  "website.media",
+  "website.history",
+  "website.submissions",
+  "growth.dashboard",
+  "growth.leads",
+  "growth.customers"
+]);
+
+function firstSearchValue(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  return value?.[0] ?? null;
+}
+
+function editorReturnPath(
+  query: Awaited<AdminEditorPageProps["searchParams"]>,
+  initialPath: string
+): string {
+  const parameters = new URLSearchParams();
+  const workspace = firstSearchValue(query.workspace);
+  if (workspace && EDITOR_WORKSPACES.has(workspace)) parameters.set("workspace", workspace);
+  if (query.path !== undefined) parameters.set("path", initialPath);
+  const suffix = parameters.toString();
+  return suffix ? `/admin/editor?${suffix}` : "/admin/editor";
+}
 
 export default async function AdminEditorPage({ searchParams }: AdminEditorPageProps) {
   const query = await searchParams;
@@ -24,7 +55,10 @@ export default async function AdminEditorPage({ searchParams }: AdminEditorPageP
   const identity = await authenticateBuilderRequest(new Request(`${origin}/admin/editor`, {
     headers: { cookie: incoming.get("cookie") ?? "" }
   }));
-  if (!identity) redirect("/admin/login?returnTo=%2Fadmin%2Feditor");
+  if (!identity) {
+    const loginParameters = new URLSearchParams({ returnTo: editorReturnPath(query, initialPath) });
+    redirect(`/admin/login?${loginParameters}`);
+  }
   const client = getBuilderAdminClient();
   const linkablePosts = client ? toLinkablePosts(await listPublishedPosts(client)) : [];
   return (
