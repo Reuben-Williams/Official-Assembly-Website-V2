@@ -1,6 +1,5 @@
 import {
-  createPublicFormSubmissionRoute,
-  createSupabasePublicFormIngestionService
+  createPublicFormSubmissionRoute
 } from "@reuben-williams/next/forms/server";
 import {
   createCloudflareTurnstileVerifier,
@@ -15,6 +14,9 @@ import {
   isManagedPublicFormKey
 } from "../../../../lib/builder/forms";
 import { allowedBuilderOrigins } from "../../../../lib/builder/authorization";
+import { readNewsletterConfiguration } from "../../../../lib/newsletter/config";
+import { createManagedPublicFormIngestionService } from "../../../../lib/newsletter/ingestion";
+import { readNewsletterPublicReadiness } from "../../../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,16 @@ export async function POST(
 
   const siteId = await resolveBuilderSiteId(admin);
   if (!siteId) return unavailable();
+  const newsletterConfiguration = readNewsletterConfiguration();
+  if (type === "newsletter") {
+    if (newsletterConfiguration.status !== "ready") return unavailable();
+    const readiness = await readNewsletterPublicReadiness(
+      admin,
+      siteId,
+      newsletterConfiguration
+    );
+    if (readiness.status !== "ready") return unavailable();
+  }
   const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? request.url).hostname;
   const repository = createSupabasePublishedFormRepository({
     client: admin,
@@ -66,7 +78,14 @@ export async function POST(
       expectedHostname: hostname,
       expectedAction: definition.action
     }),
-    ingestion: createSupabasePublicFormIngestionService(admin, { mode: "strict" }),
+    ingestion: createManagedPublicFormIngestionService({
+      type,
+      client: admin,
+      confirmationKeyId:
+        newsletterConfiguration.status === "ready"
+          ? newsletterConfiguration.activeKeyId
+          : "contact-only"
+    }),
     rateLimits: {
       network: { limit: 10, windowMs: 3_600_000 },
       identity: { limit: 5, windowMs: 3_600_000 }

@@ -7,6 +7,8 @@ import {
   getManagedFormDefinition,
   loadManagedFormProjection
 } from "../../lib/builder/forms";
+import { readNewsletterConfiguration } from "../../lib/newsletter/config";
+import { readNewsletterPublicReadiness } from "../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../lib/supabase/admin";
 
 type ResidentFormsProps = {
@@ -45,6 +47,12 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
 
   const siteId = await resolveBuilderSiteId(client);
   if (!siteId) return <Unavailable />;
+  if (type === "newsletter") {
+    const configuration = readNewsletterConfiguration();
+    if (configuration.status !== "ready") return <Unavailable />;
+    const readiness = await readNewsletterPublicReadiness(client, siteId, configuration);
+    if (readiness.status !== "ready") return <Unavailable />;
+  }
 
   const repository = createSupabasePublishedFormRepository({
     client,
