@@ -25,11 +25,12 @@ The rollback target recorded before this release is Vercel deployment `dpl_333Wr
 At the August 6 audit:
 
 - Vercel project `assemblywomanmorales` is linked locally.
-- `RESEND_API_KEY` exists as a Sensitive variable in both Preview and Production. It is a legacy, overly broad name and makes the new application fail closed. Remove it from Preview immediately and revoke it in Resend after purpose-specific replacement keys are installed.
+- The legacy combined `RESEND_API_KEY` variable was removed from Preview and Production on August 6, 2026. Vercel removed both scopes together when Preview containment was applied. No Resend credential is currently present in Vercel; revoke the old key in Resend after confirming it has no other approved consumer.
 - The required purpose-specific newsletter variables are not yet present.
 - `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`, Supabase browser/server variables, and existing builder variables are present.
 - The local checkout is not linked or authenticated to the remote Supabase project. A Supabase owner must run `supabase login` and `supabase link --project-ref <project-ref>` before remote migration review or application.
 - The exact privacy and consent wording below still requires human approval before enablement.
+- Disabled Preview deployment `dpl_5m1YdV87Avg98DBGFgHMf8bSc3QF` passed the direct newsletter, privacy, confirmation, and protected Forms route checks.
 
 Never record API keys, confirmation key material, subscriber addresses, message bodies, raw webhook payloads, or full recipient lists in release evidence.
 
@@ -67,17 +68,13 @@ npx vercel env add NEWSLETTER_TEST_RECIPIENTS production --sensitive
 npx vercel env add NEWSLETTER_EMAIL_ENABLED production --value false --yes
 ```
 
-Remove the legacy Preview key without printing it:
+Verify the legacy variable remains absent without printing any value:
 
 ```powershell
-npx vercel env rm RESEND_API_KEY preview --yes
+npx vercel env ls
 ```
 
-After the two replacements are installed and a disabled deployment is healthy, remove the legacy Production variable and revoke the old key in Resend:
-
-```powershell
-npx vercel env rm RESEND_API_KEY production --yes
-```
+After the two replacements are installed and a disabled deployment is healthy, revoke the old key in Resend after confirming it has no other approved consumer.
 
 Every environment-variable change requires a fresh deployment.
 
