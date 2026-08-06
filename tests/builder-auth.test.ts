@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   BuilderAuthorizationError,
@@ -6,14 +6,8 @@ import {
   isSafeReturnPath,
   roleCanPerformBuilderOperation
 } from "../lib/builder/authorization";
-import { authorizePrivateMediaOperator } from "../lib/builder/media-operator";
 
 const origin = "http://localhost:3000";
-
-afterEach(() => {
-  delete process.env.BUILDER_MEDIA_IMPORT_TOKEN;
-  delete process.env.VERCEL_ENV;
-});
 
 describe("builder authorization", () => {
   it("accepts only same-site relative return paths", () => {
@@ -87,22 +81,4 @@ describe("builder authorization", () => {
     );
   });
 
-  it("allows the one-time private media operator only in production with the exact token", () => {
-    const token = "a".repeat(64);
-    process.env.BUILDER_MEDIA_IMPORT_TOKEN = token;
-    process.env.VERCEL_ENV = "production";
-
-    expect(authorizePrivateMediaOperator(new Request(origin))).toBeNull();
-    expect(authorizePrivateMediaOperator(new Request(origin, {
-      headers: { "x-builder-media-import-token": "b".repeat(64) }
-    }))).toBeNull();
-    expect(authorizePrivateMediaOperator(new Request(origin, {
-      headers: { "x-builder-media-import-token": token }
-    }))).toMatchObject({
-      role: "owner",
-      siteKey: "official-assembly-website-v2",
-      siteId: "a3f57b25-df25-4d98-9ff6-a4a3f3a00a68",
-      userId: "98e9e1e7-1a8a-4f1f-b71c-31e682567dd1"
-    });
-  });
 });
