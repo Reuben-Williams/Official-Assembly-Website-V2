@@ -10,7 +10,7 @@ import {
   createSecuredBuilderHandlers,
   createSiteKeyResolvingAdapter
 } from "../../../lib/builder/repositories";
-import { getBuilderAdminClient } from "../../../lib/supabase/admin";
+import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,6 +41,17 @@ function createHandlers(request: Request) {
       const identity = await authenticateBuilderRequest(authorizedRequest);
       if (!identity) throw new Error("A verified editor identity is required.");
       return identity.userId;
+    },
+    validateLinkedPost: async (entryId: string) => {
+      const siteId = await resolveBuilderSiteId(admin);
+      if (!siteId) return false;
+      const result = await admin
+        .from("builder_public_posts")
+        .select("entry_id")
+        .eq("site_id", siteId)
+        .eq("entry_id", entryId)
+        .maybeSingle();
+      return !result.error && Boolean(result.data?.entry_id);
     }
   });
 }

@@ -264,7 +264,7 @@ export const pages: PageContent[] = [
     title: "Legislative and District Updates",
     eyebrow: "Official Sources",
     description:
-      "Use the New Jersey Legislature record for current bills, votes, committees, and public proceedings. Site-managed posts are not yet available.",
+      "Read published district office updates and use the New Jersey Legislature record for current bills, votes, committees, and public proceedings.",
     imageKey: "voteBoard",
     cards: [
       {

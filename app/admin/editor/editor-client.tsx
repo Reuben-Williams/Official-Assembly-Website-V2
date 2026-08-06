@@ -6,6 +6,7 @@ import {
   createHttpAttachedSiteEditorClient,
   type BuilderShellRegistration,
   type BuilderWorkspaceId,
+  type LinkablePost,
   type RegisteredWorkspace
 } from "@reuben-williams/editor";
 import { growthCustomersModule } from "@reuben-williams/growth-customers";
@@ -14,9 +15,12 @@ import { growthLeadsModule } from "@reuben-williams/growth-leads";
 import { useMemo, useState } from "react";
 
 import site from "../../../builder.config";
+import { createHttpPostsClient } from "../../../lib/builder/posts-client";
+import { createHttpMediaUploadClient } from "../../../lib/builder/media-client";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
-import { createHttpPostsClient } from "../../../lib/builder/posts-client";
+import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
+import { EditorOperationalHeader } from "./editor-operational-header";
 import {
   LiveCustomersWorkspace,
   LiveDashboardWorkspace,
@@ -37,24 +41,41 @@ export function editorPageNavigation(currentPath: string, onPageChange: (path: s
 }
 
 export function EditorClient({
+  initialLinkablePosts,
   memberId,
   previewBaseUrl,
   role
 }: {
+  initialLinkablePosts: LinkablePost[];
   memberId: string;
   previewBaseUrl: string;
   role: "owner" | "editor" | "contributor" | "viewer";
 }) {
-  const [endingSession, setEndingSession] = useState(false);
   const [currentPath, setCurrentPath] = useState("/");
-  const client = useMemo(() => createHttpAttachedSiteEditorClient({
-    baseUrl: "/api/builder",
-    getCsrfToken: csrfCookie
-  }), []);
+  const [linkablePosts, setLinkablePosts] = useState(initialLinkablePosts);
+  const client = useMemo(() => {
+    const attached = createHttpAttachedSiteEditorClient({
+      baseUrl: "/api/builder",
+      getCsrfToken: csrfCookie
+    });
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return attached;
+    const media = createHttpMediaUploadClient({
+      baseUrl: "/api/builder/media",
+      getCsrfToken: csrfCookie,
+      storage: supabase.storage.from("builder-media")
+    });
+    return {
+      ...attached,
+      uploadMedia: media.uploadMedia,
+      ...(role === "owner" ? { uploadMediaBatch: media.uploadMediaBatch } : {})
+    };
+  }, [role]);
   const growth = useMemo(() => createLiveGrowthClient(site.siteId), []);
   const posts = useMemo(() => createHttpPostsClient({
     baseUrl: "/api/builder/posts",
-    getCsrfToken: csrfCookie
+    getCsrfToken: csrfCookie,
+    onLinkablePostsChanged: setLinkablePosts
   }), []);
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
@@ -76,48 +97,30 @@ export function EditorClient({
         mobilePriority: 4, status: "active", render: () => <LiveSubmissionsWorkspace {...props} />
       }
     ];
-    return { modules: [GROWTH_DASHBOARD_MODULE, growthLeadsModule, growthCustomersModule], workspaces };
+    return {
+      modules: [GROWTH_DASHBOARD_MODULE, growthLeadsModule, growthCustomersModule],
+      workspaces,
+      globalHeader: <EditorOperationalHeader />
+    };
   }, [growth, memberId, role]);
   const initialWorkspace = (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;
-
-  async function signOut() {
-    setEndingSession(true);
-    const response = await fetch("/api/builder/session", {
-      method: "DELETE",
-      credentials: "same-origin",
-      cache: "no-store"
-    });
-    if (response.ok) window.location.replace("/admin/login");
-    else setEndingSession(false);
-  }
 
   return (
     <AttachedSiteEditor
       client={client}
       {...editorPageNavigation(currentPath, setCurrentPath)}
       initialWorkspace={initialWorkspace}
+      linkablePosts={linkablePosts}
       postsWorkspace={<AttachedPostsWorkspace client={posts} />}
       previewBaseUrl={previewBaseUrl}
       registration={registration}
       site={site}
       userViewUrl="/"
-    >
-      <div className="editor-attachment-note">
-        <p>
-          Contact and newsletter use approved managed-form templates. Posts use the provisioned live
-          content store. The survey remains unavailable until separately approved and provisioned.
-        </p>
-        <p>
-          Dashboard, submissions, leads, and customers use live production storage. No synthetic
-          or placeholder records are loaded. Email, SMS, and AI actions remain unavailable because
-          external providers are not configured; no outbound provider work runs from this release.
-        </p>
-        <button disabled={endingSession} onClick={signOut} type="button">
-          {endingSession ? "Ending session…" : "Sign out and revoke editor session"}
-        </button>
-      </div>
-    </AttachedSiteEditor>
+      mediaBatchUploadUnavailableReason={role === "owner"
+        ? "Private folder import is unavailable until the media service is configured."
+        : "Folder import is available to site owners only. Individual uploads remain available for authorized staff."}
+    />
   );
 }

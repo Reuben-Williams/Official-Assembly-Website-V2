@@ -7,6 +7,7 @@ describe("production editor workspace registration", () => {
   it("hosts the live workspaces without demo or setup placeholder data", () => {
     const html = renderToStaticMarkup(
       <EditorClient
+        initialLinkablePosts={[]}
         memberId="11111111-1111-4111-8111-111111111111"
         previewBaseUrl="https://assemblywomanmorales.vercel.app"
         role="owner"
@@ -26,5 +27,10 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("Posts use the provisioned live content store");
     expect(html).not.toContain("site-managed posts remain unavailable");
     expect(html).toContain("Email, SMS, and AI actions remain unavailable");
+    expect(html).toContain("Providers unavailable");
+    expect(html).toContain("Survey unavailable");
+    expect(html).toContain("<details");
+    expect(html).toContain("Sign out and revoke editor session");
+    expect(html).not.toContain("editor-attachment-note");
   });
 });

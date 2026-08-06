@@ -12,13 +12,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@reuben-williams/core": "0.2.1",
-    "@reuben-williams/editor": "0.2.1",
-    "@reuben-williams/forms": "0.2.1",
-    "@reuben-williams/growth-customers": "0.2.1",
-    "@reuben-williams/growth-dashboard": "0.2.1",
-    "@reuben-williams/growth-leads": "0.2.1",
-    "@reuben-williams/next": "0.2.1",
+    "@reuben-williams/core": "0.2.2",
+    "@reuben-williams/content": "0.2.2",
+    "@reuben-williams/editor": "0.2.2",
+    "@reuben-williams/forms": "0.2.2",
+    "@reuben-williams/growth-customers": "0.2.2",
+    "@reuben-williams/growth-dashboard": "0.2.2",
+    "@reuben-williams/growth-leads": "0.2.2",
+    "@reuben-williams/next": "0.2.2",
     "@supabase/ssr": "0.12.4",
     "@supabase/supabase-js": "2.111.0",
     "@tiptap/core": "3.29.2",
@@ -48,11 +49,12 @@
     "lucide-react": "^0.468.0",
     "next": "16.3.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@reuben-williams/cli": "0.2.1",
+    "@reuben-williams/cli": "0.2.2",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

@@ -197,6 +197,7 @@ export function createSecuredBuilderHandlers(input: {
   adapter: BuilderContentAdapter;
   authorize: Parameters<typeof createBuilderRouteHandlers>[0]["authorize"];
   getUserId: NonNullable<Parameters<typeof createBuilderRouteHandlers>[0]["getUserId"]>;
+  validateLinkedPost?: (entryId: string) => Promise<boolean>;
 }) {
   const base = createBuilderRouteHandlers(input);
 
@@ -225,6 +226,15 @@ export function createSecuredBuilderHandlers(input: {
           }
         }
         const { expectedVersionId: _expected, ...sanitized } = body;
+        const editableValue = body.value as EditableValue;
+        const postEntryId = editableValue.type === "link"
+          ? editableValue.postEntryId
+          : editableValue.type === "sections" || editableValue.type === "postCollection"
+            ? undefined
+            : editableValue.link?.postEntryId;
+        if (postEntryId && input.validateLinkedPost && !(await input.validateLinkedPost(postEntryId))) {
+          return jsonError(409, "POST_UNAVAILABLE", "The selected post is no longer available to link.");
+        }
         return base.POST(recreatedRequest(request, sanitized));
       });
     },

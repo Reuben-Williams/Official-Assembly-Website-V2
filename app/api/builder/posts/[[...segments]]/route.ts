@@ -199,6 +199,22 @@ async function handleGet(request: Request, segments: string[]) {
   if (segments.length === 1) return response(await editablePost(client, identity, segments[0]));
   if (segments.length !== 0) return response({ error: { code: "ROUTE_NOT_FOUND", message: "Post route not found." } }, 404);
 
+  if (new URL(request.url).searchParams.get("scope") === "linkable") {
+    const publishedResult = await client
+      .from("builder_public_posts")
+      .select("entry_id, title, slug, expires_at")
+      .eq("site_id", identity.siteId)
+      .order("display_date", { ascending: false });
+    if (publishedResult.error) throw publishedResult.error;
+    return response((publishedResult.data ?? []).map((post) => ({
+      id: String(post.entry_id),
+      title: String(post.title),
+      href: `/news/${String(post.slug)}`,
+      status: "published",
+      expiresAt: post.expires_at ? String(post.expires_at) : null
+    })));
+  }
+
   const entriesResult = await client
     .from("builder_entries")
     .select("id, status, active_draft_version_id, active_published_version_id, updated_at")

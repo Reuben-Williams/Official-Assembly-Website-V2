@@ -70,4 +70,33 @@ describe("secured builder route handlers", () => {
       currentVersionId: "current-version"
     });
   });
+
+  it("revalidates a linked post immediately before saving the page draft", async () => {
+    const base = createInMemoryAdapter();
+    const saveDraft = vi.fn(base.saveDraft.bind(base));
+    const validateLinkedPost = vi.fn(async () => false);
+    const handlers = createSecuredBuilderHandlers({
+      site,
+      adapter: { ...base, saveDraft },
+      authorize: async () => undefined,
+      getUserId: async () => "user-1",
+      validateLinkedPost
+    });
+    const response = await handlers.POST(new Request("http://localhost:3000/api/builder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pagePath: "/",
+        regionId: "home.hero.title",
+        value: {
+          type: "text",
+          value: "District update",
+          link: { href: "/news/district-update", postEntryId: "11111111-1111-4111-8111-111111111111" }
+        }
+      })
+    }));
+    expect(response.status).toBe(409);
+    expect(validateLinkedPost).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111");
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
 });

@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { authenticateBuilderRequest } from "../../../lib/builder/request-auth";
+import { listPublishedPosts, toLinkablePosts } from "../../../lib/builder/published-posts";
+import { getBuilderAdminClient } from "../../../lib/supabase/admin";
 import { EditorClient } from "./editor-client";
 
 export const dynamic = "force-dynamic";
@@ -15,5 +17,14 @@ export default async function AdminEditorPage() {
     headers: { cookie: incoming.get("cookie") ?? "" }
   }));
   if (!identity) redirect("/admin/login?returnTo=%2Fadmin%2Feditor");
-  return <EditorClient memberId={identity.userId} previewBaseUrl={origin} role={identity.role} />;
+  const client = getBuilderAdminClient();
+  const linkablePosts = client ? toLinkablePosts(await listPublishedPosts(client)) : [];
+  return (
+    <EditorClient
+      initialLinkablePosts={linkablePosts}
+      memberId={identity.userId}
+      previewBaseUrl={origin}
+      role={identity.role}
+    />
+  );
 }
