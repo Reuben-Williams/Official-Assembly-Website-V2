@@ -1,4 +1,5 @@
 import Script from "next/script";
+import Link from "next/link";
 import { BuilderForm, UnavailableFormFallback } from "@reuben-williams/next/forms";
 
 import { siteConfig } from "../data/site";
@@ -69,6 +70,19 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
       />
+      {type === "newsletter" ? (
+        <aside className="newsletter-consent-context" aria-label="Newsletter confirmation and privacy notice">
+          <strong>Confirmation is required</strong>
+          <p>
+            Submitting this form creates a pending District Newsletter confirmation request.
+            You are not subscribed until you confirm using the email sent to your inbox.
+          </p>
+          <p>
+            Review how the office and Resend handle newsletter information in the <Link href="/privacy">privacy notice</Link>.
+            Every District Newsletter includes an unsubscribe link.
+          </p>
+        </aside>
+      ) : null}
       <BuilderForm
         className="builder-public-form"
         endpoint={`/api/forms/${result.projection.formKey}`}

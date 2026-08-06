@@ -38,4 +38,12 @@ describe("site data", () => {
       expect(publicCopy).not.toContain(blockedTerm);
     }
   });
+
+  it("describes newsletter double opt-in without claiming a submission is subscribed", () => {
+    const newsletter = pages.find((page) => page.slug === "newsletter");
+    const copy = JSON.stringify(newsletter);
+    expect(copy).toContain("confirmation request");
+    expect(copy).toContain("not an active subscription");
+    expect(copy).not.toContain("will be available after");
+  });
 });

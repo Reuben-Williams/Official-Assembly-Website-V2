@@ -58,6 +58,7 @@ export function AppFooter() {
           <p data-builder-region="global.footer.communication-body" data-builder-kind="text">
             Call {siteConfig.phoneDisplay} for district office assistance.
           </p>
+          <p className="footer-policy-link"><Link href="/privacy">Privacy</Link></p>
           <Link
             className="staff-portal-link"
             data-staff-portal="true"

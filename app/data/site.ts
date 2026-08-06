@@ -398,19 +398,19 @@ export const pages: PageContent[] = [
     title: "District Newsletter",
     eyebrow: "Stay Informed",
     description:
-      "A newsletter signup will be available after the district office approves the subscription policy and publishing workflow.",
+      "District Newsletter emails share legislative information, public services, and district events. The live form uses an explicit confirmation request before any subscription becomes active.",
     imageKey: "eventGroup",
     cards: [
       {
         id: "district-updates",
         title: "District Updates",
-        text: "The planned newsletter will cover legislative information, public services, and district events.",
+        text: "District Newsletter emails cover legislative information, public services, and district events.",
         icon: Megaphone
       },
       {
         id: "subscriber-preferences",
         title: "Consent and Preferences",
-        text: "Signup requires explicit email consent and a published privacy policy before submissions can be accepted.",
+        text: "Submitting the form creates a confirmation request, not an active subscription. Every newsletter includes an unsubscribe link.",
         icon: CheckCircle2
       }
     ]

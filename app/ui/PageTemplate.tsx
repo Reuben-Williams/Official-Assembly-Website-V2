@@ -113,20 +113,22 @@ export async function PageTemplate({ page }: PageTemplateProps) {
                 data-builder-region="global.template.form-eyebrow"
                 data-builder-kind="text"
               >
-                Resident Form
+                {formType === "newsletter" ? "Email Updates" : "Resident Form"}
               </p>
               <h2
                 data-builder-region="global.template.form-title"
                 data-builder-kind="text"
               >
-                District office intake
+                {formType === "newsletter" ? "Request District Newsletter emails" : "District office intake"}
               </h2>
               <p
                 className="lead"
                 data-builder-region="global.template.form-body"
                 data-builder-kind="text"
               >
-                Online submission is shown only when an approved form revision and verification service are available.
+                {formType === "newsletter"
+                  ? "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
+                  : "Online submission is shown only when an approved form revision and verification service are available."}
               </p>
             </div>
             <div
