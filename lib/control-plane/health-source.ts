@@ -55,11 +55,9 @@ export function createOfficialAssemblyHealthSource(
       };
     },
     async probeIntegrations() {
-      return {
-        email: "disconnected",
-        sms: "disconnected",
-        ai: "disconnected"
-      };
+      // Optional providers are absent from installation health until configured.
+      // Their unavailable state is surfaced in the staff workspace instead.
+      return {};
     }
   };
 }

@@ -36,6 +36,7 @@ describe("installation runtime cron boundary", () => {
   });
 
   it("returns only a sanitized unavailable response on runtime failure", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const GET = createInstallationCronHandler({
       secret: "cron-secret",
       runtimeFactory: () => ({ runScheduled: async () => { throw new Error("private detail"); } })
@@ -47,5 +48,11 @@ describe("installation runtime cron boundary", () => {
 
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("private detail");
+    expect(errorLog).toHaveBeenCalledWith("installation_runtime_unavailable", {
+      name: "Error",
+      code: null
+    });
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("private detail");
+    errorLog.mockRestore();
   });
 });

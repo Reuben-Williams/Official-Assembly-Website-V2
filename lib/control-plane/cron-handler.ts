@@ -19,6 +19,17 @@ function json(body: Record<string, unknown>, status: number) {
   });
 }
 
+function runtimeDiagnostic(error: unknown) {
+  const record = error && typeof error === "object"
+    ? error as { name?: unknown; code?: unknown }
+    : null;
+  const safeValue = (value: unknown) =>
+    typeof value === "string" && /^[A-Za-z][A-Za-z0-9_.:-]{0,79}$/.test(value)
+      ? value
+      : null;
+  return { name: safeValue(record?.name), code: safeValue(record?.code) };
+}
+
 export function createInstallationCronHandler(input: {
   secret: string | undefined;
   runtimeFactory: RuntimeFactory;
@@ -32,7 +43,8 @@ export function createInstallationCronHandler(input: {
       const runtime = await input.runtimeFactory();
       const result = await runtime.runScheduled();
       return json({ status: "ok", ...result }, 200);
-    } catch {
+    } catch (error) {
+      console.error("installation_runtime_unavailable", runtimeDiagnostic(error));
       return json({ status: "unavailable" }, 503);
     }
   };

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "receiptDigest": "72dae0dd1c24b1335f49f151c1e58761f2b317629e70f987fec2b0d01b47df02",
+  "target": {
+    "provider": "manual",
+    "accountId": "manual",
+    "siteId": "4a4bb4b1057d0488638648c8d3639bf945d9f803563260f5a922a2e420245626",
+    "siteName": "Official Assembly Website V2",
+    "context": "staging",
+    "branch": null,
+    "scopes": [
+      "server-runtime"
+    ]
+  },
+  "names": [
+    "BUILDER_CONTROL_PLANE_URL",
+    "BUILDER_INSTALLATION_ID",
+    "BUILDER_INSTALLATION_KEY_ID",
+    "BUILDER_INSTALLATION_PRIVATE_JWK"
+  ],
+  "acknowledgedAt": "2026-08-05T23:36:58.713Z"
+}

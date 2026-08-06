@@ -14,3 +14,5 @@ morales4assembly_contact_sheet.jpg
 
 .vercel
 .env*
+.builder/secrets/
+.builder/installation-registration.json
