@@ -8,6 +8,7 @@ describe("production editor workspace registration", () => {
     const html = renderToStaticMarkup(
       <EditorClient
         initialLinkablePosts={[]}
+        initialPath="/"
         memberId="11111111-1111-4111-8111-111111111111"
         previewBaseUrl="https://assemblywomanmorales.vercel.app"
         role="owner"

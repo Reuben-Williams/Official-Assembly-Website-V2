@@ -4,11 +4,19 @@ import { redirect } from "next/navigation";
 import { authenticateBuilderRequest } from "../../../lib/builder/request-auth";
 import { listPublishedPosts, toLinkablePosts } from "../../../lib/builder/published-posts";
 import { getBuilderAdminClient } from "../../../lib/supabase/admin";
+import site from "../../../builder.config";
 import { EditorClient } from "./editor-client";
+import { resolveEditorPagePath } from "./editor-path";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminEditorPage() {
+type AdminEditorPageProps = {
+  searchParams: Promise<{ path?: string | string[] }>;
+};
+
+export default async function AdminEditorPage({ searchParams }: AdminEditorPageProps) {
+  const query = await searchParams;
+  const initialPath = resolveEditorPagePath(query.path, site.pages) ?? "/";
   const incoming = await headers();
   const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
   const protocol = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
@@ -22,6 +30,7 @@ export default async function AdminEditorPage() {
   return (
     <EditorClient
       initialLinkablePosts={linkablePosts}
+      initialPath={initialPath}
       memberId={identity.userId}
       previewBaseUrl={origin}
       role={identity.role}

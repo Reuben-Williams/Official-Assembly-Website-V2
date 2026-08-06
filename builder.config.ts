@@ -1459,6 +1459,42 @@ export default {
           "label": "local-photos link"
         }
       ]
+    },
+    {
+      "path": "/404",
+      "label": "404 - Page not found",
+      "regions": [
+        {
+          "id": "404.hero.eyebrow",
+          "kind": "text",
+          "label": "404 eyebrow"
+        },
+        {
+          "id": "404.hero.title",
+          "kind": "text",
+          "label": "404 title"
+        },
+        {
+          "id": "404.hero.body",
+          "kind": "text",
+          "label": "404 description"
+        },
+        {
+          "id": "404.hero.image",
+          "kind": "image",
+          "label": "404 image"
+        },
+        {
+          "id": "404.hero.primary-cta",
+          "kind": "link",
+          "label": "404 primary link"
+        },
+        {
+          "id": "404.hero.secondary-cta",
+          "kind": "link",
+          "label": "404 secondary link"
+        }
+      ]
     }
   ],
   "sections": {

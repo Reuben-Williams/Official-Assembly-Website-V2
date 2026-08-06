@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
 import { headers } from "next/headers";
+import { Suspense } from "react";
 
 import "./globals.css";
 import { AppFooter } from "./ui/AppFooter";
@@ -46,7 +47,9 @@ export default async function RootLayout({
         <AppHeader />
         <main id="main">{children}</main>
         <AppFooter />
-        <BuilderContentBridge />
+        <Suspense fallback={null}>
+          <BuilderContentBridge />
+        </Suspense>
       </body>
     </html>
   );

@@ -12,7 +12,7 @@ import {
 import { growthCustomersModule } from "@reuben-williams/growth-customers";
 import { GROWTH_DASHBOARD_MODULE } from "@reuben-williams/growth-dashboard";
 import { growthLeadsModule } from "@reuben-williams/growth-leads";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import site from "../../../builder.config";
 import { createHttpPostsClient } from "../../../lib/builder/posts-client";
@@ -21,6 +21,7 @@ import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
+import { resolveEditorPagePath } from "./editor-path";
 import {
   LiveCustomersWorkspace,
   LiveDashboardWorkspace,
@@ -37,22 +38,54 @@ function csrfCookie() {
 }
 
 export function editorPageNavigation(currentPath: string, onPageChange: (path: string) => void) {
-  return { currentPath, onPageChange };
+  return {
+    currentPath,
+    onPageChange(path: string) {
+      const normalizedPath = resolveEditorPagePath(path, site.pages);
+      if (!normalizedPath) return;
+      if (normalizedPath === currentPath) return;
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("path", normalizedPath);
+        window.history.pushState({}, "", url);
+      }
+      onPageChange(normalizedPath);
+    }
+  };
 }
 
 export function EditorClient({
   initialLinkablePosts,
+  initialPath,
   memberId,
   previewBaseUrl,
   role
 }: {
   initialLinkablePosts: LinkablePost[];
+  initialPath: string;
   memberId: string;
   previewBaseUrl: string;
   role: "owner" | "editor" | "contributor" | "viewer";
 }) {
-  const [currentPath, setCurrentPath] = useState("/");
+  const [currentPath, setCurrentPath] = useState(
+    () => resolveEditorPagePath(initialPath, site.pages) ?? "/"
+  );
   const [linkablePosts, setLinkablePosts] = useState(initialLinkablePosts);
+  useEffect(() => {
+    const restorePageFromHistory = () => {
+      const url = new URL(window.location.href);
+      const candidate = url.searchParams.get("path");
+      const resolvedPath = resolveEditorPagePath(candidate, site.pages);
+      if (candidate !== null && !resolvedPath) {
+        url.searchParams.set("path", "/");
+        window.history.replaceState({}, "", url);
+      }
+      setCurrentPath(resolvedPath ?? "/");
+    };
+    restorePageFromHistory();
+    window.addEventListener("popstate", restorePageFromHistory);
+    return () => window.removeEventListener("popstate", restorePageFromHistory);
+  }, []);
   const client = useMemo(() => {
     const attached = createHttpAttachedSiteEditorClient({
       baseUrl: "/api/builder",

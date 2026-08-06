@@ -17,6 +17,24 @@ describe("editor recovery contracts", () => {
     expect(setCurrentPath).toHaveBeenCalledWith("/news");
   });
 
+  it("rejects page selections that are not registered editor routes", () => {
+    const setCurrentPath = vi.fn();
+    const navigation = editorPageNavigation("/", setCurrentPath);
+
+    navigation.onPageChange("https://malicious.example/redirect");
+
+    expect(setCurrentPath).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a registered page before changing the controlled preview", () => {
+    const setCurrentPath = vi.fn();
+    const navigation = editorPageNavigation("/", setCurrentPath);
+
+    navigation.onPageChange("/about/");
+
+    expect(setCurrentPath).toHaveBeenCalledWith("/about");
+  });
+
   it("maps the provisioned normalized media schema without legacy columns", () => {
     const assets = mapNormalizedMediaAssets(
       [{

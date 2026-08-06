@@ -12,8 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@reuben-williams/core": "0.2.2",
     "@reuben-williams/content": "0.2.2",
+    "@reuben-williams/core": "0.2.2",
     "@reuben-williams/editor": "0.2.2",
     "@reuben-williams/forms": "0.2.2",
     "@reuben-williams/growth-customers": "0.2.2",
@@ -60,6 +60,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.17.0",
     "eslint-config-next": "16.3.0",
+    "jsdom": "27.0.1",
     "supabase": "2.111.0",
     "typescript": "^5.7.2",
     "vitest": "^4.1.10"
