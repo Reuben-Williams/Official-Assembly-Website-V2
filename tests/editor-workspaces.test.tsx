@@ -23,6 +23,8 @@ describe("production editor workspace registration", () => {
     expect(html).not.toContain("Production setup required");
     expect(html).not.toContain("Demo");
     expect(html).not.toContain("sample data");
+    expect(html).toContain("Posts use the provisioned live content store");
+    expect(html).not.toContain("site-managed posts remain unavailable");
     expect(html).toContain("Email, SMS, and AI actions remain unavailable");
   });
 });

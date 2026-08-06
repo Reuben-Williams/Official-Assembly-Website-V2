@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AttachedPostsWorkspace,
   AttachedSiteEditor,
   createHttpAttachedSiteEditorClient,
   type BuilderShellRegistration,
@@ -15,6 +16,7 @@ import { useMemo, useState } from "react";
 import site from "../../../builder.config";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
+import { createHttpPostsClient } from "../../../lib/builder/posts-client";
 import {
   LiveCustomersWorkspace,
   LiveDashboardWorkspace,
@@ -30,6 +32,10 @@ function csrfCookie() {
   return null;
 }
 
+export function editorPageNavigation(currentPath: string, onPageChange: (path: string) => void) {
+  return { currentPath, onPageChange };
+}
+
 export function EditorClient({
   memberId,
   previewBaseUrl,
@@ -40,11 +46,16 @@ export function EditorClient({
   role: "owner" | "editor" | "contributor" | "viewer";
 }) {
   const [endingSession, setEndingSession] = useState(false);
+  const [currentPath, setCurrentPath] = useState("/");
   const client = useMemo(() => createHttpAttachedSiteEditorClient({
     baseUrl: "/api/builder",
     getCsrfToken: csrfCookie
   }), []);
   const growth = useMemo(() => createLiveGrowthClient(site.siteId), []);
+  const posts = useMemo(() => createHttpPostsClient({
+    baseUrl: "/api/builder/posts",
+    getCsrfToken: csrfCookie
+  }), []);
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
     const workspaces: readonly RegisteredWorkspace[] = [
@@ -85,8 +96,9 @@ export function EditorClient({
   return (
     <AttachedSiteEditor
       client={client}
-      currentPath="/"
+      {...editorPageNavigation(currentPath, setCurrentPath)}
       initialWorkspace={initialWorkspace}
+      postsWorkspace={<AttachedPostsWorkspace client={posts} />}
       previewBaseUrl={previewBaseUrl}
       registration={registration}
       site={site}
@@ -94,8 +106,8 @@ export function EditorClient({
     >
       <div className="editor-attachment-note">
         <p>
-          Contact and newsletter use approved managed-form templates. The survey and site-managed
-          posts remain unavailable until separately approved and provisioned.
+          Contact and newsletter use approved managed-form templates. Posts use the provisioned live
+          content store. The survey remains unavailable until separately approved and provisioned.
         </p>
         <p>
           Dashboard, submissions, leads, and customers use live production storage. No synthetic

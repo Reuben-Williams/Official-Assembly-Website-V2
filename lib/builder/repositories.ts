@@ -2,7 +2,8 @@ import {
   createSupabaseAdapter,
   type BuilderContentAdapter,
   type BuilderSiteConfig,
-  type EditableValue
+  type EditableValue,
+  type MediaAsset
 } from "@reuben-williams/core";
 import { createBuilderRouteHandlers } from "@reuben-williams/next/routes";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,6 +11,91 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { BuilderAuthorizationError } from "./authorization";
 
 const STABLE_REGION = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+
+type NormalizedMediaAssetRow = {
+  id: unknown;
+  site_id: unknown;
+  label: unknown;
+  created_by: unknown;
+  created_at: unknown;
+};
+
+type NormalizedMediaRevisionRow = {
+  media_id: unknown;
+  id: unknown;
+  object_key: unknown;
+  mime_type: unknown;
+  width: unknown;
+  height: unknown;
+  created_at: unknown;
+};
+
+export function mapNormalizedMediaAssets(
+  assetRows: readonly NormalizedMediaAssetRow[],
+  revisionRows: readonly NormalizedMediaRevisionRow[],
+  signedUrls: ReadonlyMap<string, string>
+): MediaAsset[] {
+  const latestRevision = new Map<string, NormalizedMediaRevisionRow>();
+  for (const revision of [...revisionRows].sort((left, right) =>
+    String(right.created_at).localeCompare(String(left.created_at)))) {
+    const mediaId = String(revision.media_id);
+    if (!latestRevision.has(mediaId)) latestRevision.set(mediaId, revision);
+  }
+
+  return assetRows.flatMap((asset) => {
+    const revision = latestRevision.get(String(asset.id));
+    if (!revision) return [];
+    const objectKey = String(revision.object_key);
+    const url = signedUrls.get(objectKey);
+    if (!url) return [];
+    return [{
+      id: String(asset.id),
+      siteId: String(asset.site_id),
+      path: objectKey,
+      url,
+      alt: String(asset.label),
+      label: String(asset.label),
+      mimeType: String(revision.mime_type),
+      source: "upload" as const,
+      ...(revision.width ? { width: Number(revision.width) } : {}),
+      ...(revision.height ? { height: Number(revision.height) } : {}),
+      userId: String(asset.created_by),
+      createdAt: String(asset.created_at)
+    }];
+  });
+}
+
+export async function listNormalizedMediaAssets(
+  client: SupabaseClient,
+  siteId: string
+): Promise<MediaAsset[]> {
+  const assetsResult = await client
+    .from("builder_media_assets")
+    .select("id, site_id, label, created_by, created_at")
+    .eq("site_id", siteId)
+    .is("archived_at", null)
+    .order("created_at", { ascending: false });
+  if (assetsResult.error) throw assetsResult.error;
+  const assets = (assetsResult.data ?? []) as NormalizedMediaAssetRow[];
+  if (assets.length === 0) return [];
+
+  const revisionsResult = await client
+    .from("builder_media_revisions")
+    .select("media_id, id, object_key, mime_type, width, height, created_at")
+    .eq("site_id", siteId)
+    .in("media_id", assets.map((asset) => String(asset.id)))
+    .order("created_at", { ascending: false });
+  if (revisionsResult.error) throw revisionsResult.error;
+  const revisions = (revisionsResult.data ?? []) as NormalizedMediaRevisionRow[];
+  const objectKeys = [...new Set(revisions.map((revision) => String(revision.object_key)))];
+  const signedUrls = new Map<string, string>();
+  await Promise.all(objectKeys.map(async (objectKey) => {
+    const result = await client.storage.from("builder-media").createSignedUrl(objectKey, 60 * 60);
+    if (result.error) throw result.error;
+    if (result.data?.signedUrl) signedUrls.set(objectKey, result.data.signedUrl);
+  }));
+  return mapNormalizedMediaAssets(assets, revisions, signedUrls);
+}
 
 function jsonError(status: number, code: string, message: string, extra?: Record<string, unknown>) {
   return Response.json(
@@ -102,7 +188,7 @@ export function createSiteKeyResolvingAdapter(input: {
     undoRollback: async (value) => base.undoRollback({ ...value, siteId: await siteId() }),
     listAuditLog: async (_site, path) => base.listAuditLog(await siteId(), path),
     createMediaAsset: async (value) => base.createMediaAsset({ ...value, siteId: await siteId() }),
-    listMediaAssets: async () => base.listMediaAssets(await siteId())
+    listMediaAssets: async () => listNormalizedMediaAssets(input.client, await siteId())
   };
 }
 
