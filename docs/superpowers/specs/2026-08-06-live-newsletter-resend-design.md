@@ -295,6 +295,8 @@ The protected release command is available only to an authorized site owner/oper
 4. records the operator, source identifier, digest, requested local dispatch time, and safe review result without retaining another message-body copy; and
 5. enqueues either an immediate `newsletter.broadcast.dispatch` job or, for a schedule at least 15 minutes in the future, a `newsletter.broadcast.preflight` job five minutes before dispatch plus the dispatch job at the requested time.
 
+The same protected surface provides a distinct `validate-only` operation for deployment checks. It performs source retrieval, fixed-field validation, digest calculation, and Segment readiness reconciliation and records a bounded audit result, but its authorization contract forbids creating a Broadcast release, provider Broadcast, preflight/dispatch job, or send. It cannot accept or derive a staff-recipient override.
+
 The future schedule exists only in the site database. Cancelling before the send call atomically marks the local release cancelled and closes its unclaimed jobs. If an API draft was already bound, it remains unsent and is never eligible for a later retry. No provider schedule or send cancellation is necessary.
 
 Preflight retrieves the source again, requires the stored digest to match, reconciles Segment/Topic eligibility, and records readiness. It never sends. Dispatch obtains a lease/fencing token, re-retrieves the source, verifies the approved digest and fixed content contract, runs fresh Segment reconciliation, and confirms the release is neither cancelled nor already dispatched. It then calls Resend's create-Broadcast API **without** `send` or a provider schedule, using a deterministic release marker and the exact retrieved content. Before any send call, the worker persists the returned provider Broadcast identifier under the fencing token, retrieves that exact identifier, verifies `draft` status and the canonical digest, and moves the release to `release-copy-bound`.
@@ -569,6 +571,7 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - Contact/Topic/Segment saga resumes after a timeout at every provider phase and reconciles ambiguous mutations before retry;
 - confirmation-send ambiguity inside and outside Resend's 24-hour idempotency window;
 - topic withdrawal, global withdrawal, authorized global reactivation, Segment removal, deletion, and non-automatic recovery after complaint, bounce, suppression removal, or Contact deletion;
+- `validate-only` enforces operator and content/readiness policy while creating no release, provider Broadcast, preflight/dispatch job, or send;
 - dashboard source draft to exact API release-copy digest binding;
 - duplicate Broadcast release commands, unsent-draft creation timeouts, provider-ID persistence before send, multiple-draft terminal ambiguity, same-ID send-timeout reconciliation, 15-minute local scheduling lead time, local cancellation races, missed dispatches, and final source-digest changes;
 - raw-body webhook signature verification, atomic receipt-plus-mutation, crash rollback, duplicate `svix-id`, and reordered distinct event IDs;
@@ -630,9 +633,9 @@ Acceptance verifies:
 - one authentic double-opt-in flow;
 - Resend Contact/Segment membership and explicit Topic opt-in;
 - Segment reconciliation removes every provider member not backed by an active confirmed Supabase subscription;
-- the protected Broadcast release gate rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator, and binds the dashboard source digest to one unsent API-created release copy and persists its unique provider identifier before any send;
-- locally scheduled dispatch refuses to send when eligibility or source digest changes, honors local cancellation, and never sends automatically after a missed window;
-- webhook and scheduled audit reconciliation map the authorized release copy and raise an incident for an unknown/dashboard-originated send;
+- the protected Broadcast release gate's `validate-only` operation rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator and returns safe digest/readiness evidence without creating a release, provider Broadcast, dispatch job, or send;
+- two-phase API-copy binding, same-ID send retry, locally scheduled dispatch refusal, local cancellation, missed-window behavior, and unauthorized-Broadcast incident handling have passed controlled provider-fake acceptance and, when provisioned, the wholly separate Preview Resend team;
+- production activation performs no production-Segment Broadcast send; the first real release requires a separate authorized operator command after activation;
 - one Resend test delivery of the source draft to authorized staff inboxes only;
 - unsubscribe reconciliation; and
 - no unrelated SMS, AI, survey, or editor send capability became active.
@@ -653,7 +656,7 @@ Acceptance verifies:
 12. Run the non-mutating database/provider readiness and empty-Segment reconciliation checks.
 13. Enable `NEWSLETTER_EMAIL_ENABLED`, create a fresh deployment, and perform the single authorized authentic signup.
 14. Verify confirmation, Contact/Topic/Segment membership, atomic webhook processing, withdrawal behavior, editor visibility, and public fallback.
-15. Compose a draft in Resend, pass the protected release gate, and send one staff test Broadcast to authorized recipients only.
+15. Compose a source draft in Resend and use Resend's dashboard test-delivery control to send only to authorized staff inboxes. Exercise the protected release gate through `validate-only`; verify its contract and readiness result without creating a release, provider Broadcast, dispatch job, or production-Segment send.
 16. Record release evidence and the rollback/disable path.
 
 ## Rollback and Disablement
