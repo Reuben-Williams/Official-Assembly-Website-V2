@@ -13,15 +13,16 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  const sendKey = process.env.RESEND_SEND_API_KEY;
   const client = getBuilderAdminClient();
-  if (!webhookSecret || !client) {
+  if (!webhookSecret || !sendKey || !client) {
     return Response.json({ status: "unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
   }
   const siteId = await resolveBuilderSiteId(client);
   if (!siteId) {
     return Response.json({ status: "unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
   }
-  const resend = new Resend();
+  const resend = new Resend(sendKey);
   const repository = createNewsletterWebhookRepository(client);
   const broadcasts = process.env.RESEND_MANAGEMENT_API_KEY
     ? createProductionNewsletterBroadcastProvider(process.env.RESEND_MANAGEMENT_API_KEY)

@@ -60,6 +60,14 @@ export function inspectNewsletterBoundaries(root) {
       violations,
       file,
       contents,
+      "RESEND_WITHOUT_API_KEY",
+      /new\s+Resend\s*\(\s*\)/g,
+      "Resend clients must be constructed with an explicit server-only API key."
+    );
+    addMatches(
+      violations,
+      file,
+      contents,
       "BROADCAST_MUTATION",
       /\.broadcasts\.(?:create|update|send|schedule|remove|delete)\s*\(/g,
       "Application code may inspect Broadcasts but may not create, mutate, schedule, or send them."

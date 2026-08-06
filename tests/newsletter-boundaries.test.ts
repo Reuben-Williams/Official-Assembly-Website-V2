@@ -24,6 +24,16 @@ function fixture(files: Record<string, string>) {
 }
 
 describe("newsletter release boundaries", () => {
+  it("rejects a Resend client constructed without an explicit API key", () => {
+    const root = fixture({
+      "lib/webhook.ts": 'import { Resend } from "resend";\nconst resend = new Resend();\n'
+    });
+
+    expect(inspectNewsletterBoundaries(root).map((item: { code: string }) => item.code)).toContain(
+      "RESEND_WITHOUT_API_KEY"
+    );
+  });
+
   it("rejects browser Resend imports, public secrets, Broadcast mutations, and unsafe logging", () => {
     const root = fixture({
       "app/client.tsx": '"use client";\nimport { Resend } from "resend";\n',
