@@ -55,6 +55,10 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("Content-Security-Policy", contentSecurityPolicy(nonce));
+  if (request.nextUrl.pathname === "/newsletter/confirm") {
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+  }
   return response;
 }
 
