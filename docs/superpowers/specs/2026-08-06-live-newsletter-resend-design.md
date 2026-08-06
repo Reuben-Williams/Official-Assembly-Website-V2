@@ -54,7 +54,7 @@ Infrastructure readiness is not application readiness. Production newsletter col
 
 ### 1. Double opt-in with site-local consent and Resend Broadcasts — selected
 
-The website records the request as pending, sends a transactional confirmation message, and activates the subscription only after the resident deliberately confirms. Confirmed contacts are synchronized to a dedicated Resend Segment and default-opt-out Topic. Staff composes and tests marketing newsletters in the Resend dashboard; the protected release gate stores the approved digest and site-local schedule, then creates and immediately sends an API release copy at the authorized dispatch boundary.
+The website records the request as pending, sends a transactional confirmation message, and activates the subscription only after the resident deliberately confirms. Confirmed contacts are synchronized to a dedicated Resend Segment and default-opt-out Topic. Staff composes and tests marketing newsletters in the Resend dashboard; the protected release gate stores the approved digest and site-local schedule, then creates an unsent API release copy, persists and verifies its provider identifier, and immediately sends only that known copy at the authorized dispatch boundary.
 
 This has more implementation work than single opt-in, but it provides the clearest proof that the submitted address belongs to a person who wants the newsletter. It also keeps the existing editor submission/customer history aligned with the delivery provider.
 
@@ -89,7 +89,7 @@ Resend is authoritative for:
 
 The public browser never calls Resend. All Resend API access is server-only. Provider-specific code is isolated behind a small newsletter delivery adapter rather than embedded in public components or the shared editor core.
 
-The private editor may display subscription and delivery facts supplied by the site-local database, but it does not gain a campaign composer in this release. Staff opens Resend to compose, preview, and test source drafts. Only the protected site-owned dispatcher creates and immediately sends the API release copy; Resend never owns the future schedule in this release.
+The private editor may display subscription and delivery facts supplied by the site-local database, but it does not gain a campaign composer in this release. Staff opens Resend to compose, preview, and test source drafts. Only the protected site-owned dispatcher creates an unsent API release copy, binds its verified provider identifier, and sends that known copy; Resend never owns the future schedule in this release.
 
 ## Resend Configuration
 
@@ -217,22 +217,28 @@ Database jobs use leases and fencing tokens so two Vercel invocations cannot cla
 
 ## Durable Job Processing
 
-Subscription/provider jobs are scoped to one subscription and support:
+Subscription-scoped jobs require one site and one subscription and support:
 
 - `newsletter.confirmation.send`
 - `newsletter.contact.sync`
 - `newsletter.contact.withdraw`
 - `newsletter.contact.reactivate_global`
 - `newsletter.contact.delete`
+
+Site-scoped provider-maintenance jobs require one site, forbid a subscription or Broadcast release, and support:
+
 - `newsletter.segment.reconcile`
 
-Broadcast dispatch jobs are a separate typed family scoped to one Broadcast release and support:
+Broadcast release jobs require one site and one Broadcast release and support:
 
 - `newsletter.broadcast.preflight`
 - `newsletter.broadcast.dispatch`
+
+Provider Broadcast audit jobs require one site and configured Resend team scope, forbid a subscription or Broadcast release, and support:
+
 - `newsletter.broadcast.audit`
 
-Jobs contain identifiers and safe operational metadata only. They do not duplicate message bodies, raw confirmation tokens, API keys, or full contact records. Subscription jobs require a subscription foreign key and may carry confirmation generation/ordinal fields. Broadcast jobs require a Broadcast release foreign key and forbid subscription, confirmation generation, and delivery ordinal fields. Database check constraints enforce the mutually exclusive subject types.
+Jobs contain identifiers and safe operational metadata only. They do not duplicate message bodies, raw confirmation tokens, API keys, or full contact records. Subscription jobs may carry confirmation generation/ordinal fields. Site-maintenance and provider-audit jobs carry only their site/provider scope and durable cursor or saga state. Broadcast release jobs carry only their release scope. Foreign keys, kind allowlists, and database check constraints enforce all four mutually exclusive subject shapes.
 
 The database tracks queued, leased, completed, retryable-failed, and terminal-failed states; attempt count; next-attempt time; lease owner; lease expiry; provider message/contact identifier; and a bounded non-sensitive failure code.
 
@@ -267,7 +273,7 @@ The message must not claim successful subscription, delivery, legislative endors
 
 ## Broadcast Operating Model
 
-Staff uses Resend's no-code Broadcast editor, not the Site Editor Platform, to compose, preview, and test a **source draft**. Resend does not permit the Broadcast API to send a dashboard-created draft, so the protected site-owned release gate records the reviewed digest and keeps any future schedule in Supabase. At the authorized dispatch time, it creates and immediately sends an API release copy. It never creates a mutable scheduled Broadcast in Resend.
+Staff uses Resend's no-code Broadcast editor, not the Site Editor Platform, to compose, preview, and test a **source draft**. Resend does not permit the Broadcast API to send a dashboard-created draft, so the protected site-owned release gate records the reviewed digest and keeps any future schedule in Supabase. At the authorized dispatch time, it creates an unsent API release copy, persists and verifies that copy's provider identifier, and then immediately sends only that known copy. It never creates a mutable scheduled Broadcast in Resend.
 
 Before a Broadcast can be sent, staff must:
 
@@ -289,17 +295,19 @@ The protected release command is available only to an authorized site owner/oper
 4. records the operator, source identifier, digest, requested local dispatch time, and safe review result without retaining another message-body copy; and
 5. enqueues either an immediate `newsletter.broadcast.dispatch` job or, for a schedule at least 15 minutes in the future, a `newsletter.broadcast.preflight` job five minutes before dispatch plus the dispatch job at the requested time.
 
-The future schedule exists only in the site database. Cancelling before dispatch atomically marks the local release cancelled and closes its unclaimed jobs; no provider cancellation is necessary because no scheduled Resend Broadcast exists.
+The future schedule exists only in the site database. Cancelling before the send call atomically marks the local release cancelled and closes its unclaimed jobs. If an API draft was already bound, it remains unsent and is never eligible for a later retry. No provider schedule or send cancellation is necessary.
 
-Preflight retrieves the source again, requires the stored digest to match, reconciles Segment/Topic eligibility, and records readiness. It never sends. Dispatch obtains a lease/fencing token and repeats every authority check at the actual send boundary: it re-retrieves the source, verifies the approved digest and fixed content contract, runs fresh Segment reconciliation, confirms the release is not cancelled or already dispatched, and only then calls Resend's create-Broadcast API with `send: true`, no provider schedule, a deterministic unique release marker, and the exact retrieved content. The API-created copy is therefore queued/sent immediately and has no staff-editable scheduled interval.
+Preflight retrieves the source again, requires the stored digest to match, reconciles Segment/Topic eligibility, and records readiness. It never sends. Dispatch obtains a lease/fencing token, re-retrieves the source, verifies the approved digest and fixed content contract, runs fresh Segment reconciliation, and confirms the release is neither cancelled nor already dispatched. It then calls Resend's create-Broadcast API **without** `send` or a provider schedule, using a deterministic release marker and the exact retrieved content. Before any send call, the worker persists the returned provider Broadcast identifier under the fencing token, retrieves that exact identifier, verifies `draft` status and the canonical digest, and moves the release to `release-copy-bound`.
 
-Resend Broadcast endpoints do not provide email-style idempotency keys. Dispatch is a resumable saga. After a create-and-send timeout, the worker lists/retrieves Broadcasts and matches the deterministic release marker, exact provider identifier when known, and content digest. A unique `queued` or `sent` match means dispatch succeeded; no match permits a guarded retry; `draft`, conflicting fields, or multiple matches become `terminal_ambiguous` and require operator review. Duplicate operator commands return the existing release record and never create a second release copy. If the worker misses the requested time by more than five minutes, it does not send late automatically; it marks the release `missed_dispatch_review` for operator reauthorization.
+The worker then repeats the source-digest, sender, Segment, Topic, unsubscribe, cancellation, readiness, and five-minute lateness checks at the actual send boundary and calls Resend's send-Broadcast API for the persisted identifier. If any check fails or the release is already more than five minutes late, the bound draft remains unsent and the release moves to the applicable cancelled, failed, or `missed_dispatch_review` state. This interval is machine-controlled and immediate; staff has no site-editor control over it, and the management key is confined to the dispatcher. The copy is never scheduled at Resend.
 
-Broadcast release records have reviewed, preflight-ready, dispatch-leased, provider-ambiguous, queued, sent, cancelled-local, missed-dispatch-review, failed-terminal, and incident states. Their typed jobs track attempts, next-attempt times, lease/fencing data, release identifiers, and safe provider-observed status. Workers prioritize due dispatches and audits without sharing subscription-only columns.
+Resend Broadcast endpoints do not provide email-style idempotency keys, so creation and send ambiguity are handled separately. After a create timeout, the worker may only list/retrieve **unsent drafts** matching the release marker and exact digest. One exact draft is persisted and verified; no match permits a guarded create retry; conflicting or multiple matches become `terminal_ambiguous`. No ambiguous or unpersisted copy is ever sent. Once an identifier is persisted, creation is permanently closed for that release. After a send timeout, the worker retrieves only that identifier: `queued` or `sent` means success, while `draft` permits retrying the send call against the same identifier only if the release still passes every send-boundary check and lateness cutoff. A conflicting state becomes terminal and never causes another copy to be created. Duplicate operator commands return the existing release record. If the worker misses the requested time by more than five minutes before a send call begins, it does not send late automatically; it marks the release `missed_dispatch_review` for operator reauthorization.
+
+Broadcast release records have reviewed, preflight-ready, dispatch-leased, release-copy-bound, provider-ambiguous, queued, sent, cancelled-local, missed-dispatch-review, failed-terminal, and incident states. Their typed jobs track attempts, next-attempt times, lease/fencing data, release identifiers, and safe provider-observed status. Workers prioritize due dispatches and audits without sharing subscription-only columns.
 
 Resend team access is limited to the smallest practical set of designated staff. Production Contacts, Segment membership, Topic state, and final dispatch controls are not operated manually. Because Resend's Member/Admin roles are coarse, this runbook and the release gate are both required; a dashboard send that bypasses the gate is an unauthorized operational event and is detected by Broadcast/webhook reconciliation.
 
-A scheduled `newsletter.broadcast.audit` job lists newly queued/sent provider Broadcasts from a durable cursor and maps every provider Broadcast identifier and deterministic release marker to one authorized local release record. Missing, duplicate, mismatched, dashboard-originated, or content-conflicting sends create a critical incident and trigger the documented provider-disable response. The audit is detection, not permission to send; final authority remains the site dispatcher.
+A scheduled `newsletter.broadcast.audit` job lists newly queued/sent provider Broadcasts from a site/team-scoped durable cursor and maps every provider Broadcast identifier and deterministic release marker to one authorized local release record. Missing, duplicate, mismatched, dashboard-originated, or content-conflicting sends atomically upsert a critical incident keyed by `(site_id, provider_broadcast_id)` and trigger the documented provider-disable response. The audit is detection, not permission to send; final authority remains the site dispatcher.
 
 The site does not author Broadcast content and the private editor has no campaign composer. It creates only the exact API release copy required to bind consent readiness to the staff-reviewed dashboard source. A later editor campaign composer requires its own platform release and design review.
 
@@ -307,11 +315,11 @@ The site does not author Broadcast content and the private editor has no campaig
 
 The webhook route reads the raw request body and verifies the Resend/Svix signature using `svix-id`, `svix-timestamp`, `svix-signature`, and `RESEND_WEBHOOK_SECRET` before parsing or mutating data.
 
-Webhook delivery is treated as at least once and not ordered. After signature verification and bounded normalization, one database RPC atomically inserts the unique `svix-id` receipt, maps the provider identity to this site, maps any `broadcast_id` to an authorized local release, applies the monotonic subscription/job/release transition, and marks the receipt processed with its disposition. An email event carrying an unknown, dashboard-source, duplicate, or mismatched Broadcast identifier creates or replays one critical unauthorized-Broadcast incident in that same transaction. If any step fails, the entire transaction rolls back, allowing Resend's retry to apply the event. A repeated processed identifier returns the recorded disposition without repeating mutations. No state exists in which a receipt is permanently deduplicated while its transition is missing.
+Webhook delivery is treated as at least once and not ordered. After signature verification and bounded normalization, one database RPC atomically inserts the unique `svix-id` receipt and maps the configured provider team/site scope. For every event carrying a `broadcast_id`, the RPC performs Broadcast authorization **before and independently of recipient-to-subscription mapping**. An unknown, dashboard-source, duplicate, or mismatched Broadcast identifier atomically creates or replays the critical incident keyed by `(site_id, provider_broadcast_id)`, even when the recipient is unknown or belongs to no local subscription. The RPC then applies any valid monotonic subscription/job/release transition and marks the receipt processed with its disposition. If any step fails, the entire transaction rolls back, allowing Resend's retry to apply the event. A repeated processed identifier returns the recorded disposition without repeating mutations, while a different event for the same unauthorized Broadcast increments the same incident rather than creating another. No state exists in which a receipt is permanently deduplicated while its transition or required incident is missing.
 
 State transitions compare provider time and severity so a late delivered event cannot overwrite a later bounce, complaint, suppression, or unsubscribe. Distinct event identifiers that arrive out of order are still evaluated rather than discarded merely because an event was previously processed.
 
-Events are applied only when the provider Contact or recipient maps to this site's subscription. Unknown or other-site events are recorded as ignored without exposing their payload to staff.
+Recipient subscription transitions are applied only when the provider Contact or recipient maps to this site's subscription. Unknown or other-site recipients are recorded as ignored without exposing their payload to staff, but that recipient disposition never suppresses the independent Broadcast-authorization check or its incident upsert.
 
 - A District Newsletter Topic opt-out moves the local subscription to `withdrawn_topic`, records `withdrawal_origin: topic`, enqueues `newsletter.contact.withdraw`, and permits reactivation only through a fresh form-consent and double-opt-in generation.
 - A provider-global unsubscribe moves it to `withdrawn_global`, records `withdrawal_origin: global`, enqueues `newsletter.contact.withdraw`, and also requires the authorized global-reactivation policy before provider-global state can be cleared.
@@ -347,11 +355,11 @@ Implementation requires additive, site-scoped database objects. Exact foreign-ke
 
 There is one current subscription per site and canonical customer identity. Email remains on the canonical customer record rather than being copied into the subscription table.
 
-### Subscription/provider job record
+### Subscription-scoped job record
 
 - job identifier;
 - required site and subscription identifiers;
-- job type and confirmation generation;
+- job type, confirmation generation, and delivery ordinal when applicable;
 - current provider-saga phase and per-phase outcomes;
 - state, attempts, next-attempt time, and terminal flag;
 - lease owner, fencing token, and lease expiry;
@@ -360,21 +368,45 @@ There is one current subscription per site and canonical customer identity. Emai
 - bounded safe result/failure code; and
 - created, updated, and completed times.
 
-Check constraints allow only subscription/provider job kinds and require or forbid confirmation generation/ordinal according to that kind.
+Check constraints allow only confirmation/contact job kinds and require or forbid confirmation generation/ordinal according to that kind.
 
-### Broadcast dispatch job record
+### Site-scoped provider-maintenance job record
+
+- job identifier;
+- required site identifier and provider-scope identifier;
+- kind: `segment_reconcile`;
+- saga phase or reconciliation cursor;
+- state, attempts, next-attempt time, terminal flag, and lease/fencing data;
+- bounded safe result/failure code; and
+- created, updated, and completed times.
+
+This shape forbids subscription and Broadcast release identifiers and all confirmation-delivery fields.
+
+### Broadcast release job record
 
 - job identifier;
 - required site and Broadcast release identifiers;
-- kind: `preflight`, `dispatch`, or `audit`;
-- due time and durable audit cursor when applicable;
+- kind: `preflight` or `dispatch`;
+- due time;
 - state, attempts, next-attempt time, and terminal flag;
 - lease owner, fencing token, and lease expiry;
 - provider identifier/status when available;
 - bounded safe result/failure code; and
 - created, updated, and completed times.
 
-Broadcast jobs have no subscription identifier, confirmation generation, delivery ordinal, or confirmation-email idempotency key. Database constraints enforce this separate subject shape.
+Broadcast release jobs have no subscription identifier, confirmation generation, delivery ordinal, confirmation-email idempotency key, or audit cursor.
+
+### Site/team-scoped Broadcast audit job record
+
+- job identifier;
+- required site and provider-team scope identifiers;
+- kind: `broadcast_audit`;
+- due time and durable provider-list cursor;
+- state, attempts, next-attempt time, terminal flag, and lease/fencing data;
+- bounded safe result/failure code; and
+- created, updated, and completed times.
+
+Audit jobs deliberately have no Broadcast release foreign key because their purpose is to discover provider Broadcasts without a local release. Database foreign keys and check constraints enforce all four job subject shapes.
 
 ### Webhook receipt
 
@@ -388,21 +420,38 @@ Broadcast jobs have no subscription identifier, confirmation generation, deliver
 
 The verified webhook RPC writes the receipt and mapped mutation in one transaction. Raw webhook bodies are not retained after verified processing unless a separately approved retention policy requires them.
 
+### Provider Broadcast incident record
+
+- incident identifier;
+- required site and provider-team scope identifiers;
+- required provider Broadcast identifier;
+- unique constraint on `(site_id, provider_broadcast_id)`;
+- mapped authorized release identifier when one exists;
+- first and last detection source: webhook or scheduled audit;
+- first and last `svix-id` or audit cursor when applicable;
+- reason: unknown, dashboard-originated, duplicate, release-marker mismatch, content mismatch, or other bounded policy code;
+- safe provider status, deterministic marker, and digest evidence;
+- open, acknowledged, contained, or resolved state;
+- first-seen, last-seen, and occurrence-count fields; and
+- authorized operator, resolution reason, and resolution time when closed.
+
+The verified webhook RPC and audit worker use the same atomic upsert keyed by `(site_id, provider_broadcast_id)`. A new event increments or enriches the existing incident without erasing its first-seen evidence. Incident creation does not depend on a recipient or subscription mapping.
+
 ### Broadcast release record
 
 - immutable release and operator-command identifiers;
 - authorized operator and request time;
 - dashboard source-draft identifier;
-- API release-copy identifier when known;
-- deterministic release marker and canonical content digest;
+- API release-copy identifier when known, with a partial unique constraint on `(site_id, api_release_copy_id)`;
+- deterministic release marker, unique per site/release, and canonical content digest;
 - Segment, Topic, sender, and approved Reply-To snapshot;
 - readiness revision, audience count, and readiness expiry;
 - immediate or locally scheduled mode and requested dispatch time;
-- reviewed, preflight-ready, dispatch-leased, provider-ambiguous, queued, sent, cancelled-local, missed-dispatch-review, failed-terminal, or incident state;
+- reviewed, preflight-ready, dispatch-leased, release-copy-bound, provider-ambiguous, queued, sent, cancelled-local, missed-dispatch-review, failed-terminal, or incident state;
 - provider-observed status and safe result/failure code; and
 - created, updated, scheduled, cancelled, queued, and sent times when applicable.
 
-The database stores the digest and provider identifiers, not an additional copy of the Broadcast HTML or text. The provider remains the content store for both the reviewed source and immutable release copy.
+The database stores the digest and provider identifiers, not an additional copy of the Broadcast HTML or text. A fenced transition binds at most one provider Broadcast identifier to a release, and that identifier cannot be bound to another local release. The provider remains the content store for both the reviewed source and the identifier-bound API release copy.
 
 Every table denies anonymous and browser-authenticated access. Only service-role server paths and specifically authorized staff projections may read or mutate these records. Every RPC verifies the supplied site against the referenced receipt, customer, consent, subscription, and job.
 
@@ -479,7 +528,8 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - A newsletter receipt, customer/consent mutation, pending subscription, and initial confirmation job commit in one RPC transaction. Failure in any step rolls back all newsletter mutations, returns the existing truthful unavailable response, and leaves no stranded accepted receipt.
 - A Resend outage leaves confirmation or contact-sync jobs retryable.
 - An email-send outcome that remains ambiguous beyond Resend's 24-hour idempotency window becomes terminal and requires an authorized new confirmation generation; it is never blindly resent.
-- A Broadcast create-and-send timeout is reconciled by deterministic release marker, provider identifier, digest, and provider status before retry; it never creates or sends a second copy based only on an HTTP failure.
+- A Broadcast-create timeout may produce only an unsent draft. The worker reconciles marker and digest, persists one verified identifier, and sends nothing when matches are missing, conflicting, or multiple.
+- A Broadcast-send timeout is reconciled by retrieving the one persisted identifier; a retry may send only that same identifier and can never reopen creation.
 - A missed site-local dispatch window never sends late automatically and requires operator reauthorization.
 - A provider API acceptance records **sent/accepted**, not delivered.
 - Webhook signature failures return a rejection and perform no mutation.
@@ -497,6 +547,7 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - Token signatures bind site, subscription, generation, nonce, and expiry.
 - Webhooks are verified against the exact raw body before JSON parsing.
 - `svix-id` provides replay deduplication.
+- Provider Broadcast incidents use a separate unique `(site_id, provider_broadcast_id)` key so different recipient events and scheduled audits converge on one incident.
 - Database leases and fencing tokens protect job execution.
 - Logs and staff projections exclude email bodies, raw tokens, secrets, and full webhook payloads.
 - Content Security Policy changes are limited to what the rendered public routes require; the browser never connects directly to Resend.
@@ -519,11 +570,12 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - confirmation-send ambiguity inside and outside Resend's 24-hour idempotency window;
 - topic withdrawal, global withdrawal, authorized global reactivation, Segment removal, deletion, and non-automatic recovery after complaint, bounce, suppression removal, or Contact deletion;
 - dashboard source draft to exact API release-copy digest binding;
-- duplicate Broadcast release commands, create-and-send timeouts, provider-read reconciliation, terminal ambiguity, 15-minute local scheduling lead time, local cancellation races, missed dispatches, and final source-digest changes;
+- duplicate Broadcast release commands, unsent-draft creation timeouts, provider-ID persistence before send, multiple-draft terminal ambiguity, same-ID send-timeout reconciliation, 15-minute local scheduling lead time, local cancellation races, missed dispatches, and final source-digest changes;
 - raw-body webhook signature verification, atomic receipt-plus-mutation, crash rollback, duplicate `svix-id`, and reordered distinct event IDs;
-- webhook `broadcast_id` mapping accepts authorized API release copies and atomically incidents unknown, dashboard-source, duplicate, or mismatched Broadcasts;
+- webhook `broadcast_id` mapping accepts authorized API release copies and atomically incidents unknown, dashboard-source, duplicate, or mismatched Broadcasts before recipient mapping;
+- different recipient webhooks and a scheduled audit for the same unauthorized provider Broadcast upsert one incident, preserve first-seen evidence, and increment the occurrence count;
 - scheduled Broadcast audit cursor reconciliation detects queued/sent provider Broadcasts without authorized local release records;
-- unknown-site/provider events are ignored;
+- unconfigured provider-team/site events are rejected without mutation, while unknown recipients still perform Broadcast authorization and incident an unauthorized `broadcast_id` before their recipient transition is ignored;
 - no secret, token, email address, or provider payload appears in logs or public responses;
 - feature-disabled and configuration-missing paths fail closed; and
 - `NEXT_PUBLIC_SITE_URL` generates the canonical `www` confirmation URL.
@@ -537,9 +589,9 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - confirmation generation consumption;
 - delivery-ordinal uniqueness, rolling address ledger, and 30-day `expired_pending` transition;
 - job lease, fencing, retry, and terminal failure behavior;
-- separate Broadcast preflight/dispatch/audit job constraints, leases, digest binding, duplicate command replay, and provider-state reconciliation;
+- enforced subscription, site-maintenance, release-dispatch, and site/team-audit job shapes, plus their leases, digest binding, duplicate command replay, and provider-state reconciliation;
 - atomic webhook receipt/mutation, rollback/retry after injected crash, deduplication, and monotonic state precedence;
-- unique authorized provider-Broadcast mapping and one replay-safe unauthorized-Broadcast incident per provider identifier;
+- unique authorized provider-Broadcast mapping and one replay-safe unauthorized-Broadcast incident per provider identifier across webhook and audit races, including events for unknown recipients;
 - consent withdrawal and deletion/redaction behavior; and
 - cross-site denial.
 
@@ -578,10 +630,10 @@ Acceptance verifies:
 - one authentic double-opt-in flow;
 - Resend Contact/Segment membership and explicit Topic opt-in;
 - Segment reconciliation removes every provider member not backed by an active confirmed Supabase subscription;
-- the protected Broadcast release gate rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator, and binds the dashboard source digest to one API-created release copy;
+- the protected Broadcast release gate rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator, and binds the dashboard source digest to one unsent API-created release copy and persists its unique provider identifier before any send;
 - locally scheduled dispatch refuses to send when eligibility or source digest changes, honors local cancellation, and never sends automatically after a missed window;
 - webhook and scheduled audit reconciliation map the authorized release copy and raise an incident for an unknown/dashboard-originated send;
-- one staff test Broadcast to authorized recipients only;
+- one Resend test delivery of the source draft to authorized staff inboxes only;
 - unsubscribe reconciliation; and
 - no unrelated SMS, AI, survey, or editor send capability became active.
 
