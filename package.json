@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "media:import:private": "node scripts/import-private-media.mjs",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",

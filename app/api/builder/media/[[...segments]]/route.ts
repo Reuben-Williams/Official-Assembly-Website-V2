@@ -7,6 +7,7 @@ import {
   authorizeBuilderRequest,
   type ActiveBuilderIdentity
 } from "../../../../../lib/builder/authorization";
+import { authorizePrivateMediaOperator } from "../../../../../lib/builder/media-operator";
 import {
   MEDIA_BATCH_MAX_BYTES,
   MEDIA_BATCH_MAX_FILES,
@@ -72,6 +73,8 @@ function fingerprint(value: Record<string, unknown>) {
 }
 
 async function authorize(request: Request) {
+  const operator = authorizePrivateMediaOperator(request);
+  if (operator) return operator;
   const identity = await authorizeBuilderRequest({
     request,
     operation: "media.create",
