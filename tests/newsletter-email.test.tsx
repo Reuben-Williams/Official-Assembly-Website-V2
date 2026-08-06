@@ -16,7 +16,7 @@ describe("newsletter confirmation email", () => {
       expect(content).toContain("no action is required");
       expect(content).toContain("not monitored");
       expect(content).toContain("https://www.assemblywomanmorales.com/contact");
-      expect(content).toContain("973-414-3658");
+      expect(content).toContain("973-450-0484");
       expect(content).toContain(confirmationUrl.replaceAll("&", "&amp;").replace("#", "#"));
     }
     expect(rendered.html).toContain("One more step to receive updates from the Office of Assemblywoman Carmen Morales.");

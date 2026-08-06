@@ -23,7 +23,7 @@ export async function renderNewsletterConfirmationEmail(input: {
     "This confirmation link expires in 48 hours.",
     "If you did not request this subscription, no action is required.",
     "This sending address is not monitored.",
-    "Contact the district office: https://www.assemblywomanmorales.com/contact or 973-414-3658."
+    "Contact the district office: https://www.assemblywomanmorales.com/contact or 973-450-0484."
   ].join("\n");
   return { subject: NEWSLETTER_CONFIRMATION_SUBJECT, html, text };
 }

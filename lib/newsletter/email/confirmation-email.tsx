@@ -39,7 +39,7 @@ export function NewsletterConfirmationEmail({ confirmationUrl }: { readonly conf
           <Text>If you did not request this subscription, no action is required.</Text>
           <Text>
             This sending address is not monitored. Contact the district office at{" "}
-            <Link href={CONTACT_URL}>{CONTACT_URL}</Link> or call 973-414-3658.
+            <Link href={CONTACT_URL}>{CONTACT_URL}</Link> or call 973-450-0484.
           </Text>
         </Container>
       </Body>
