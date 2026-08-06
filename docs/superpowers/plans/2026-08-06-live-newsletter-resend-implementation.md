@@ -38,7 +38,7 @@
 
 **Implementation**
 
-1. Install exact, lockfile-pinned server dependencies: `resend`, `@react-email/components`, and `@react-email/render`.
+1. Install exact, lockfile-pinned server dependencies: `resend` and React Email 6's supported unified `react-email` package. The originally planned `@react-email/components` and `@react-email/render` packages were deprecated when React Email 6 unified their exports.
 2. Add only names and safe examples to `.env.example`:
    `RESEND_SEND_API_KEY`, `RESEND_MANAGEMENT_API_KEY`, `RESEND_WEBHOOK_SECRET`, `RESEND_NEWSLETTER_SEGMENT_ID`, `RESEND_NEWSLETTER_TOPIC_ID`, `NEWSLETTER_CONFIRMATION_KEYRING`, `NEWSLETTER_CONFIRMATION_ACTIVE_KEY_ID`, `NEWSLETTER_TEST_RECIPIENTS`, and `NEWSLETTER_EMAIL_ENABLED`.
 3. Parse configuration in a server-only module. Return typed `disabled`, `ready`, or bounded `unavailable` results; never return raw credentials or allowlisted addresses.
