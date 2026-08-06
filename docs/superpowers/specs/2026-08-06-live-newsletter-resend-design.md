@@ -54,7 +54,7 @@ Infrastructure readiness is not application readiness. Production newsletter col
 
 ### 1. Double opt-in with site-local consent and Resend Broadcasts — selected
 
-The website records the request as pending, sends a transactional confirmation message, and activates the subscription only after the resident deliberately confirms. Confirmed contacts are synchronized to a dedicated Resend Segment. Staff sends marketing newsletters from the Resend dashboard.
+The website records the request as pending, sends a transactional confirmation message, and activates the subscription only after the resident deliberately confirms. Confirmed contacts are synchronized to a dedicated Resend Segment and default-opt-out Topic. Staff composes and tests marketing newsletters in the Resend dashboard; the protected release gate copies the reviewed source into an API-created Broadcast and sends or schedules that immutable release copy.
 
 This has more implementation work than single opt-in, but it provides the clearest proof that the submitted address belongs to a person who wants the newsletter. It also keeps the existing editor submission/customer history aligned with the delivery provider.
 
@@ -73,7 +73,7 @@ Supabase is authoritative for:
 - the immutable managed-form receipt;
 - the canonical site-local person/customer reference;
 - the captured marketing-email consent evidence and policy version;
-- pending, confirmed, active, withdrawn, and provider-suppressed subscriber state;
+- pending, confirmed, active, topic-withdrawn, globally withdrawn, expired, and provider-suppressed subscriber state;
 - confirmation generations, expiry, and consumption;
 - provider synchronization attempts and outcomes; and
 - verified webhook receipts and audit events.
@@ -134,11 +134,17 @@ Open and click tracking are not required for activation and are not copied into 
 
 The committed database transaction is not rolled back because Resend is temporarily unavailable after the job is durable. Instead, the confirmation job remains retryable. A provider outage cannot erase valid consent evidence or produce a false active subscription.
 
-Repeated form submissions use the existing form idempotency contract. Replayed receipts do not create duplicate subscriptions. A pending record reuses its current unexpired confirmation generation; it does not create a new generation on every request. Confirmation delivery is limited to one attempt per normalized address per 15 minutes, five attempts per 24 hours, and ten attempts per rolling 30 days. Limits are enforced atomically before enqueueing and use non-reversible site-scoped address fingerprints rather than browser-visible email values.
+Repeated form submissions use the existing form idempotency contract. Replayed receipts do not create duplicate subscriptions. A pending record reuses its current unexpired confirmation generation; it does not create a new generation on every request.
 
-An expired generation may be renewed only by a fresh authentic form submission with approved consent evidence or by an authorized staff recovery action. A previously withdrawn subscriber requires fresh form consent and a new double-opt-in generation. Complaint, hard-bounce, or suppression states are never automatically renewed. Pending subscriptions expire after 30 days and follow the approved retention/redaction policy while their minimum consent audit evidence remains governed by that policy.
+A **generation** identifies one confirmation token lifecycle. A **delivery ordinal** identifies one logical confirmation message within that generation. The initial accepted request creates ordinal 1. A later authentic request after the cooldown may enqueue ordinal 2 with the same token generation. Transport retries for one ordinal reuse the same durable job, payload, and Resend email idempotency key; they do not create another ordinal. Jobs are unique on `(site_id, subscription_id, generation, delivery_ordinal)`, and the provider key includes all four values.
 
-Terminal or repeatedly failed jobs appear in an authorized operations view with a bounded failure code. An authorized requeue uses the same unexpired generation when safe; otherwise it creates one new generation, invalidates older links, resets bounded attempt counters according to policy, and records the operator and reason. There is no anonymous public endpoint that can generate unbounded confirmation messages.
+Logical confirmation deliveries are limited to one ordinal per normalized address per 15 minutes, five ordinals per 24 hours, and ten ordinals per rolling 30 days. Limits are enforced atomically before enqueueing and use non-reversible site-scoped address fingerprints rather than browser-visible email values. Authorized requeue never resets or deletes the rolling delivery ledger. Re-running transport for an existing ordinal does not consume a new logical-delivery allowance; creating a new ordinal always does.
+
+An expired generation may be renewed only by a fresh authentic form submission with approved consent evidence or by an authorized staff recovery action. A subscriber who withdrew only from the District Newsletter Topic may start a fresh form-consent and double-opt-in generation. A provider-global unsubscribe requires that same fresh consent plus an authorized `newsletter.contact.reactivate_global` review job that verifies there is no complaint, bounce, or suppression before it may set global `unsubscribed: false`, opt in the Topic, and restore Segment membership. Complaint, hard-bounce, or suppression states never enter that ordinary reactivation path. Pending subscriptions expire after 30 days and follow the approved retention/redaction policy while their minimum consent audit evidence remains governed by that policy.
+
+At 30 days without confirmation, a scheduled database transition changes the status to `expired_pending`, clears the usable nonce and key reference, terminally closes queued confirmation jobs, and preserves only the approved receipt/consent audit and bounded delivery ledger. A fresh authentic request after expiration creates the next generation and remains subject to the rolling address limits.
+
+Terminal or repeatedly failed jobs appear in an authorized operations view with a bounded failure code. An authorized requeue uses the same unexpired generation and existing ordinal only for transport recovery. A deliberate logical resend creates the next ordinal and counts against every rolling limit. Creating a new generation invalidates older links but does not reset delivery limits. The operator and reason are recorded. There is no anonymous public endpoint that can generate unbounded confirmation messages.
 
 ## Double Opt-in Confirmation
 
@@ -163,7 +169,7 @@ Tokens expire after 48 hours. Starting a new confirmation generation invalidates
 
 ### Link-scanner and token-leakage safety
 
-The emailed link uses `https://www.assemblywomanmorales.com/newsletter/confirm#token=...`. URL fragments are not sent in the HTTP request or Referer header. A small same-origin client component reads the fragment, immediately removes it with `history.replaceState`, and posts it in a bounded `no-store` request to `POST /api/newsletter/confirmation-session`. That route validates the token without mutating subscription state and exchanges it for a Secure, HttpOnly, SameSite=Lax confirmation-session cookie scoped to `/newsletter/confirm` with a ten-minute lifetime.
+The emailed link uses `https://www.assemblywomanmorales.com/newsletter/confirm#token=...`. URL fragments are not sent in the HTTP request or Referer header. A small same-origin client component reads the fragment, immediately removes it with `history.replaceState`, and posts it in a bounded `no-store` request to `POST /api/newsletter/confirmation-session`. That route applies the same strict same-origin and Fetch Metadata checks as the mutation route, validates the token without mutating subscription state, and exchanges it for a `__Host-newsletter-confirmation` cookie with Secure, HttpOnly, SameSite=Lax, `Path=/`, no Domain attribute, and a ten-minute lifetime.
 
 The clean `/newsletter/confirm` page renders an explicit **Confirm subscription** button. The button sends a same-origin POST to `POST /api/newsletter/confirm` using the short-lived cookie. The cookie contains an encrypted or authenticated opaque session reference, not the reusable confirmation token, and is deleted after success or terminal failure.
 
@@ -180,13 +186,13 @@ The confirmation POST verifies:
 - bounded request size and rate limits; and
 - single-use database consumption.
 
-The database atomically changes the subscription from `pending_confirmation` to `confirmed_pending_provider` and enqueues a Resend Contact synchronization job. The browser never receives the canonical customer record or provider credential.
+For an ordinary pending or topic-withdrawn subscription, the database atomically changes the subscription to `confirmed_pending_provider` and enqueues a Resend Contact synchronization job. For a globally withdrawn Contact, it changes to `confirmed_pending_global_review` and does not enqueue ordinary synchronization; an authorized global-reactivation review is required. Complaint, bounce, and suppression states remain non-eligible and do not enter either automatic path. The browser receives the same generic accepted-for-review result and never receives the canonical customer record or provider credential.
 
 After the Resend Contact is successfully created or updated and assigned to the configured Segment, the worker changes the local state to `active`. Until then, the confirmation page truthfully says that confirmation was accepted and activation is being completed. A provider failure leaves a retryable state rather than claiming full activation.
 
 ## Resend Contact Synchronization
 
-Only `confirmed_pending_provider` or already `active` subscriptions with current marketing consent may be synchronized.
+Only `confirmed_pending_provider` or already `active` subscriptions with current marketing consent may enter ordinary synchronization. `confirmed_pending_global_review` is handled only by the authorized global-reactivation saga.
 
 The adapter:
 
@@ -204,7 +210,7 @@ An ordinary retry must never reverse an unsubscribe, complaint, hard-bounce, or 
 
 Resend Contact, Topic, and Segment APIs do not provide the email-send idempotency contract. Contact synchronization is therefore a resumable saga. Each completed provider phase and returned identifier is persisted before the next phase. A timeout or ambiguous response causes a provider read before any retry, so the worker converges on the desired state without assuming that the failed HTTP response means no mutation occurred.
 
-Confirmation email sends use a deterministic Resend idempotency key derived from the site, subscription, job type, and generation. Resend retains email-send idempotency keys for 24 hours. Within that window, an ambiguous send retries with the identical key and payload. If a provider message identifier was returned, the job never sends again even when a webhook is delayed. If the outcome remains ambiguous without an identifier after 24 hours, automatic sending stops and the job becomes `terminal_ambiguous`. An authorized recovery creates a new confirmation generation and key, invalidates the older link, and records the reason before sending; it never blindly repeats the old request outside Resend's deduplication window.
+Confirmation email sends use a deterministic Resend idempotency key derived from the site, subscription, job type, generation, and delivery ordinal. Resend retains email-send idempotency keys for 24 hours. Within that window, an ambiguous send retries with the identical key and payload. If a provider message identifier was returned, the job never sends again even when a webhook is delayed. If the outcome remains ambiguous without an identifier after 24 hours, automatic sending stops and the job becomes `terminal_ambiguous`. An authorized recovery creates a new confirmation generation and ordinal, invalidates the older link, remains subject to the rolling address ledger, and records the reason before sending; it never blindly repeats the old request outside Resend's deduplication window.
 
 Database jobs use leases and fencing tokens so two Vercel invocations cannot claim the same attempt concurrently.
 
@@ -215,8 +221,12 @@ The following job types are supported:
 - `newsletter.confirmation.send`
 - `newsletter.contact.sync`
 - `newsletter.contact.withdraw`
+- `newsletter.contact.reactivate_global`
 - `newsletter.contact.delete`
 - `newsletter.segment.reconcile`
+- `newsletter.broadcast.release`
+- `newsletter.broadcast.guard`
+- `newsletter.broadcast.cancel`
 
 Jobs contain identifiers and safe operational metadata only. They do not duplicate message bodies, raw confirmation tokens, API keys, or full contact records.
 
@@ -224,9 +234,13 @@ The database tracks queued, leased, completed, retryable-failed, and terminal-fa
 
 The scheduled worker is a Node.js Vercel route protected by `CRON_SECRET`. It claims a bounded batch, applies exponential backoff with jitter, and stops retrying terminal policy failures. Immediate post-submission processing and scheduled processing use the same lease-protected handler.
 
-Contact synchronization jobs persist saga phases such as `lookup`, `contact_ensured`, `topic_ensured`, `segment_ensured`, and `verified`. Withdrawal removes Segment membership and sets the District Newsletter Topic to `opt_out`; it never automatically clears a provider-global unsubscribe or suppression. Approved deletion removes Segment membership, opts out the Topic, and deletes the provider Contact only when the operator has verified that the Contact has no other approved use in the dedicated team. Otherwise it retains the provider suppression/withdrawal marker while removing site-specific membership and properties.
+Contact synchronization jobs persist saga phases such as `lookup`, `contact_ensured`, `topic_ensured`, `segment_ensured`, and `verified`. Topic withdrawal removes Segment membership and sets the District Newsletter Topic to `opt_out`. Global withdrawal performs those steps and preserves provider `unsubscribed: true`. The stored withdrawal origin is never collapsed or cleared by ordinary retry.
 
-The reconciliation job lists the production Segment and compares every member with active, confirmed Supabase eligibility. It removes unconfirmed, withdrawn, bounced, complained, suppressed, unknown, or other-site Contacts; verifies that every retained Contact is opted in to the District Newsletter Topic; and records a signed, expiring readiness result. It never opts an ineligible Contact in merely because the Contact exists in Resend.
+Only an authorized `newsletter.contact.reactivate_global` job may clear provider-global unsubscribe. It requires a newer confirmed generation, newer approved consent than the withdrawal, no complaint/bounce/suppression, an operator reason, and a provider read both before and after mutation. Complaint recovery is unsupported in this release. Hard-bounce or suppression recovery requires a separately documented provider remediation and fresh consent and cannot reuse the global-withdrawal job.
+
+Approved deletion removes Segment membership, opts out the Topic, and deletes the provider Contact only when the operator has verified that the Contact has no other approved use in the dedicated team. Otherwise it retains the provider suppression/withdrawal marker while removing site-specific membership and properties.
+
+The reconciliation job lists the production Segment and compares every member with active, confirmed Supabase eligibility. It removes unconfirmed, topic-withdrawn, globally withdrawn, expired, bounced, complained, suppressed, unknown, or other-site Contacts; verifies that every retained Contact is opted in to the District Newsletter Topic; and records a signed, expiring readiness result. It never opts an ineligible Contact in merely because the Contact exists in Resend.
 
 No worker logs email addresses, confirmation URLs, tokens, message bodies, credentials, or raw provider responses.
 
@@ -249,7 +263,7 @@ The message must not claim successful subscription, delivery, legislative endors
 
 ## Broadcast Operating Model
 
-Staff uses Resend's no-code Broadcast editor, not the Site Editor Platform, to compose and preview the initial release. Production send and schedule authorization passes through a protected site-owned release gate because Resend dashboard Contact and Segment edits cannot enforce the Supabase consent boundary by themselves.
+Staff uses Resend's no-code Broadcast editor, not the Site Editor Platform, to compose, preview, and test a **source draft**. Resend does not permit the Broadcast API to send a dashboard-created draft, so the protected site-owned release gate creates an immutable API release copy bound to the reviewed source draft and sends or schedules only that copy.
 
 Before a Broadcast can be sent, staff must:
 
@@ -261,15 +275,30 @@ Before a Broadcast can be sent, staff must:
 - include Resend's unsubscribe footer or `RESEND_UNSUBSCRIBE_URL` placeholder;
 - send a test to an authorized staff inbox;
 - review desktop and mobile rendering, links, alt text, and plain-text output; and
-- provide the Resend draft Broadcast identifier to the protected release command.
+- provide the dashboard source-draft identifier and requested immediate or scheduled release time to the protected release command.
 
-The protected release command is available only to an authorized site owner/operator. It retrieves the draft from Resend, verifies the fixed sender, production Segment, opt-out-by-default Topic, unsubscribe placeholder/footer, office-contact content, draft status, and requested schedule; runs Segment reconciliation; requires a readiness result less than five minutes old; and then invokes the Resend Broadcast send/schedule API exactly once. The command records the operator, Broadcast identifier, readiness revision, audience count, requested schedule, and provider result without storing message content.
+The protected release command is available only to an authorized site owner/operator. It creates or replays a durable `newsletter.broadcast.release` record keyed by the operator command identifier. The release saga:
 
-For scheduled Broadcasts, a protected guard re-runs reconciliation within five minutes of the scheduled time. If eligibility, Segment, Topic, sender, unsubscribe, or consent readiness no longer passes, the guard cancels the schedule and records the reason. The regular reconciliation worker also removes ineligible members throughout the interval between schedule and send.
+1. retrieves the dashboard source draft and requires `draft` status;
+2. verifies the fixed sender, production Segment, opt-out-by-default Topic, unsubscribe placeholder/footer, office-contact content, and requested schedule;
+3. canonicalizes the release fields and records a SHA-256 digest over sender, subject, preview text, HTML, text, Segment, Topic, and approved Reply-To state;
+4. runs Segment reconciliation and requires a readiness result less than five minutes old;
+5. creates one API Broadcast release copy with a deterministic unique release marker in its internal name and the exact reviewed fields;
+6. retrieves the API copy, recomputes the digest, and refuses release if it differs from the source digest;
+7. sends or schedules only the verified API-created copy; and
+8. records the operator, source identifier, release-copy identifier, digest, readiness revision, audience count, requested schedule, provider status, and safe result without retaining an additional message-body copy in the site database.
+
+Resend Broadcast endpoints do not provide email-style idempotency keys. The release is therefore a lease- and fencing-protected saga. After a create timeout, the worker lists/retrieves Broadcasts and matches the deterministic release marker, exact provider identifier when known, and content digest before deciding whether creation must resume. After a send/schedule timeout, it retrieves the release copy: `scheduled`, `queued`, or `sent` means the command was applied; `draft` allows a guarded retry; conflicting or multiple matches become `terminal_ambiguous` and require operator review. Duplicate operator commands return the existing release record and never create a second release copy.
+
+Immediate releases require a readiness result produced in the same command and are dispatched only after the verified copy is recorded. Scheduled releases require at least 15 minutes of lead time. A durable `newsletter.broadcast.guard` job is created with the release record and must run between ten and five minutes before the scheduled time.
+
+The guard re-runs reconciliation and re-reads the API release copy. If eligibility, Segment, Topic, sender, unsubscribe, digest, or consent readiness no longer passes, it executes a durable `newsletter.broadcast.cancel` saga. Cancellation uses Resend's delete-Broadcast operation, which cancels scheduled delivery, then verifies the release copy is absent before marking the local release cancelled. A timeout is reconciled by provider read/list before retry. If the guard cannot prove readiness or cancellation before the safety cutoff, it marks a critical operational incident and repeatedly attempts cancellation until the provider reports queued/sent or absence; it never records a false cancellation. The regular reconciliation worker also removes ineligible members throughout the interval between schedule and send.
+
+Release, guard, and cancellation records have queued, leased, provider-ambiguous, scheduled, cancelled, queued-for-send, sent, failed-terminal, and incident states; attempt counts; next-attempt times; lease/fencing data; source/release identifiers; digest; and provider-observed status. Workers process overdue guards before lower-priority newsletter jobs.
 
 Resend team access is limited to the smallest practical set of designated staff. Production Contacts, Segment membership, Topic state, and final Send/Schedule controls are not operated manually. Because Resend's Member/Admin roles are coarse, this runbook and the release gate are both required; a dashboard send that bypasses the gate is an unauthorized operational event and is detected by Broadcast/webhook reconciliation.
 
-The site does not automatically create Broadcast content and the private editor has no campaign send control. A later editor campaign composer requires its own platform release and design review.
+The site does not author Broadcast content and the private editor has no campaign composer. It creates only the exact API release copy required to bind consent readiness to the staff-reviewed dashboard source. A later editor campaign composer requires its own platform release and design review.
 
 ## Unsubscribe and Provider Event Reconciliation
 
@@ -281,7 +310,8 @@ State transitions compare provider time and severity so a late delivered event c
 
 Events are applied only when the provider Contact or recipient maps to this site's subscription. Unknown or other-site events are recorded as ignored without exposing their payload to staff.
 
-- A Resend Topic opt-out, global unsubscribe, or corresponding Contact update moves the local subscription to `withdrawn`, enqueues `newsletter.contact.withdraw`, and prevents future synchronization into an eligible state without fresh double opt-in.
+- A District Newsletter Topic opt-out moves the local subscription to `withdrawn_topic`, records `withdrawal_origin: topic`, enqueues `newsletter.contact.withdraw`, and permits reactivation only through a fresh form-consent and double-opt-in generation.
+- A provider-global unsubscribe moves it to `withdrawn_global`, records `withdrawal_origin: global`, enqueues `newsletter.contact.withdraw`, and also requires the authorized global-reactivation policy before provider-global state can be cleared.
 - A permanent hard bounce moves it to `bounced`.
 - A complaint moves it to `complained`.
 - `email.suppressed` or `suppression.added` moves it to `suppressed`, removes Segment eligibility, and preserves the suppression origin.
@@ -303,7 +333,8 @@ Implementation requires additive, site-scoped database objects. Exact foreign-ke
 - canonical customer/person identifier;
 - originating newsletter receipt identifier;
 - current marketing-consent event identifier and policy version;
-- status: `pending_confirmation`, `confirmed_pending_provider`, `active`, `withdrawn`, `bounced`, `complained`, `suppressed`, or `provider_removed_review`;
+- status: `pending_confirmation`, `expired_pending`, `confirmed_pending_provider`, `confirmed_pending_global_review`, `active`, `withdrawn_topic`, `withdrawn_global`, `bounced`, `complained`, `suppressed`, or `provider_removed_review`;
+- withdrawal origin, provider-global unsubscribe state, and withdrawal time when applicable;
 - confirmation generation, nonce, signing-key identifier, issued time, and expiry;
 - consumed time;
 - Resend Contact identifier and Segment identifier;
@@ -336,6 +367,22 @@ There is one current subscription per site and canonical customer identity. Emai
 - received and processed times.
 
 The verified webhook RPC writes the receipt and mapped mutation in one transaction. Raw webhook bodies are not retained after verified processing unless a separately approved retention policy requires them.
+
+### Broadcast release record
+
+- immutable release and operator-command identifiers;
+- authorized operator and request time;
+- dashboard source-draft identifier;
+- API release-copy identifier when known;
+- deterministic release marker and canonical content digest;
+- Segment, Topic, sender, and approved Reply-To snapshot;
+- readiness revision, audience count, and readiness expiry;
+- immediate or scheduled mode and requested time;
+- release, guard, and cancellation state with lease/fencing data;
+- provider-observed status and safe result/failure code; and
+- created, updated, scheduled, cancelled, queued, and sent times when applicable.
+
+The database stores the digest and provider identifiers, not an additional copy of the Broadcast HTML or text. The provider remains the content store for both the reviewed source and immutable release copy.
 
 Every table denies anonymous and browser-authenticated access. Only service-role server paths and specifically authorized staff projections may read or mutate these records. Every RPC verifies the supplied site against the referenced receipt, customer, consent, subscription, and job.
 
@@ -402,7 +449,7 @@ It never exposes whether an arbitrary email address is subscribed. Responses are
 
 ### Editor and operational header
 
-Submissions and Customers continue to show real site-local data. Where supported by current package projection contracts, staff can see pending, active, withdrawn, bounced, complained, or suppressed state. No unsupported editor UI is simulated.
+Submissions and Customers continue to show real site-local data. Where supported by current package projection contracts, staff can see pending, active, topic-withdrawn, globally withdrawn, expired, bounced, complained, or suppressed state. No unsupported editor UI is simulated.
 
 The operational header changes from **Providers unavailable** to a narrower truthful statement: newsletter email is configured through Resend; SMS and AI remain unavailable; Broadcast composition occurs in Resend rather than the editor.
 
@@ -412,18 +459,20 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - A newsletter receipt, customer/consent mutation, pending subscription, and initial confirmation job commit in one RPC transaction. Failure in any step rolls back all newsletter mutations, returns the existing truthful unavailable response, and leaves no stranded accepted receipt.
 - A Resend outage leaves confirmation or contact-sync jobs retryable.
 - An email-send outcome that remains ambiguous beyond Resend's 24-hour idempotency window becomes terminal and requires an authorized new confirmation generation; it is never blindly resent.
+- A Broadcast create or send/schedule timeout is reconciled by deterministic release marker, provider identifier, digest, and provider status before retry; it never creates or sends a second copy based only on an HTTP failure.
+- A scheduled guard delayed beyond its safety window attempts and verifies cancellation, records a critical incident, and never reports cancellation until provider absence is proven.
 - A provider API acceptance records **sent/accepted**, not delivered.
 - Webhook signature failures return a rejection and perform no mutation.
 - Unknown webhook events are safely ignored after signature verification.
-- Duplicate or out-of-order webhooks cannot reactivate a withdrawn, bounced, complained, or suppressed subscription.
+- Duplicate or out-of-order webhooks cannot reactivate a topic-withdrawn, globally withdrawn, bounced, complained, or suppressed subscription.
 - A webhook transaction crash commits neither the receipt nor mutation, so provider retry can safely apply it.
 - Missing Segment, webhook secret, signing secret, sender-domain readiness, or feature flag causes the email adapter to fail closed.
 
 ## Security Requirements
 
 - All Resend SDK use is confined to Node.js server modules marked server-only.
-- Confirmation and webhook mutation routes use bounded bodies, explicit methods, no-store responses, and safe error messages.
-- Confirmation POST retains same-origin and rate-limit protection.
+- Confirmation-session exchange, confirmation mutation, and webhook routes use bounded bodies, explicit methods, no-store responses, and safe error messages.
+- Confirmation-session exchange and confirmation POST both retain same-origin, Fetch Metadata, and rate-limit protection.
 - HMAC comparisons use constant-time verification.
 - Token signatures bind site, subscription, generation, nonce, and expiry.
 - Webhooks are verified against the exact raw body before JSON parsing.
@@ -437,18 +486,20 @@ The operational header changes from **Providers unavailable** to a narrower trut
 ### Unit and route tests
 
 - canonical confirmation-token serialization, issue, keyring lookup, rotation, validation, expiry, generation invalidation, unknown-key rejection, tamper rejection, and constant-time signature path;
-- fragment-token exchange removes the fragment, produces no token-bearing request URL/log entry, creates only a short-lived read-only session, and POST performs the mutation;
+- fragment-token exchange rejects cross-origin requests, removes the fragment, produces no token-bearing request URL/log entry, creates only the Secure `__Host-` read-only session cookie with `Path=/`, and sends that cookie to the confirmation POST;
 - invalid and expired links reveal no subscriber information;
-- form acceptance enqueues one confirmation job for accepted and replayed receipts;
+- form acceptance enqueues exactly one initial ordinal for accepted and replayed receipts;
 - duplicate form retries and duplicate worker claims do not duplicate subscriptions or activations;
-- repeated pending requests reuse one unexpired generation, observe send cooldowns and rolling limits, and cannot email-bomb an address or create unbounded generations;
+- repeated pending requests reuse one unexpired generation, create distinct bounded delivery ordinals only after cooldown, keep transport retry within an ordinal, never reset the rolling ledger during requeue, and cannot email-bomb an address or create unbounded generations;
 - provider failures leave retryable jobs and truthful UI states;
-- a confirmation cannot activate missing or withdrawn consent;
+- a confirmation cannot activate missing consent or bypass topic/global withdrawal reactivation policy;
 - Resend Contact synchronization is limited to confirmed eligible subscriptions, the configured Segment, and explicit opt-in to the default-opt-out Topic;
 - ordinary retry cannot reverse unsubscribe, bounce, complaint, or suppression;
 - Contact/Topic/Segment saga resumes after a timeout at every provider phase and reconciles ambiguous mutations before retry;
 - confirmation-send ambiguity inside and outside Resend's 24-hour idempotency window;
-- provider withdrawal, Topic opt-out, Segment removal, deletion, and non-automatic recovery after suppression removal or Contact deletion;
+- topic withdrawal, global withdrawal, authorized global reactivation, Segment removal, deletion, and non-automatic recovery after complaint, bounce, suppression removal, or Contact deletion;
+- dashboard source draft to exact API release-copy digest binding;
+- duplicate Broadcast release commands, create/send/schedule timeouts, provider-read reconciliation, terminal ambiguity, 15-minute scheduling lead time, overdue guards, delete-based cancellation, and cancellation races;
 - raw-body webhook signature verification, atomic receipt-plus-mutation, crash rollback, duplicate `svix-id`, and reordered distinct event IDs;
 - unknown-site/provider events are ignored;
 - no secret, token, email address, or provider payload appears in logs or public responses;
@@ -462,7 +513,9 @@ The operational header changes from **Providers unavailable** to a narrower trut
 - atomic strict receipt/customer/consent plus pending-subscription/job creation, including injected failure at every step and a simulated crash at the former receipt-to-subscription boundary;
 - one current subscription per site/customer;
 - confirmation generation consumption;
+- delivery-ordinal uniqueness, rolling address ledger, and 30-day `expired_pending` transition;
 - job lease, fencing, retry, and terminal failure behavior;
+- Broadcast release/guard/cancel saga leases, digest binding, duplicate command replay, and provider-state reconciliation;
 - atomic webhook receipt/mutation, rollback/retry after injected crash, deduplication, and monotonic state precedence;
 - consent withdrawal and deletion/redaction behavior; and
 - cross-site denial.
@@ -471,16 +524,21 @@ Database tests use an isolated database and clean up their own records. They nev
 
 ### Preview acceptance
 
+The following checks are required in every Preview:
+
 - build, lint, unit tests, database tests, and existing platform checks pass;
 - `/newsletter` renders active and unavailable states correctly;
 - desktop and mobile form behavior, accessibility, no overflow, and no console/network errors;
-- with provider calls hard-disabled, controlled provider fakes prove confirmation, saga, withdrawal, reconciliation, and webhook behavior without touching the Production Resend team;
-- if and only if a separate Preview Resend team is provisioned, a controlled isolated test inbox receives the bilingual confirmation message from its non-production subdomain;
 - link scanners cannot confirm by GET;
-- POST confirms once and a replay is harmless;
-- the isolated Resend Contact joins only that separate team's Preview Segment and default-opt-out Topic;
-- a test Broadcast in the separate team includes Topic-scoped unsubscribe behavior; and
-- webhook retries and duplicate delivery are idempotent.
+- confirmation POST confirms once and a replay is harmless; and
+- with provider calls hard-disabled, controlled provider fakes prove confirmation delivery, Contact/Topic/Segment sagas, topic/global withdrawal, global-reactivation denial/approval, Segment reconciliation, dashboard-source/API-release-copy binding, Broadcast release/guard/cancel, and webhook retry/deduplication without touching the Production Resend team.
+
+Only if a wholly separate Preview Resend team is provisioned, the following additional live-provider checks are required:
+
+- a controlled isolated test inbox receives the bilingual confirmation message from the non-production subdomain;
+- the isolated Contact joins only that team's Preview Segment and explicit default-opt-out Topic opt-in;
+- a test Broadcast release copy is created from a reviewed dashboard source draft and includes Topic-scoped unsubscribe behavior; and
+- live webhook retries and duplicate delivery reconcile idempotently inside that Preview team.
 
 ### Production acceptance
 
@@ -497,7 +555,7 @@ Acceptance verifies:
 - one authentic double-opt-in flow;
 - Resend Contact/Segment membership and explicit Topic opt-in;
 - Segment reconciliation removes every provider member not backed by an active confirmed Supabase subscription;
-- the protected Broadcast release gate rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator;
+- the protected Broadcast release gate rejects the wrong sender, Segment, Topic, missing unsubscribe/footer, stale readiness, or unauthorized operator, and binds the dashboard source digest to one API-created release copy;
 - scheduled Broadcast guard reconciliation cancels a schedule when eligibility changes before send;
 - one staff test Broadcast to authorized recipients only;
 - unsubscribe reconciliation; and
@@ -579,6 +637,9 @@ The newsletter is live only when all of the following are true:
 - [Resend audience hygiene and double opt-in](https://resend.com/docs/knowledge-base/audience-hygiene)
 - [Resend Contacts](https://resend.com/docs/dashboard/audiences/contacts)
 - [Resend Broadcasts](https://resend.com/docs/dashboard/broadcasts/introduction)
+- [Resend create Broadcast API](https://resend.com/docs/api-reference/broadcasts/create-broadcast)
+- [Resend send Broadcast API and API-created restriction](https://resend.com/docs/api-reference/broadcasts/send-broadcast)
+- [Resend delete/cancel scheduled Broadcast API](https://resend.com/docs/api-reference/broadcasts/delete-broadcast)
 - [Resend Segments](https://resend.com/docs/dashboard/segments/introduction)
 - [Resend Topics](https://resend.com/docs/dashboard/topics/introduction)
 - [Resend unsubscribe management](https://resend.com/docs/dashboard/audiences/managing-unsubscribe-list)
