@@ -33,6 +33,8 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("Newsletter email uses Resend");
     expect(html).toContain("SMS and AI actions remain unavailable");
     expect(html).toContain("Resend newsletter");
+    expect(html).toContain("authentic-live-form-checklist");
+    expect(html).toContain("When every total is zero, there is no live form or growth activity");
     expect(html).toContain("Survey unavailable");
     expect(html).toContain("<details");
     expect(html).toContain("Sign out and revoke editor session");
@@ -44,6 +46,7 @@ describe("production editor workspace registration", () => {
 
     expect(css).toMatch(/\.editor-operational-header :where\(button:not\(:disabled\), a\[href\], summary\)[^{]*\{[^}]*cursor: pointer/);
     expect(css).toMatch(/\.newsletter-operations :where\(button:not\(:disabled\), a\[href\], summary\)[^{]*\{[^}]*cursor: pointer/);
+    expect(css).toMatch(/\.forms-guidance :where\(button:not\(:disabled\), a\[href\], summary\)[^{]*\{[^}]*cursor: pointer/);
     expect(css).toMatch(/\.editor-operational-header button:disabled[^{]*\{[^}]*cursor: not-allowed/);
     expect(css).not.toMatch(/\.editor-operational-header\s+(?:span|p|label)\s*\{[^}]*cursor: pointer/);
   });

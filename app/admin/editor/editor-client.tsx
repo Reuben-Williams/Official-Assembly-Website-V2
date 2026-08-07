@@ -21,6 +21,7 @@ import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
+import { FormsGuidanceWorkspace } from "./forms-guidance-workspace";
 import { NewsletterOperationsWorkspace } from "./newsletter-operations-workspace";
 import { resolveEditorPagePath } from "./editor-path";
 import {
@@ -201,7 +202,10 @@ export function EditorClient({
       {...editorPageNavigation(currentPath, setCurrentPath)}
       initialWorkspace={initialWorkspace}
       linkablePosts={linkablePosts}
-      formsWorkspace={<NewsletterOperationsWorkspace role={role} />}
+      formsWorkspace={<FormsGuidanceWorkspace
+        role={role}
+        newsletterOperations={<NewsletterOperationsWorkspace role={role} />}
+      />}
       postsWorkspace={<ManagedPostsWorkspace
         client={posts}
         mediaAssets={mediaAssets}
