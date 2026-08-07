@@ -20,6 +20,6 @@ describe("vendored platform migration history", () => {
     );
 
     expect(stderr).toBe("");
-    expect(stdout).toBe("Verified 27 approved platform migrations.\n");
+    expect(stdout).toBe("Verified 28 approved platform migrations.\n");
   });
 });

@@ -12,7 +12,7 @@ const repositoryRoot = path.resolve(
 const execFileAsync = promisify(execFile);
 
 describe("production migration lineage", () => {
-  it("keeps the production baseline exact and only approved newsletter migrations pending", async () => {
+  it("keeps the production baseline exact and only approved release migrations pending", async () => {
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
       ["scripts/verify-production-migration-lineage.mjs"],
@@ -21,7 +21,7 @@ describe("production migration lineage", () => {
 
     expect(stderr).toBe("");
     expect(stdout).toBe(
-      "Verified 20 production migrations and 3 approved pending migrations.\n"
+      "Verified 20 production migrations and 4 approved pending migrations.\n"
     );
   });
 });
