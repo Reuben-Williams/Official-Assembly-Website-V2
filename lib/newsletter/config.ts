@@ -6,7 +6,8 @@ import { NEWSLETTER_ERROR_CODES } from "./errors";
 import type {
   NewsletterConfigurationState,
   NewsletterEnvironment,
-  NewsletterEnvironmentInput
+  NewsletterEnvironmentInput,
+  NewsletterProviderInventoryConfigurationState
 } from "./types";
 
 const PRODUCTION_SITE_URL = "https://www.assemblywomanmorales.com";
@@ -40,6 +41,16 @@ function unavailable(
     { status: "disabled" } | { status: "ready" }
   >["code"]
 ): NewsletterConfigurationState {
+  return { status: "unavailable", code, environment };
+}
+
+function inventoryUnavailable(
+  environment: NewsletterEnvironment,
+  code: Exclude<
+    NewsletterProviderInventoryConfigurationState,
+    { status: "ready" }
+  >["code"]
+): NewsletterProviderInventoryConfigurationState {
   return { status: "unavailable", code, environment };
 }
 
@@ -175,5 +186,99 @@ export function readNewsletterConfiguration(
     activeKeyId,
     verificationKeyIds,
     testRecipientCount
+  };
+}
+
+/**
+ * Validates the provider values required for the read-only inventory audit.
+ * This intentionally ignores NEWSLETTER_EMAIL_ENABLED so the audit can run
+ * while every outbound newsletter action remains disabled.
+ */
+export function readNewsletterProviderInventoryConfiguration(
+  input: NewsletterEnvironmentInput = process.env
+): NewsletterProviderInventoryConfigurationState {
+  const environment = normalizeEnvironment(input.VERCEL_ENV);
+  const providerCredentialPresent = PROVIDER_SECRET_NAMES.some((name) =>
+    hasValue(input[name])
+  );
+
+  if (environment === "preview" && providerCredentialPresent) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.previewCredentialsForbidden
+    );
+  }
+  if (hasValue(input.RESEND_API_KEY)) {
+    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.legacyApiKey);
+  }
+  if (environment !== "production") {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.environmentNotProduction
+    );
+  }
+  if (!hasValue(input.RESEND_SEND_API_KEY)) {
+    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.missingSendApiKey);
+  }
+  if (!hasValue(input.RESEND_MANAGEMENT_API_KEY)) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.missingManagementApiKey
+    );
+  }
+  if (!hasValue(input.RESEND_WEBHOOK_SECRET)) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.missingWebhookSecret
+    );
+  }
+  if (
+    !hasValue(input.RESEND_NEWSLETTER_SEGMENT_ID) ||
+    !UUID_PATTERN.test(input.RESEND_NEWSLETTER_SEGMENT_ID)
+  ) {
+    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.invalidSegmentId);
+  }
+  if (
+    !hasValue(input.RESEND_NEWSLETTER_TOPIC_ID) ||
+    !UUID_PATTERN.test(input.RESEND_NEWSLETTER_TOPIC_ID)
+  ) {
+    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.invalidTopicId);
+  }
+  if (input.NEXT_PUBLIC_SITE_URL !== PRODUCTION_SITE_URL) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.invalidCanonicalSiteUrl
+    );
+  }
+
+  const sendKeyId = input.RESEND_SEND_API_KEY_ID?.trim() ?? "";
+  if (!KEY_ID_PATTERN.test(sendKeyId)) {
+    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.missingSendKeyId);
+  }
+  const managementKeyId = input.RESEND_MANAGEMENT_API_KEY_ID?.trim() ?? "";
+  if (!KEY_ID_PATTERN.test(managementKeyId)) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.missingManagementKeyId
+    );
+  }
+  const authSmtpKeyId = input.RESEND_AUTH_SMTP_KEY_ID?.trim() ?? "";
+  if (!KEY_ID_PATTERN.test(authSmtpKeyId)) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.missingAuthSmtpKeyId
+    );
+  }
+
+  return {
+    status: "ready",
+    environment: "production",
+    canonicalSiteUrl: PRODUCTION_SITE_URL,
+    segmentId: input.RESEND_NEWSLETTER_SEGMENT_ID,
+    topicId: input.RESEND_NEWSLETTER_TOPIC_ID,
+    sendKeyId,
+    managementKeyId,
+    authSmtpKeyId,
+    webhookUrl: `${PRODUCTION_SITE_URL}/api/webhooks/resend`
   };
 }

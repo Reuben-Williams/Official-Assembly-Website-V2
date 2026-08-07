@@ -24,6 +24,24 @@ export type NewsletterConfigurationState =
       testRecipientCount: number;
     };
 
+export type NewsletterProviderInventoryConfigurationState =
+  | {
+      status: "unavailable";
+      code: Exclude<NewsletterErrorCode, "newsletter_disabled">;
+      environment: NewsletterEnvironment;
+    }
+  | {
+      status: "ready";
+      environment: "production";
+      canonicalSiteUrl: string;
+      segmentId: string;
+      topicId: string;
+      sendKeyId: string;
+      managementKeyId: string;
+      authSmtpKeyId: string;
+      webhookUrl: string;
+    };
+
 export type NewsletterEnvironmentInput = Readonly<
   Record<string, string | undefined>
 >;

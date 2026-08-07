@@ -2,7 +2,10 @@ import { Buffer } from "node:buffer";
 
 import { describe, expect, it } from "vitest";
 
-import { readNewsletterConfiguration } from "../lib/newsletter/config";
+import {
+  readNewsletterConfiguration,
+  readNewsletterProviderInventoryConfiguration
+} from "../lib/newsletter/config";
 import { toSafeNewsletterLog } from "../lib/newsletter/safe-log";
 
 const productionEnvironment = {
@@ -23,6 +26,14 @@ const productionEnvironment = {
     "editor.one@example.com",
     "editor.two@example.com"
   ])
+} satisfies Record<string, string>;
+
+const inventoryEnvironment = {
+  ...productionEnvironment,
+  NEWSLETTER_EMAIL_ENABLED: "false",
+  RESEND_SEND_API_KEY_ID: "key_newsletter_send",
+  RESEND_MANAGEMENT_API_KEY_ID: "key_newsletter_management",
+  RESEND_AUTH_SMTP_KEY_ID: "key_site_auth_smtp"
 } satisfies Record<string, string>;
 
 describe("readNewsletterConfiguration", () => {
@@ -158,6 +169,40 @@ describe("readNewsletterConfiguration", () => {
     expect(serialized).not.toContain("whsec_webhook_secret_value");
     expect(serialized).not.toContain("editor.one@example.com");
     expect(serialized).not.toContain(Buffer.alloc(32, 7).toString("base64url"));
+  });
+});
+
+describe("readNewsletterProviderInventoryConfiguration", () => {
+  it("validates the full hidden provider configuration while sending remains disabled", () => {
+    expect(readNewsletterProviderInventoryConfiguration(inventoryEnvironment)).toEqual({
+      status: "ready",
+      environment: "production",
+      canonicalSiteUrl: "https://www.assemblywomanmorales.com",
+      segmentId: inventoryEnvironment.RESEND_NEWSLETTER_SEGMENT_ID,
+      topicId: inventoryEnvironment.RESEND_NEWSLETTER_TOPIC_ID,
+      sendKeyId: "key_newsletter_send",
+      managementKeyId: "key_newsletter_management",
+      authSmtpKeyId: "key_site_auth_smtp",
+      webhookUrl: "https://www.assemblywomanmorales.com/api/webhooks/resend"
+    });
+  });
+
+  it.each([
+    "RESEND_SEND_API_KEY",
+    "RESEND_MANAGEMENT_API_KEY",
+    "RESEND_WEBHOOK_SECRET",
+    "RESEND_NEWSLETTER_SEGMENT_ID",
+    "RESEND_NEWSLETTER_TOPIC_ID",
+    "RESEND_SEND_API_KEY_ID",
+    "RESEND_MANAGEMENT_API_KEY_ID",
+    "RESEND_AUTH_SMTP_KEY_ID"
+  ])("fails safely when disabled-stage inventory value %s is missing", (name) => {
+    const environment = { ...inventoryEnvironment };
+    delete environment[name as keyof typeof environment];
+    const result = readNewsletterProviderInventoryConfiguration(environment);
+    expect(result).toMatchObject({ status: "unavailable", environment: "production" });
+    expect(JSON.stringify(result)).not.toContain("re_send_secret_value");
+    expect(JSON.stringify(result)).not.toContain("re_management_secret_value");
   });
 });
 
