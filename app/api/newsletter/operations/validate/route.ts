@@ -1,13 +1,13 @@
 import { validateNewsletterBroadcast } from "../../../../../lib/newsletter/broadcast-operations";
 import { createNewsletterBroadcastRepository } from "../../../../../lib/newsletter/broadcast-repository";
-import { createSupabaseNewsletterAuditData } from "../../../../../lib/newsletter/job-repository";
+import { createSupabaseNewsletterReconciliationRequestRepository } from "../../../../../lib/newsletter/job-repository";
 import {
   authorizeNewsletterOperation,
   newsletterOperationBody,
   newsletterOperationError,
   requireReadyNewsletterConfiguration
 } from "../../../../../lib/newsletter/operations-route";
-import { createProductionNewsletterBroadcastProvider, createProductionNewsletterContactProvider } from "../../../../../lib/newsletter/resend/client";
+import { createProductionNewsletterBroadcastProvider } from "../../../../../lib/newsletter/resend/client";
 import { getBuilderAdminClient } from "../../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,14 @@ export async function POST(request: Request) {
     if (!client) throw new Error("newsletter database unavailable");
     const repository = createNewsletterBroadcastRepository(client, identity.siteId);
     if ((await repository.status()).openIncidents > 0) throw new Error("newsletter incident lockout");
-    const audit = createSupabaseNewsletterAuditData(client, identity.siteId);
+    const readiness = await createSupabaseNewsletterReconciliationRequestRepository(client, identity.siteId)
+      .request({ commandId, operation: "validate" });
+    if (readiness.status !== "ready") {
+      return Response.json({ state: readiness.status, commandId }, {
+        status: readiness.status === "pending" ? 202 : 409,
+        headers: { "cache-control": "no-store" }
+      });
+    }
     const result = await validateNewsletterBroadcast(createProductionNewsletterBroadcastProvider(key), {
       siteId: identity.siteId,
       commandId,
@@ -39,9 +46,7 @@ export async function POST(request: Request) {
       segmentId: configuration.segmentId,
       topicId: configuration.topicId,
       confirmedTestObservationId: observationId,
-      reconcile: () => audit.segmentReconcile(
-        createProductionNewsletterContactProvider(key), configuration.topicId, configuration.segmentId
-      ),
+      readiness,
       createValidation: repository.createValidation
     });
     return Response.json(result, { headers: { "cache-control": "no-store" } });

@@ -35,15 +35,15 @@ describe("newsletter Broadcast operations", () => {
 
   it("performs content/config/readiness checks without creating or sending a Broadcast", async () => {
     const get = vi.fn(async () => broadcast);
-    const reconcile = vi.fn(async () => ({
+    const readiness = {
       readinessRevisionId: "34100000-0000-4000-8000-000000000001",
       audienceCount: 125
-    }));
+    };
     const result = await inspectNewsletterBroadcast({ get }, {
       broadcastId: broadcast.id,
       segmentId: broadcast.segmentId,
       topicId: broadcast.topicId,
-      reconcile
+      readiness
     });
 
     expect(result).toEqual(expect.objectContaining({
@@ -53,7 +53,6 @@ describe("newsletter Broadcast operations", () => {
       audienceCount: 125
     }));
     expect(get).toHaveBeenCalledWith(broadcast.id);
-    expect(reconcile).toHaveBeenCalledOnce();
   });
 
   it("requires an exact confirmed test and creates only a ten-minute database validation", async () => {
@@ -69,10 +68,10 @@ describe("newsletter Broadcast operations", () => {
       segmentId: broadcast.segmentId,
       topicId: broadcast.topicId,
       confirmedTestObservationId: "34700000-0000-4000-8000-000000000001",
-      reconcile: async () => ({
+      readiness: {
         readinessRevisionId: "34100000-0000-4000-8000-000000000001",
         audienceCount: 125
-      }),
+      },
       createValidation
     });
 

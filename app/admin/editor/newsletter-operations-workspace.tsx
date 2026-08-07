@@ -79,8 +79,10 @@ export function NewsletterOperationsWorkspace({
     setError("");
     setNotice("");
     try {
-      await task();
-      setNotice(success);
+      const result = await task();
+      setNotice(result.state === "pending"
+        ? "A fresh audience reconciliation is queued. Retry this operation after the protected worker completes."
+        : success);
       await refresh();
     } catch {
       setError("The newsletter operation could not be completed. Review readiness and try again.");

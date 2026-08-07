@@ -78,6 +78,7 @@ async function responseJson(response: Response) {
 export function createNewsletterOperationsClient(
   getCsrfToken: () => string | null
 ): NewsletterOperationsClient {
+  const pendingCommands = new Map<string, string>();
   async function mutation(path: string, body: Record<string, unknown>) {
     const csrf = getCsrfToken();
     if (!csrf) throw new Error("The editor session must be refreshed.");
@@ -89,6 +90,19 @@ export function createNewsletterOperationsClient(
       body: JSON.stringify(body)
     }));
   }
+  async function commandMutation(
+    path: string,
+    broadcastId: string,
+    proposedCommandId: string,
+    body: Record<string, unknown> = {}
+  ) {
+    const key = `${path}:${broadcastId}`;
+    const commandId = pendingCommands.get(key) ?? proposedCommandId;
+    const result = await mutation(path, { ...body, broadcastId, commandId });
+    if (result.state === "pending") pendingCommands.set(key, commandId);
+    else pendingCommands.delete(key);
+    return result;
+  }
   return {
     async status() {
       return boundedStatus(await responseJson(await fetch("/api/newsletter/operations/status", {
@@ -96,10 +110,14 @@ export function createNewsletterOperationsClient(
         cache: "no-store"
       })));
     },
-    activationCheck: (broadcastId) => mutation("activation-check", { broadcastId }),
-    openStaffTestWindow: (broadcastId, commandId) => mutation("staff-test", { broadcastId, commandId }),
-    validate: (broadcastId, commandId, confirmedTestObservationId) => mutation("validate", {
-      broadcastId, commandId, confirmedTestObservationId
-    })
+    activationCheck: (broadcastId) => commandMutation(
+      "activation-check", broadcastId, crypto.randomUUID()
+    ),
+    openStaffTestWindow: (broadcastId, commandId) => commandMutation(
+      "staff-test", broadcastId, commandId
+    ),
+    validate: (broadcastId, commandId, confirmedTestObservationId) => commandMutation(
+      "validate", broadcastId, commandId, { confirmedTestObservationId }
+    )
   };
 }

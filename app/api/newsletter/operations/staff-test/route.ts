@@ -2,14 +2,14 @@ import { createHash } from "node:crypto";
 
 import { inspectNewsletterBroadcast } from "../../../../../lib/newsletter/broadcast-operations";
 import { createNewsletterBroadcastRepository } from "../../../../../lib/newsletter/broadcast-repository";
-import { createSupabaseNewsletterAuditData } from "../../../../../lib/newsletter/job-repository";
+import { createSupabaseNewsletterReconciliationRequestRepository } from "../../../../../lib/newsletter/job-repository";
 import {
   authorizeNewsletterOperation,
   newsletterOperationBody,
   newsletterOperationError,
   requireReadyNewsletterConfiguration
 } from "../../../../../lib/newsletter/operations-route";
-import { createProductionNewsletterBroadcastProvider, createProductionNewsletterContactProvider } from "../../../../../lib/newsletter/resend/client";
+import { createProductionNewsletterBroadcastProvider } from "../../../../../lib/newsletter/resend/client";
 import { getBuilderAdminClient } from "../../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,19 @@ export async function POST(request: Request) {
     const client = getBuilderAdminClient();
     if (!client) throw new Error("newsletter database unavailable");
     const repository = createNewsletterBroadcastRepository(client, identity.siteId);
-    const audit = createSupabaseNewsletterAuditData(client, identity.siteId);
+    const readiness = await createSupabaseNewsletterReconciliationRequestRepository(client, identity.siteId)
+      .request({ commandId, operation: "staff_test" });
+    if (readiness.status !== "ready") {
+      return Response.json({ state: readiness.status, commandId }, {
+        status: readiness.status === "pending" ? 202 : 409,
+        headers: { "cache-control": "no-store" }
+      });
+    }
     const inspected = await inspectNewsletterBroadcast(createProductionNewsletterBroadcastProvider(key), {
       broadcastId,
       segmentId: configuration.segmentId,
       topicId: configuration.topicId,
-      reconcile: () => audit.segmentReconcile(
-        createProductionNewsletterContactProvider(key), configuration.topicId, configuration.segmentId
-      )
+      readiness
     });
     const allowlist: unknown = JSON.parse(process.env.NEWSLETTER_TEST_RECIPIENTS ?? "[]");
     if (!Array.isArray(allowlist) || !allowlist.every((value) => typeof value === "string")) {

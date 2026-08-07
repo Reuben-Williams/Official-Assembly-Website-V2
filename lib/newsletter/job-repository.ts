@@ -279,6 +279,56 @@ export function createSupabaseNewsletterReconciliationData(
   };
 }
 
+export function createSupabaseNewsletterReconciliationRequestRepository(
+  client: SupabaseClient,
+  siteId: string
+) {
+  return {
+    async request(input: {
+      readonly commandId: string;
+      readonly operation: "activation_check" | "validate" | "staff_test";
+    }): Promise<
+      | { readonly status: "pending" | "blocked" }
+      | {
+          readonly status: "ready";
+          readonly readinessRevisionId: string;
+          readonly audienceCount: number;
+        }
+    > {
+      const result = await client.rpc("builder_request_newsletter_reconciliation_v1", {
+        p_request: {
+          version: 1,
+          siteId,
+          commandId: input.commandId,
+          operation: input.operation
+        }
+      });
+      if (result.error || !result.data || typeof result.data !== "object") {
+        throw new Error("newsletter reconciliation request unavailable");
+      }
+      const value = result.data as Record<string, unknown>;
+      if (value.status === "pending" || value.status === "blocked") {
+        return { status: value.status };
+      }
+      if (value.status !== "fresh" || typeof value.readinessRevisionId !== "string") {
+        throw new Error("newsletter reconciliation request unavailable");
+      }
+      const readiness = await client.from("builder_newsletter_readiness_revisions")
+        .select("audience_count,state,expires_at")
+        .eq("site_id", siteId).eq("id", value.readinessRevisionId).single();
+      if (
+        readiness.error || !readiness.data || readiness.data.state !== "ready" ||
+        Date.parse(String(readiness.data.expires_at)) <= Date.now()
+      ) throw new Error("newsletter reconciliation request unavailable");
+      return {
+        status: "ready",
+        readinessRevisionId: value.readinessRevisionId,
+        audienceCount: Number(readiness.data.audience_count)
+      };
+    }
+  };
+}
+
 export function createSupabaseNewsletterSubscriptionJobData(client: SupabaseClient, siteId: string) {
   return {
     async loadConfirmation(jobId: string) {

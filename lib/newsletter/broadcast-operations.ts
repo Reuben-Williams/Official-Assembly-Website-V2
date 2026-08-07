@@ -32,10 +32,10 @@ export async function inspectNewsletterBroadcast(
     readonly broadcastId: string;
     readonly segmentId: string;
     readonly topicId: string;
-    readonly reconcile: () => Promise<{
+    readonly readiness: {
       readonly readinessRevisionId: string;
       readonly audienceCount: number;
-    }>;
+    };
   }
 ) {
   const snapshot = await provider.get(input.broadcastId);
@@ -48,15 +48,14 @@ export async function inspectNewsletterBroadcast(
   ) {
     throw new Error("newsletter broadcast is not ready");
   }
-  const readiness = await input.reconcile();
   return {
     state: "ready" as const,
     broadcastId: snapshot.id,
     digest: digestNewsletterBroadcast(snapshot),
     sender: snapshot.from,
     replyToState: "none" as const,
-    audienceCount: readiness.audienceCount,
-    readinessRevisionId: readiness.readinessRevisionId,
+    audienceCount: input.readiness.audienceCount,
+    readinessRevisionId: input.readiness.readinessRevisionId,
     snapshot
   };
 }
@@ -71,7 +70,7 @@ export async function validateNewsletterBroadcast(
     readonly segmentId: string;
     readonly topicId: string;
     readonly confirmedTestObservationId: string;
-    readonly reconcile: () => Promise<{ readonly readinessRevisionId: string; readonly audienceCount: number }>;
+    readonly readiness: { readonly readinessRevisionId: string; readonly audienceCount: number };
     readonly createValidation: (input: Record<string, unknown>) => Promise<{
       readonly state: "valid";
       readonly validationId: string;
