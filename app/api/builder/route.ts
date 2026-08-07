@@ -8,6 +8,7 @@ import {
 import { authenticateBuilderRequest } from "../../../lib/builder/request-auth";
 import {
   createSecuredBuilderHandlers,
+  createSupabaseContentCommandExecutor,
   createSiteKeyResolvingAdapter
 } from "../../../lib/builder/repositories";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../lib/supabase/admin";
@@ -29,6 +30,7 @@ function createHandlers(request: Request) {
   return createSecuredBuilderHandlers({
     site,
     adapter,
+    contentCommands: createSupabaseContentCommandExecutor(admin),
     authorize: async (authorizedRequest: Request, operation: BuilderRouteOperation) => {
       await authorizeBuilderRequest({
         request: authorizedRequest,
