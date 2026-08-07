@@ -20,6 +20,8 @@ select has_column('public', 'builder_newsletter_reconciliation_circuits', 'recov
 
 select has_function('public', 'builder_schedule_newsletter_reconciliation_v1', array['jsonb'], 'generic reconciliation scheduler exists');
 select has_function('public', 'builder_request_newsletter_reconciliation_v1', array['jsonb'], 'force-fresh reconciliation request exists');
+select has_function('public', 'builder_reserve_newsletter_segment_removal_v1', array['jsonb'], 'provider mutation reservation exists');
+select has_function('public', 'builder_complete_newsletter_segment_removal_v1', array['jsonb'], 'provider mutation completion exists');
 select has_function('public', 'builder_checkpoint_newsletter_reconciliation_v1', array['jsonb'], 'fenced checkpoint/yield exists');
 select has_function('public', 'builder_finalize_newsletter_reconciliation_v1', array['jsonb'], 'atomic readiness finalizer exists');
 select has_function('public', 'builder_abandon_newsletter_reconciliations_v1', array['jsonb'], 'age-bounded abandonment exists');
@@ -103,6 +105,8 @@ select ok(
       and routine.proname in (
         'builder_schedule_newsletter_reconciliation_v1',
         'builder_request_newsletter_reconciliation_v1',
+        'builder_reserve_newsletter_segment_removal_v1',
+        'builder_complete_newsletter_segment_removal_v1',
         'builder_checkpoint_newsletter_reconciliation_v1',
         'builder_finalize_newsletter_reconciliation_v1',
         'builder_abandon_newsletter_reconciliations_v1',
@@ -683,6 +687,141 @@ select is(
   ),
   1,
   'recovery command replay queues one durable job'
+);
+
+set local role service_role;
+insert into durable_results values (
+  'mutation_claim',
+  public.builder_claim_newsletter_jobs_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'limit', 1,
+    'leaseSeconds', 60,
+    'emailEnabled', true
+  ))
+);
+select is(
+  public.builder_reserve_newsletter_segment_removal_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'mutation_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'mutation_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'mutation_claim'),
+    'expectedEligibilityEpoch', 0,
+    'providerContactId', 'provider-saga-1',
+    'seenLocal', false
+  )) ->> 'status',
+  'reserved',
+  'current worker reserves provider removal before the external effect'
+);
+select is(
+  public.builder_complete_newsletter_segment_removal_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'mutation_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'mutation_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'mutation_claim'),
+    'expectedEligibilityEpoch', 0,
+    'providerContactId', 'provider-saga-1'
+  )) ->> 'expectedEligibilityEpoch',
+  '1',
+  'provider mutation completion advances the owned run epoch'
+);
+select is(
+  public.builder_complete_newsletter_segment_removal_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'mutation_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'mutation_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'mutation_claim'),
+    'expectedEligibilityEpoch', 0,
+    'providerContactId', 'provider-saga-1'
+  )) ->> 'expectedEligibilityEpoch',
+  '1',
+  'a replayed completion does not advance the epoch twice'
+);
+reset role;
+select is(
+  (
+    select action_state
+    from public.builder_newsletter_reconciliation_members
+    where site_id = '39000000-0000-4000-8000-000000000002'
+      and provider_contact_id = 'provider-saga-1'
+  ),
+  'completed',
+  'provider mutation evidence is durably completed'
+);
+select is(
+  (
+    select expected_eligibility_epoch
+    from public.builder_newsletter_reconciliation_runs
+    where site_id = '39000000-0000-4000-8000-000000000002'
+      and id = (select (result #>> '{jobs,0,runId}')::uuid from durable_results where test_case = 'mutation_claim')
+  ),
+  1::bigint,
+  'the run adopts only its fenced provider mutation epoch'
+);
+set local role service_role;
+select is(
+  public.builder_reserve_newsletter_segment_removal_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'mutation_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'mutation_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'mutation_claim'),
+    'expectedEligibilityEpoch', 1,
+    'providerContactId', 'provider-saga-2',
+    'seenLocal', false
+  )) ->> 'status',
+  'reserved',
+  'a second provider mutation reserves against the adopted epoch'
+);
+select lives_ok(
+  $$ select builder_private.invalidate_newsletter_readiness_v1(
+    '39000000-0000-4000-8000-000000000002'::uuid,
+    'concurrent_test_change'
+  ) $$,
+  'an unrelated eligibility change can win after reservation'
+);
+select is(
+  public.builder_complete_newsletter_segment_removal_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000002',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'mutation_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'mutation_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000109',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'mutation_claim'),
+    'expectedEligibilityEpoch', 1,
+    'providerContactId', 'provider-saga-2'
+  )) ->> 'status',
+  'restarted',
+  'completion cannot absorb an unrelated concurrent eligibility change'
+);
+reset role;
+select is(
+  (
+    select state
+    from public.builder_newsletter_reconciliation_runs
+    where site_id = '39000000-0000-4000-8000-000000000002'
+      and id = (select (result #>> '{jobs,0,runId}')::uuid from durable_results where test_case = 'mutation_claim')
+  ),
+  'superseded',
+  'the stale run is superseded after a concurrent epoch change'
+);
+select is(
+  (
+    select state
+    from public.builder_newsletter_site_jobs
+    where site_id = '39000000-0000-4000-8000-000000000002'
+      and id = (select (result #>> '{jobs,0,id}')::uuid from durable_results where test_case = 'mutation_claim')
+  ),
+  'queued',
+  'the stale run releases its lease for a full restart'
 );
 
 select * from finish();

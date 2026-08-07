@@ -554,6 +554,220 @@ begin
 end;
 $$;
 
+create function public.builder_reserve_newsletter_segment_removal_v1(p_request jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_site_id uuid;
+  v_job_id uuid;
+  v_run_id uuid;
+  v_worker_id uuid;
+  v_fencing bigint;
+  v_expected_epoch bigint;
+  v_provider_contact_id text;
+  v_subscription_id uuid;
+  v_contact_generation integer;
+  v_seen_local boolean;
+  v_epoch bigint;
+  v_action_state text;
+begin
+  begin
+    v_site_id := (p_request ->> 'siteId')::uuid;
+    v_job_id := (p_request ->> 'jobId')::uuid;
+    v_run_id := (p_request ->> 'runId')::uuid;
+    v_worker_id := (p_request ->> 'workerId')::uuid;
+    v_fencing := (p_request ->> 'fencingToken')::bigint;
+    v_expected_epoch := (p_request ->> 'expectedEligibilityEpoch')::bigint;
+    v_provider_contact_id := p_request ->> 'providerContactId';
+    v_subscription_id := nullif(p_request ->> 'subscriptionId', '')::uuid;
+    v_contact_generation := nullif(p_request ->> 'contactGeneration', '')::integer;
+    v_seen_local := coalesce((p_request ->> 'seenLocal')::boolean, false);
+  exception when others then
+    raise exception 'invalid newsletter segment removal reservation' using errcode = '22023';
+  end;
+  if (p_request ->> 'version') <> '1'
+    or char_length(v_provider_contact_id) not between 1 and 200
+    or (v_contact_generation is not null and v_contact_generation <= 0)
+  then
+    raise exception 'invalid newsletter segment removal reservation' using errcode = '22023';
+  end if;
+
+  insert into public.builder_newsletter_eligibility_epochs (site_id)
+  values (v_site_id)
+  on conflict (site_id) do nothing;
+  select epoch.epoch into v_epoch
+  from public.builder_newsletter_eligibility_epochs epoch
+  where epoch.site_id = v_site_id
+  for update;
+  if v_epoch is distinct from v_expected_epoch then
+    raise exception 'newsletter eligibility epoch changed' using errcode = '55000';
+  end if;
+  if not exists (
+    select 1
+    from public.builder_newsletter_reconciliation_runs run
+    join public.builder_newsletter_site_jobs job
+      on job.site_id = run.site_id and job.id = run.job_id
+    where run.site_id = v_site_id and run.id = v_run_id and run.job_id = v_job_id
+      and run.state = 'running' and run.expected_eligibility_epoch = v_expected_epoch
+      and job.state = 'leased' and job.lease_owner = v_worker_id
+      and job.lease_fencing_token = v_fencing
+      and job.lease_expires_at > clock_timestamp()
+  ) then
+    raise exception 'newsletter job lease lost' using errcode = '55000';
+  end if;
+
+  select member.action_state into v_action_state
+  from public.builder_newsletter_reconciliation_members member
+  where member.site_id = v_site_id and member.run_id = v_run_id
+    and member.provider_contact_id = v_provider_contact_id
+  for update;
+  if found then
+    return jsonb_build_object('version', 1, 'status', v_action_state);
+  end if;
+
+  insert into public.builder_newsletter_reconciliation_members (
+    site_id, run_id, provider_contact_id, subscription_id, contact_generation,
+    seen_provider, seen_local, eligible, disposition, action_state
+  ) values (
+    v_site_id, v_run_id, v_provider_contact_id, v_subscription_id, v_contact_generation,
+    true, v_seen_local, false,
+    case when v_subscription_id is null then 'provider_only' else 'locally_ineligible' end,
+    'pending'
+  );
+  return jsonb_build_object('version', 1, 'status', 'reserved');
+end;
+$$;
+
+create function public.builder_complete_newsletter_segment_removal_v1(p_request jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_site_id uuid;
+  v_job_id uuid;
+  v_run_id uuid;
+  v_worker_id uuid;
+  v_fencing bigint;
+  v_expected_epoch bigint;
+  v_provider_contact_id text;
+  v_epoch bigint;
+  v_run_epoch bigint;
+  v_action_state text;
+  v_changed integer;
+begin
+  begin
+    v_site_id := (p_request ->> 'siteId')::uuid;
+    v_job_id := (p_request ->> 'jobId')::uuid;
+    v_run_id := (p_request ->> 'runId')::uuid;
+    v_worker_id := (p_request ->> 'workerId')::uuid;
+    v_fencing := (p_request ->> 'fencingToken')::bigint;
+    v_expected_epoch := (p_request ->> 'expectedEligibilityEpoch')::bigint;
+    v_provider_contact_id := p_request ->> 'providerContactId';
+  exception when others then
+    raise exception 'invalid newsletter segment removal completion' using errcode = '22023';
+  end;
+  if (p_request ->> 'version') <> '1'
+    or char_length(v_provider_contact_id) not between 1 and 200
+  then
+    raise exception 'invalid newsletter segment removal completion' using errcode = '22023';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
+  select epoch.epoch into v_epoch
+  from public.builder_newsletter_eligibility_epochs epoch
+  where epoch.site_id = v_site_id
+  for update;
+  if not exists (
+    select 1 from public.builder_newsletter_site_jobs job
+    where job.site_id = v_site_id and job.id = v_job_id and job.state = 'leased'
+      and job.lease_owner = v_worker_id and job.lease_fencing_token = v_fencing
+      and job.lease_expires_at > clock_timestamp()
+  ) then
+    raise exception 'newsletter job lease lost' using errcode = '55000';
+  end if;
+  select run.expected_eligibility_epoch into v_run_epoch
+  from public.builder_newsletter_reconciliation_runs run
+  where run.site_id = v_site_id and run.id = v_run_id and run.job_id = v_job_id
+    and run.state = 'running'
+  for update;
+  if not found then
+    raise exception 'newsletter reconciliation is unavailable' using errcode = '55000';
+  end if;
+  select member.action_state into v_action_state
+  from public.builder_newsletter_reconciliation_members member
+  where member.site_id = v_site_id and member.run_id = v_run_id
+    and member.provider_contact_id = v_provider_contact_id
+  for update;
+  if not found then
+    raise exception 'newsletter segment removal is not reserved' using errcode = '55000';
+  end if;
+  if v_action_state = 'completed' then
+    return jsonb_build_object(
+      'version', 1, 'status', 'completed',
+      'expectedEligibilityEpoch', v_run_epoch
+    );
+  end if;
+
+  if v_epoch is distinct from v_expected_epoch
+    or v_run_epoch is distinct from v_expected_epoch
+  then
+    delete from public.builder_newsletter_reconciliation_members
+    where site_id = v_site_id and run_id = v_run_id;
+    update public.builder_newsletter_reconciliation_runs
+    set state = 'superseded', completed_at = clock_timestamp(), updated_at = clock_timestamp()
+    where site_id = v_site_id and id = v_run_id and state = 'running';
+    update public.builder_newsletter_site_jobs
+    set state = 'queued', available_at = clock_timestamp(), lease_owner = null,
+        lease_expires_at = null, consecutive_failure_count = 0,
+        last_checkpoint_at = clock_timestamp(), updated_at = clock_timestamp()
+    where site_id = v_site_id and id = v_job_id and state = 'leased'
+      and lease_owner = v_worker_id and lease_fencing_token = v_fencing
+      and lease_expires_at > clock_timestamp();
+    get diagnostics v_changed = row_count;
+    if v_changed <> 1 then
+      raise exception 'newsletter job lease lost' using errcode = '55000';
+    end if;
+    return jsonb_build_object('version', 1, 'status', 'restarted');
+  end if;
+  if v_action_state <> 'pending' then
+    raise exception 'newsletter segment removal is not pending' using errcode = '55000';
+  end if;
+
+  perform builder_private.invalidate_newsletter_readiness_v1(
+    v_site_id,
+    'provider_segment_removal'
+  );
+  select epoch.epoch into v_epoch
+  from public.builder_newsletter_eligibility_epochs epoch
+  where epoch.site_id = v_site_id;
+  update public.builder_newsletter_reconciliation_members
+  set disposition = 'removed', action_state = 'completed', updated_at = clock_timestamp()
+  where site_id = v_site_id and run_id = v_run_id
+    and provider_contact_id = v_provider_contact_id and action_state = 'pending';
+  get diagnostics v_changed = row_count;
+  if v_changed <> 1 then
+    raise exception 'newsletter segment removal completion lost' using errcode = '55000';
+  end if;
+  update public.builder_newsletter_reconciliation_runs
+  set expected_eligibility_epoch = v_epoch, updated_at = clock_timestamp()
+  where site_id = v_site_id and id = v_run_id and state = 'running'
+    and expected_eligibility_epoch = v_expected_epoch;
+  get diagnostics v_changed = row_count;
+  if v_changed <> 1 then
+    raise exception 'newsletter reconciliation epoch adoption lost' using errcode = '55000';
+  end if;
+  return jsonb_build_object(
+    'version', 1, 'status', 'completed',
+    'expectedEligibilityEpoch', v_epoch
+  );
+end;
+$$;
+
 create function public.builder_checkpoint_newsletter_reconciliation_v1(p_request jsonb)
 returns jsonb
 language plpgsql
@@ -1637,6 +1851,8 @@ $$;
 revoke all on function
   public.builder_schedule_newsletter_reconciliation_v1(jsonb),
   public.builder_request_newsletter_reconciliation_v1(jsonb),
+  public.builder_reserve_newsletter_segment_removal_v1(jsonb),
+  public.builder_complete_newsletter_segment_removal_v1(jsonb),
   public.builder_checkpoint_newsletter_reconciliation_v1(jsonb),
   public.builder_finalize_newsletter_reconciliation_v1(jsonb),
   public.builder_abandon_newsletter_reconciliations_v1(jsonb),
@@ -1649,6 +1865,8 @@ from public, anon, authenticated;
 grant execute on function
   public.builder_schedule_newsletter_reconciliation_v1(jsonb),
   public.builder_request_newsletter_reconciliation_v1(jsonb),
+  public.builder_reserve_newsletter_segment_removal_v1(jsonb),
+  public.builder_complete_newsletter_segment_removal_v1(jsonb),
   public.builder_checkpoint_newsletter_reconciliation_v1(jsonb),
   public.builder_finalize_newsletter_reconciliation_v1(jsonb),
   public.builder_abandon_newsletter_reconciliations_v1(jsonb),

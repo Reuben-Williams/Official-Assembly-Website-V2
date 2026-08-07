@@ -19,7 +19,7 @@ export type NewsletterReconciliationMember = {
   readonly seenLocal: boolean;
   readonly eligible: boolean;
   readonly disposition: "eligible" | "removed";
-  readonly actionState: "none" | "completed";
+  readonly actionState: "none" | "pending" | "completed";
 };
 
 export interface NewsletterReconciliationData {
@@ -32,6 +32,17 @@ export interface NewsletterReconciliationData {
     readonly hasMore: boolean;
     readonly afterId?: string;
   }>;
+  reserveRemoval(
+    job: NewsletterClaimedJob,
+    member: NewsletterReconciliationMember
+  ): Promise<{ readonly status: "reserved" | "pending" | "completed" }>;
+  completeRemoval(
+    job: NewsletterClaimedJob,
+    providerContactId: string
+  ): Promise<
+    | { readonly status: "completed"; readonly expectedEligibilityEpoch: number }
+    | { readonly status: "restarted" }
+  >;
   checkpoint(job: NewsletterClaimedJob, input: {
     readonly phase: "provider_segment" | "local_eligible" | "finalize";
     readonly providerAfterCursor?: string;
@@ -83,6 +94,7 @@ export function createNewsletterSegmentReconciliationHandler(input: {
     }
 
     if (job.phase !== "local_eligible") {
+      let workingJob = job;
       const page = await input.provider.listSegmentContacts({
         segmentId: input.segmentId,
         limit: 100,
@@ -98,7 +110,28 @@ export function createNewsletterSegmentReconciliationHandler(input: {
           segmentId: input.segmentId
         });
         if (!eligible) {
-          await input.provider.removeSegment({ id: providerContact.id, segmentId: input.segmentId });
+          const pendingMember: NewsletterReconciliationMember = {
+            providerContactId: providerContact.id,
+            subscriptionId: local?.id,
+            contactGeneration: local?.contactGeneration,
+            seenProvider: true,
+            seenLocal: Boolean(local),
+            eligible: false,
+            disposition: "removed",
+            actionState: "pending"
+          };
+          const reservation = await input.data.reserveRemoval(workingJob, pendingMember);
+          if (reservation.status !== "completed") {
+            await input.provider.removeSegment({ id: providerContact.id, segmentId: input.segmentId });
+            const completion = await input.data.completeRemoval(workingJob, providerContact.id);
+            if (completion.status === "restarted") {
+              return { code: "reconciliation_restarted", alreadyCompleted: true };
+            }
+            workingJob = {
+              ...workingJob,
+              expectedEligibilityEpoch: completion.expectedEligibilityEpoch
+            };
+          }
         }
         members.push({
           providerContactId: providerContact.id,
@@ -111,7 +144,7 @@ export function createNewsletterSegmentReconciliationHandler(input: {
           actionState: eligible ? "none" : "completed"
         });
       }
-      await input.data.checkpoint(job, {
+      await input.data.checkpoint(workingJob, {
         phase: page.hasMore ? "provider_segment" : "local_eligible",
         providerAfterCursor: page.after,
         providerComplete: !page.hasMore,

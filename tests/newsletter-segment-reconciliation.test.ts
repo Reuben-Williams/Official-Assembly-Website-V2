@@ -40,6 +40,11 @@ function data(overrides: Record<string, unknown> = {}) {
   return {
     findLocalByProviderContactId: vi.fn(async () => null),
     listLocalEligible: vi.fn(async () => ({ rows: [], hasMore: false, afterId: undefined })),
+    reserveRemoval: vi.fn(async () => ({ status: "reserved" as const })),
+    completeRemoval: vi.fn(async () => ({
+      status: "completed" as const,
+      expectedEligibilityEpoch: 3
+    })),
     checkpoint: vi.fn(async () => ({ status: "queued" as const })),
     finalize: vi.fn(async () => ({ readinessRevisionId: "ready-1", audienceCount: 0 })),
     ...overrides
@@ -65,8 +70,20 @@ describe("durable newsletter Segment reconciliation", () => {
       id: "provider-1",
       segmentId: "segment-1"
     });
-    expect(reconciliationData.checkpoint).toHaveBeenCalledWith(
+    expect(reconciliationData.reserveRemoval).toHaveBeenCalledWith(
       baseJob,
+      expect.objectContaining({
+        providerContactId: "provider-1",
+        disposition: "removed",
+        actionState: "pending"
+      })
+    );
+    expect(reconciliationData.reserveRemoval.mock.invocationCallOrder[0]).toBeLessThan(
+      providerAdapter.removeSegment.mock.invocationCallOrder[0]!
+    );
+    expect(reconciliationData.completeRemoval).toHaveBeenCalledWith(baseJob, "provider-1");
+    expect(reconciliationData.checkpoint).toHaveBeenCalledWith(
+      { ...baseJob, expectedEligibilityEpoch: 3 },
       expect.objectContaining({
         phase: "local_eligible",
         providerComplete: true,
@@ -81,6 +98,51 @@ describe("durable newsletter Segment reconciliation", () => {
       })
     );
     expect(reconciliationData.finalize).not.toHaveBeenCalled();
+  });
+
+  it("replays a completed removal without another provider mutation", async () => {
+    const providerAdapter = provider();
+    const reconciliationData = data({
+      reserveRemoval: vi.fn(async () => ({ status: "completed" as const })),
+      completeRemoval: vi.fn()
+    });
+    const handler = createNewsletterSegmentReconciliationHandler({
+      provider: providerAdapter,
+      data: reconciliationData,
+      segmentId: "segment-1",
+      topicId: "topic-1"
+    });
+
+    await handler(baseJob);
+
+    expect(providerAdapter.removeSegment).not.toHaveBeenCalled();
+    expect(reconciliationData.completeRemoval).not.toHaveBeenCalled();
+    expect(reconciliationData.checkpoint).toHaveBeenCalledWith(
+      baseJob,
+      expect.objectContaining({
+        members: [expect.objectContaining({ actionState: "completed" })]
+      })
+    );
+  });
+
+  it("stops the old run when a concurrent eligibility change wins the mutation fence", async () => {
+    const providerAdapter = provider();
+    const reconciliationData = data({
+      completeRemoval: vi.fn(async () => ({ status: "restarted" as const }))
+    });
+    const handler = createNewsletterSegmentReconciliationHandler({
+      provider: providerAdapter,
+      data: reconciliationData,
+      segmentId: "segment-1",
+      topicId: "topic-1"
+    });
+
+    await expect(handler(baseJob)).resolves.toEqual({
+      code: "reconciliation_restarted",
+      alreadyCompleted: true
+    });
+    expect(providerAdapter.removeSegment).toHaveBeenCalledTimes(1);
+    expect(reconciliationData.checkpoint).not.toHaveBeenCalled();
   });
 
   it("keeps an explicitly opted-in mapped provider member and preserves pagination", async () => {

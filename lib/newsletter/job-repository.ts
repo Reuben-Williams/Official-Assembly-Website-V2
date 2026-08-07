@@ -210,6 +210,61 @@ export function createSupabaseNewsletterReconciliationData(
       };
     },
 
+    async reserveRemoval(job, member) {
+      const required = requiredReconciliationJob(job);
+      const result = await client.rpc("builder_reserve_newsletter_segment_removal_v1", {
+        p_request: {
+          version: 1,
+          siteId,
+          jobId: job.id,
+          runId: required.runId,
+          workerId,
+          fencingToken: job.fencingToken,
+          expectedEligibilityEpoch: required.expectedEligibilityEpoch,
+          providerContactId: member.providerContactId,
+          subscriptionId: member.subscriptionId,
+          contactGeneration: member.contactGeneration,
+          seenLocal: member.seenLocal
+        }
+      });
+      const status = result.data && typeof result.data === "object"
+        ? String((result.data as Record<string, unknown>).status)
+        : "";
+      if (result.error || !["reserved", "pending", "completed"].includes(status)) {
+        throw new Error("newsletter reconciliation mutation reservation unavailable");
+      }
+      return { status: status as "reserved" | "pending" | "completed" };
+    },
+
+    async completeRemoval(job, providerContactId) {
+      const required = requiredReconciliationJob(job);
+      const result = await client.rpc("builder_complete_newsletter_segment_removal_v1", {
+        p_request: {
+          version: 1,
+          siteId,
+          jobId: job.id,
+          runId: required.runId,
+          workerId,
+          fencingToken: job.fencingToken,
+          expectedEligibilityEpoch: required.expectedEligibilityEpoch,
+          providerContactId
+        }
+      });
+      const value = result.data && typeof result.data === "object"
+        ? result.data as Record<string, unknown>
+        : {};
+      const status = String(value.status ?? "");
+      if (result.error || !["completed", "restarted"].includes(status)) {
+        throw new Error("newsletter reconciliation mutation completion unavailable");
+      }
+      if (status === "restarted") return { status: "restarted" as const };
+      const expectedEligibilityEpoch = Number(value.expectedEligibilityEpoch);
+      if (!Number.isSafeInteger(expectedEligibilityEpoch) || expectedEligibilityEpoch < 0) {
+        throw new Error("newsletter reconciliation mutation completion unavailable");
+      }
+      return { status: "completed" as const, expectedEligibilityEpoch };
+    },
+
     async checkpoint(job, input) {
       const required = requiredReconciliationJob(job);
       const members = input.members.map((member: NewsletterReconciliationMember) => ({
