@@ -107,9 +107,9 @@ describe("editor page navigation", () => {
     expect(frame?.src).toContain("https://assembly.example/404?builderPreview=1");
     expect(container?.textContent).toContain("Editing /404");
     expect(vi.mocked(fetch).mock.calls.some(([input]) =>
-      String(input).includes("resource=audit&path=%2F404"))).toBe(true);
+      String(input).includes("resource=history&limit=100"))).toBe(true);
     expect(vi.mocked(fetch).mock.calls.some(([input]) =>
-      String(input).includes("resource=audit&path=%2F&"))).toBe(false);
+      String(input).includes("resource=audit"))).toBe(false);
   });
 
   it("never mounts an iframe or requests content for an invalid initial path", async () => {
