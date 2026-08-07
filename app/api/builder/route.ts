@@ -2,9 +2,14 @@ import type { BuilderRouteOperation } from "@reuben-williams/next/routes";
 
 import site from "../../../builder.config";
 import {
+  BuilderAuthorizationError,
   allowedBuilderOrigins,
   authorizeBuilderRequest
 } from "../../../lib/builder/authorization";
+import {
+  createHistoryResponseV1,
+  createSupabaseHistoryReadersV1,
+} from "../../../lib/builder/history";
 import { authenticateBuilderRequest } from "../../../lib/builder/request-auth";
 import {
   createSecuredBuilderHandlers,
@@ -58,7 +63,51 @@ function createHandlers(request: Request) {
   });
 }
 
+function historyError(error: unknown) {
+  if (error instanceof BuilderAuthorizationError) {
+    return Response.json(
+      { error: { code: error.code, message: error.message } },
+      { status: error.status, headers: { "cache-control": "no-store" } }
+    );
+  }
+  if (error instanceof TypeError) {
+    return Response.json(
+      { error: { code: "INVALID_HISTORY_QUERY", message: error.message } },
+      { status: 400, headers: { "cache-control": "no-store" } }
+    );
+  }
+  return Response.json(
+    { error: { code: "HISTORY_UNAVAILABLE", message: "Website history is temporarily unavailable." } },
+    { status: 503, headers: { "cache-control": "no-store" } }
+  );
+}
+
+async function readUnifiedHistory(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.searchParams.get("resource") !== "history") return null;
+  try {
+    const admin = getBuilderAdminClient();
+    if (!admin) return unavailable();
+    const identity = await authorizeBuilderRequest({
+      request,
+      operation: "history.read",
+      allowedOrigins: allowedBuilderOrigins(url.origin),
+      authenticate: () => authenticateBuilderRequest(request),
+    });
+    if (!identity) throw new BuilderAuthorizationError("AUTH_REQUIRED", 401, "A verified editor session is required.");
+    return await createHistoryResponseV1({
+      request,
+      readers: createSupabaseHistoryReadersV1(admin, identity.siteId),
+      role: identity.role,
+    });
+  } catch (error) {
+    return historyError(error);
+  }
+}
+
 export async function GET(request: Request) {
+  const history = await readUnifiedHistory(request);
+  if (history) return history;
   return createHandlers(request)?.GET(request) ?? unavailable();
 }
 

@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BuilderAuthorizationError } from "../lib/builder/authorization";
 import {
+  createHistoryResponseV1,
+  createHistoryEventId,
+  type HistoryEventV1,
+  type HistorySource,
+  type HistorySourceReaderV1,
+} from "../lib/builder/history";
+import {
   BuilderContentCommandError,
   createSecuredBuilderHandlers
 } from "../lib/builder/repositories";
@@ -16,7 +23,51 @@ const site: BuilderSiteConfig = {
   sections: {}
 };
 
+function historyReaders(values: Partial<Record<HistorySource, readonly HistoryEventV1[]>>): Record<HistorySource, HistorySourceReaderV1> {
+  return {
+    page: async () => values.page ?? [],
+    media: async () => values.media ?? [],
+    post: async () => values.post ?? [],
+    form: async () => values.form ?? [],
+  };
+}
+
 describe("secured builder route handlers", () => {
+  it("returns a no-store unified site history response with bounded query filters", async () => {
+    const sourceEventId = "post-event-1";
+    const item: HistoryEventV1 = {
+      schemaVersion: 1,
+      eventId: createHistoryEventId("site-1", "post", sourceEventId),
+      siteId: "site-1",
+      source: "post",
+      sourceEventId,
+      category: "posts",
+      action: "post.published",
+      workspace: "website.posts",
+      targetId: "post-1",
+      targetLabel: "District update",
+      actorId: "user-1",
+      actorLabel: "Editor",
+      createdAt: "2026-08-07T04:00:00.000Z",
+      versions: { parentVersionId: null, sourceVersionId: null, resultVersionId: null },
+      change: { before: null, after: null, changedFieldCount: 1 },
+      provenance: { legacy: false, limited: false, redactedFields: [] },
+      restore: { allowed: false, operation: null, reason: "not evaluated" },
+    };
+    const response = await createHistoryResponseV1({
+      request: new Request("http://localhost:3000/api/builder?resource=history&source=post&limit=25"),
+      readers: historyReaders({ post: [item] }),
+      role: "viewer",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toMatchObject({
+      items: [{ source: "post", targetLabel: "District update" }],
+      partial: false,
+    });
+  });
+
   it("turns authorization failures into no-store 401 responses", async () => {
     const handlers = createSecuredBuilderHandlers({
       site,
