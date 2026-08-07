@@ -84,9 +84,8 @@ export async function DELETE(request: Request) {
   }
   const resolved = await membershipForRequest();
   if (!resolved) return error(401, "AUTH_REQUIRED", "A verified editor account is required.");
-  const { error: revokeError } = await resolved.admin.rpc("builder_revoke_preview_sessions", {
-    p_site_id: resolved.membership.siteId,
-    p_user_id: resolved.membership.userId
+  const { error: revokeError } = await resolved.client.rpc("builder_revoke_preview_sessions", {
+    p_site_key: BUILDER_SITE_KEY
   });
   if (revokeError) return error(503, "REVOCATION_UNAVAILABLE", "The editor session could not be revoked.");
   await resolved.client.auth.signOut();
