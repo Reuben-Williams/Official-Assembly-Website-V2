@@ -38,6 +38,24 @@ export interface NewsletterContactProvider {
   addSegment(input: { readonly id: string; readonly segmentId: string }): Promise<void>;
 }
 
+export type NewsletterSegmentContact = {
+  readonly id: string;
+  readonly email: string;
+};
+
+export interface NewsletterReconciliationProvider extends NewsletterContactProvider {
+  listSegmentContacts(input: {
+    readonly segmentId: string;
+    readonly limit: 100;
+    readonly after?: string;
+  }): Promise<{
+    readonly contacts: readonly NewsletterSegmentContact[];
+    readonly hasMore: boolean;
+    readonly after?: string;
+  }>;
+  removeSegment(input: { readonly id: string; readonly segmentId: string }): Promise<void>;
+}
+
 export type NewsletterProviderBroadcast = {
   readonly id: string;
   readonly name: string;

@@ -4,6 +4,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NewsletterClaimedJob } from "./worker";
 import type { NewsletterContactProvider } from "./resend/contracts";
+import type {
+  NewsletterLocalEligible,
+  NewsletterReconciliationData,
+  NewsletterReconciliationMember
+} from "./segment-reconciliation";
 
 function parseClaimedJobs(value: unknown): NewsletterClaimedJob[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid job claim");
@@ -103,6 +108,173 @@ export function createSupabaseNewsletterJobRepository(client: SupabaseClient, si
         }
       });
       if (result.error) throw new Error("job failure transition unavailable");
+    }
+  };
+}
+
+function requiredReconciliationJob(job: NewsletterClaimedJob) {
+  if (
+    job.kind !== "newsletter.segment.reconcile" ||
+    typeof job.runId !== "string" ||
+    !Number.isSafeInteger(job.expectedEligibilityEpoch)
+  ) throw new Error("newsletter reconciliation unavailable");
+  return {
+    runId: job.runId,
+    expectedEligibilityEpoch: Number(job.expectedEligibilityEpoch)
+  };
+}
+
+export function createSupabaseNewsletterReconciliationData(
+  client: SupabaseClient,
+  siteId: string,
+  workerId: string
+): NewsletterReconciliationData & {
+  schedule(): Promise<"fresh" | "queued" | "already_queued" | "blocked">;
+  housekeeping(): Promise<void>;
+} {
+  async function emailFor(contactId: string) {
+    const identity = await client.from("builder_contact_identities")
+      .select("normalized_value")
+      .eq("site_id", siteId).eq("contact_id", contactId)
+      .eq("kind", "email").neq("verification_state", "invalid")
+      .limit(1).maybeSingle();
+    if (identity.error || !identity.data?.normalized_value) {
+      throw new Error("newsletter reconciliation unavailable");
+    }
+    return String(identity.data.normalized_value);
+  }
+
+  async function localRow(row: {
+    readonly id: unknown;
+    readonly contact_id: unknown;
+    readonly provider_contact_id: unknown;
+    readonly current_generation: unknown;
+  }): Promise<NewsletterLocalEligible> {
+    if (!row.provider_contact_id) throw new Error("newsletter reconciliation unavailable");
+    return {
+      id: String(row.id),
+      providerContactId: String(row.provider_contact_id),
+      contactGeneration: Number(row.current_generation),
+      email: await emailFor(String(row.contact_id))
+    };
+  }
+
+  return {
+    async schedule() {
+      const result = await client.rpc("builder_schedule_newsletter_reconciliation_v1", {
+        p_request: { version: 1, siteId }
+      });
+      const status = result.data && typeof result.data === "object"
+        ? String((result.data as Record<string, unknown>).status)
+        : "";
+      if (result.error || !["fresh", "queued", "already_queued", "blocked"].includes(status)) {
+        throw new Error("newsletter reconciliation schedule unavailable");
+      }
+      return status as "fresh" | "queued" | "already_queued" | "blocked";
+    },
+
+    async housekeeping() {
+      const abandon = await client.rpc("builder_abandon_newsletter_reconciliations_v1", {
+        p_request: { version: 1, siteId }
+      });
+      if (abandon.error) throw new Error("newsletter reconciliation housekeeping unavailable");
+      const purge = await client.rpc("builder_purge_newsletter_reconciliation_members_v1", {
+        p_request: { version: 1, siteId }
+      });
+      if (purge.error) throw new Error("newsletter reconciliation housekeeping unavailable");
+    },
+
+    async findLocalByProviderContactId(providerContactId) {
+      const result = await client.from("builder_newsletter_subscriptions")
+        .select("id,contact_id,provider_contact_id,current_generation")
+        .eq("site_id", siteId).eq("status", "active")
+        .eq("provider_contact_id", providerContactId).limit(1).maybeSingle();
+      if (result.error) throw new Error("newsletter reconciliation unavailable");
+      return result.data ? localRow(result.data) : null;
+    },
+
+    async listLocalEligible(input) {
+      let query = client.from("builder_newsletter_subscriptions")
+        .select("id,contact_id,provider_contact_id,current_generation")
+        .eq("site_id", siteId).eq("status", "active")
+        .order("id", { ascending: true }).limit(input.limit + 1);
+      if (input.afterId) query = query.gt("id", input.afterId);
+      const result = await query;
+      if (result.error) throw new Error("newsletter reconciliation unavailable");
+      const source = result.data ?? [];
+      const page = source.slice(0, input.limit);
+      return {
+        rows: await Promise.all(page.map(localRow)),
+        hasMore: source.length > input.limit,
+        afterId: page.length ? String(page.at(-1)!.id) : undefined
+      };
+    },
+
+    async checkpoint(job, input) {
+      const required = requiredReconciliationJob(job);
+      const members = input.members.map((member: NewsletterReconciliationMember) => ({
+        providerContactId: member.providerContactId,
+        subscriptionId: member.subscriptionId,
+        contactGeneration: member.contactGeneration,
+        seenProvider: member.seenProvider,
+        seenLocal: member.seenLocal,
+        eligible: member.eligible,
+        disposition: member.disposition,
+        actionState: member.actionState
+      }));
+      const result = await client.rpc("builder_checkpoint_newsletter_reconciliation_v1", {
+        p_request: {
+          version: 1,
+          siteId,
+          jobId: job.id,
+          runId: required.runId,
+          workerId,
+          fencingToken: job.fencingToken,
+          expectedEligibilityEpoch: required.expectedEligibilityEpoch,
+          phase: input.phase,
+          providerAfterCursor: input.providerAfterCursor,
+          providerComplete: input.providerComplete,
+          providerPages: input.providerPages,
+          localAfterId: input.localAfterId,
+          localComplete: input.localComplete,
+          localPages: input.localPages,
+          moreWork: input.moreWork,
+          members
+        }
+      });
+      const status = result.data && typeof result.data === "object"
+        ? String((result.data as Record<string, unknown>).status)
+        : "";
+      if (result.error || !["queued", "checkpointed"].includes(status)) {
+        throw new Error("newsletter reconciliation checkpoint unavailable");
+      }
+      return { status: status as "queued" | "checkpointed" };
+    },
+
+    async finalize(job) {
+      const required = requiredReconciliationJob(job);
+      const result = await client.rpc("builder_finalize_newsletter_reconciliation_v1", {
+        p_request: {
+          version: 1,
+          siteId,
+          jobId: job.id,
+          runId: required.runId,
+          workerId,
+          fencingToken: job.fencingToken,
+          expectedEligibilityEpoch: required.expectedEligibilityEpoch
+        }
+      });
+      if (result.error || !result.data || typeof result.data !== "object") {
+        throw new Error("newsletter reconciliation finalization unavailable");
+      }
+      const value = result.data as Record<string, unknown>;
+      if (value.status !== "ready" || typeof value.readinessRevisionId !== "string") {
+        throw new Error("newsletter reconciliation finalization unavailable");
+      }
+      return {
+        readinessRevisionId: value.readinessRevisionId,
+        audienceCount: Number(value.audienceCount)
+      };
     }
   };
 }

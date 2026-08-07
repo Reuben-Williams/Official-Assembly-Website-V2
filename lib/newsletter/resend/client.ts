@@ -7,7 +7,8 @@ import type {
   NewsletterBroadcastProvider,
   NewsletterContactProvider,
   NewsletterEmailProvider,
-  NewsletterProviderBroadcast
+  NewsletterProviderBroadcast,
+  NewsletterReconciliationProvider
 } from "./contracts";
 
 export const NEWSLETTER_CONFIRMATION_SENDER =
@@ -109,6 +110,34 @@ export function createProductionNewsletterContactProvider(apiKey: string): Newsl
     },
     async addSegment(input) {
       const result = await resend.contacts.segments.add({ contactId: input.id, segmentId: input.segmentId });
+      if (result.error) throw new Error("provider mutation unavailable");
+    }
+  };
+}
+
+export function createProductionNewsletterReconciliationProvider(apiKey: string): NewsletterReconciliationProvider {
+  const resend = new Resend(apiKey);
+  const contacts = createProductionNewsletterContactProvider(apiKey);
+  return {
+    ...contacts,
+    async listSegmentContacts(input) {
+      const result = await resend.contacts.list({
+        segmentId: input.segmentId,
+        limit: input.limit,
+        after: input.after
+      });
+      if (result.error || !result.data) throw new Error("provider read unavailable");
+      return {
+        contacts: result.data.data.map((contact) => ({ id: contact.id, email: contact.email })),
+        hasMore: result.data.has_more,
+        after: result.data.has_more ? result.data.data.at(-1)?.id : undefined
+      };
+    },
+    async removeSegment(input) {
+      const result = await resend.contacts.segments.remove({
+        contactId: input.id,
+        segmentId: input.segmentId
+      });
       if (result.error) throw new Error("provider mutation unavailable");
     }
   };

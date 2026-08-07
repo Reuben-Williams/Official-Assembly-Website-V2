@@ -373,6 +373,12 @@ declare
   v_more_work boolean;
   v_epoch bigint;
   v_changed integer;
+  v_member jsonb;
+  v_provider_contact_id text;
+  v_subscription_id uuid;
+  v_contact_generation integer;
+  v_disposition text;
+  v_action_state text;
 begin
   begin
     v_site_id := (p_request ->> 'siteId')::uuid;
@@ -394,6 +400,52 @@ begin
   if v_epoch is distinct from v_expected_epoch then
     raise exception 'newsletter eligibility epoch changed' using errcode = '55000';
   end if;
+
+  if jsonb_typeof(coalesce(p_request -> 'members', '[]'::jsonb)) <> 'array' then
+    raise exception 'invalid newsletter reconciliation checkpoint' using errcode = '22023';
+  end if;
+
+  for v_member in
+    select value from jsonb_array_elements(coalesce(p_request -> 'members', '[]'::jsonb)) value
+  loop
+    begin
+      v_provider_contact_id := v_member ->> 'providerContactId';
+      v_subscription_id := nullif(v_member ->> 'subscriptionId', '')::uuid;
+      v_contact_generation := nullif(v_member ->> 'contactGeneration', '')::integer;
+      v_disposition := v_member ->> 'disposition';
+      v_action_state := v_member ->> 'actionState';
+    exception when others then
+      raise exception 'invalid newsletter reconciliation member' using errcode = '22023';
+    end;
+    if char_length(v_provider_contact_id) not between 1 and 200
+      or v_disposition not in (
+        'eligible', 'provider_only', 'locally_ineligible', 'globally_unsubscribed',
+        'suppressed', 'wrong_topic', 'missing_segment', 'removed', 'blocked'
+      )
+      or v_action_state not in ('none', 'pending', 'completed', 'failed')
+    then
+      raise exception 'invalid newsletter reconciliation member' using errcode = '22023';
+    end if;
+    insert into public.builder_newsletter_reconciliation_members (
+      site_id, run_id, provider_contact_id, subscription_id, contact_generation,
+      seen_provider, seen_local, eligible, disposition, action_state
+    ) values (
+      v_site_id, v_run_id, v_provider_contact_id, v_subscription_id, v_contact_generation,
+      coalesce((v_member ->> 'seenProvider')::boolean, false),
+      coalesce((v_member ->> 'seenLocal')::boolean, false),
+      coalesce((v_member ->> 'eligible')::boolean, false),
+      v_disposition, v_action_state
+    )
+    on conflict (site_id, run_id, provider_contact_id) do update
+    set subscription_id = coalesce(excluded.subscription_id, public.builder_newsletter_reconciliation_members.subscription_id),
+        contact_generation = coalesce(excluded.contact_generation, public.builder_newsletter_reconciliation_members.contact_generation),
+        seen_provider = public.builder_newsletter_reconciliation_members.seen_provider or excluded.seen_provider,
+        seen_local = public.builder_newsletter_reconciliation_members.seen_local or excluded.seen_local,
+        eligible = excluded.eligible,
+        disposition = excluded.disposition,
+        action_state = excluded.action_state,
+        updated_at = clock_timestamp();
+  end loop;
 
   update public.builder_newsletter_reconciliation_runs
   set phase = case
@@ -476,15 +528,9 @@ begin
     v_worker_id := (p_request ->> 'workerId')::uuid;
     v_fencing := (p_request ->> 'fencingToken')::bigint;
     v_expected_epoch := (p_request ->> 'expectedEligibilityEpoch')::bigint;
-    v_audience_count := (p_request ->> 'audienceCount')::integer;
-    v_digest := p_request ->> 'eligibilityDigest';
   exception when others then
     raise exception 'invalid newsletter reconciliation finalization' using errcode = '22023';
   end;
-
-  if v_audience_count < 0 or v_digest !~ '^[a-f0-9]{64}$' then
-    raise exception 'invalid newsletter reconciliation finalization' using errcode = '22023';
-  end if;
 
   select epoch.epoch into v_epoch
   from public.builder_newsletter_eligibility_epochs epoch
@@ -530,6 +576,48 @@ begin
   ) then
     raise exception 'newsletter job lease lost' using errcode = '55000';
   end if;
+
+  if exists (
+    select 1
+    from public.builder_newsletter_reconciliation_members member
+    where member.site_id = v_site_id and member.run_id = v_run_id
+      and (
+        member.disposition in ('unresolved', 'blocked')
+        or member.action_state in ('pending', 'failed')
+        or (not member.eligible and not (
+          member.disposition = 'removed' and member.action_state = 'completed'
+        ))
+      )
+  ) then
+    raise exception 'newsletter audience is not ready' using errcode = '55000';
+  end if;
+
+  if exists (
+    select 1
+    from public.builder_newsletter_subscriptions subscription
+    left join public.builder_newsletter_reconciliation_members member
+      on member.site_id = subscription.site_id
+      and member.run_id = v_run_id
+      and member.subscription_id = subscription.id
+      and member.provider_contact_id = subscription.provider_contact_id
+    where subscription.site_id = v_site_id and subscription.status = 'active'
+      and (
+        subscription.provider_contact_id is null
+        or member.provider_contact_id is null
+        or not member.seen_provider
+        or not member.seen_local
+        or not member.eligible
+        or member.disposition <> 'eligible'
+      )
+  ) then
+    raise exception 'newsletter audience is not ready' using errcode = '55000';
+  end if;
+
+  select count(*)::integer,
+         encode(extensions.digest(coalesce(string_agg(subscription.id::text, E'\n' order by subscription.id), ''), 'sha256'), 'hex')
+  into v_audience_count, v_digest
+  from public.builder_newsletter_subscriptions subscription
+  where subscription.site_id = v_site_id and subscription.status = 'active';
 
   select coalesce(max(readiness.revision), 0) + 1 into v_revision
   from public.builder_newsletter_readiness_revisions readiness
@@ -656,7 +744,7 @@ begin
       reconciled_at, expires_at, state
     ) values (
       v_site_id, v_revision, 'resend-team-production', 0,
-      encode(digest('blocked:' || v_job.id::text, 'sha256'), 'hex'),
+      encode(extensions.digest('blocked:' || v_job.id::text, 'sha256'), 'hex'),
       clock_timestamp(), clock_timestamp() + interval '30 minutes', 'blocked'
     );
     v_count := v_count + 1;
@@ -1195,7 +1283,7 @@ begin
           reconciled_at, expires_at, state
         ) values (
           v_site_id, v_revision, 'resend-team-production', 0,
-          encode(digest('blocked:' || v_job_id::text, 'sha256'), 'hex'),
+          encode(extensions.digest('blocked:' || v_job_id::text, 'sha256'), 'hex'),
           clock_timestamp(), clock_timestamp() + interval '30 minutes', 'blocked'
         );
       end if;

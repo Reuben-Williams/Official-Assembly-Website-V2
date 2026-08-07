@@ -276,5 +276,122 @@ select is(
   'an actual retryable handler failure consumes one consecutive failure'
 );
 
+set local role service_role;
+insert into durable_results values (
+  'provider_reclaim',
+  public.builder_claim_newsletter_jobs_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'workerId', '39000000-0000-4000-8000-000000000103',
+    'limit', 1,
+    'leaseSeconds', 60,
+    'emailEnabled', true
+  ))
+);
+insert into durable_results values (
+  'provider_complete_yield',
+  public.builder_checkpoint_newsletter_reconciliation_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'provider_reclaim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'provider_reclaim'),
+    'workerId', '39000000-0000-4000-8000-000000000103',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'provider_reclaim'),
+    'expectedEligibilityEpoch', 0,
+    'phase', 'local_eligible',
+    'providerPages', 1,
+    'providerComplete', true,
+    'moreWork', true,
+    'members', jsonb_build_array(jsonb_build_object(
+      'providerContactId', 'provider-only-1',
+      'seenProvider', true,
+      'seenLocal', false,
+      'eligible', false,
+      'disposition', 'removed',
+      'actionState', 'completed'
+    ))
+  ))
+);
+reset role;
+
+select is(
+  (
+    select count(*)::integer
+    from public.builder_newsletter_reconciliation_members
+    where site_id = '39000000-0000-4000-8000-000000000001'
+  ),
+  1,
+  'the fenced checkpoint stores non-PII member evidence'
+);
+
+set local role service_role;
+insert into durable_results values (
+  'local_claim',
+  public.builder_claim_newsletter_jobs_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'workerId', '39000000-0000-4000-8000-000000000104',
+    'limit', 1,
+    'leaseSeconds', 60,
+    'emailEnabled', true
+  ))
+);
+insert into durable_results values (
+  'local_complete_checkpoint',
+  public.builder_checkpoint_newsletter_reconciliation_v1(jsonb_build_object(
+    'version', 1,
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'local_claim'),
+    'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'local_claim'),
+    'workerId', '39000000-0000-4000-8000-000000000104',
+    'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'local_claim'),
+    'expectedEligibilityEpoch', 0,
+    'phase', 'finalize',
+    'localPages', 1,
+    'localComplete', true,
+    'moreWork', false,
+    'members', '[]'::jsonb
+  ))
+);
+reset role;
+
+set local role service_role;
+select lives_ok(
+  format(
+    $$ select public.builder_finalize_newsletter_reconciliation_v1(%L::jsonb) $$,
+    jsonb_build_object(
+      'version', 1,
+      'siteId', '39000000-0000-4000-8000-000000000001',
+      'jobId', (select result #>> '{jobs,0,id}' from durable_results where test_case = 'local_claim'),
+      'runId', (select result #>> '{jobs,0,runId}' from durable_results where test_case = 'local_claim'),
+      'workerId', '39000000-0000-4000-8000-000000000104',
+      'fencingToken', (select (result #>> '{jobs,0,fencingToken}')::bigint from durable_results where test_case = 'local_claim'),
+      'expectedEligibilityEpoch', 0
+    )::text
+  ),
+  'the database computes and finalizes authentic zero-audience readiness'
+);
+reset role;
+
+select is(
+  (
+    select audience_count
+    from public.builder_newsletter_readiness_revisions
+    where site_id = '39000000-0000-4000-8000-000000000001'
+    order by revision desc limit 1
+  ),
+  0,
+  'the finalizer derives the zero audience count from evidence and local state'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.builder_newsletter_reconciliation_members
+    where site_id = '39000000-0000-4000-8000-000000000001'
+  ),
+  0,
+  'successful finalization compacts per-member evidence'
+);
+
 select * from finish();
 rollback;

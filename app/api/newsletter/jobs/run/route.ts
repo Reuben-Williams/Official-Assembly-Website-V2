@@ -9,11 +9,13 @@ import { createNewsletterCronHandler } from "../../../../../lib/newsletter/cron-
 import {
   createSupabaseNewsletterAuditData,
   createSupabaseNewsletterJobRepository,
+  createSupabaseNewsletterReconciliationData,
   createSupabaseNewsletterSubscriptionJobData
 } from "../../../../../lib/newsletter/job-repository";
 import {
   createProductionNewsletterContactProvider,
   createProductionNewsletterBroadcastProvider,
+  createProductionNewsletterReconciliationProvider,
   createProductionNewsletterSendAdapter
 } from "../../../../../lib/newsletter/resend/client";
 import { createNewsletterSegmentReconciliationHandler } from "../../../../../lib/newsletter/segment-reconciliation";
@@ -40,6 +42,8 @@ export async function GET(request: Request) {
       const enabled = configuration.status === "ready";
       const repository = createSupabaseNewsletterJobRepository(client, siteId);
       const subscriptionData = createSupabaseNewsletterSubscriptionJobData(client, siteId);
+      const workerId = crypto.randomUUID();
+      const reconciliationData = createSupabaseNewsletterReconciliationData(client, siteId, workerId);
       const auditData = createSupabaseNewsletterAuditData(client, siteId);
       const broadcastRepository = createNewsletterBroadcastRepository(client, siteId);
       const keyring = readNewsletterConfirmationKeyring();
@@ -48,11 +52,12 @@ export async function GET(request: Request) {
       const managementProvider = managementKey
         ? createProductionNewsletterContactProvider(managementKey)
         : null;
+      const reconciliationProvider = managementKey
+        ? createProductionNewsletterReconciliationProvider(managementKey)
+        : null;
       const broadcastProvider = managementKey
         ? createProductionNewsletterBroadcastProvider(managementKey)
         : null;
-      const workerId = crypto.randomUUID();
-
       const unavailable = async () => {
         throw new NewsletterJobFailure("provider_unavailable", false);
       };
@@ -82,13 +87,12 @@ export async function GET(request: Request) {
             )
           })
         : unavailable;
-      const segmentReconcile = enabled && managementProvider
+      const segmentReconcile = enabled && reconciliationProvider
         ? createNewsletterSegmentReconciliationHandler({
-            reconcile: () => auditData.segmentReconcile(
-              managementProvider,
-              configuration.topicId,
-              configuration.segmentId
-            )
+            provider: reconciliationProvider,
+            data: reconciliationData,
+            topicId: configuration.topicId,
+            segmentId: configuration.segmentId
           })
         : unavailable;
       const broadcastAudit = broadcastProvider
@@ -125,14 +129,18 @@ export async function GET(request: Request) {
         : unavailable;
 
       return {
-        run: () => runNewsletterWorker({
-          repository,
-          handlers: { confirmationSend, contactSync, contactAudit, segmentReconcile, broadcastAudit },
-          workerId,
-          emailEnabled: enabled,
-          limit: 10,
-          now: () => new Date()
-        })
+        run: async () => {
+          await reconciliationData.housekeeping();
+          if (enabled) await reconciliationData.schedule();
+          return runNewsletterWorker({
+            repository,
+            handlers: { confirmationSend, contactSync, contactAudit, segmentReconcile, broadcastAudit },
+            workerId,
+            emailEnabled: enabled,
+            limit: 10,
+            now: () => new Date()
+          });
+        }
       };
     }
   })(request);
