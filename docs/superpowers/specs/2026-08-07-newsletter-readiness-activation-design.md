@@ -45,11 +45,13 @@ Add one additive migration that extends the existing site-job model and introduc
 
 1. Add a partial unique index allowing at most one active `newsletter.segment.reconcile` job per site when state is `queued`, `leased`, or `retryable_failed`.
 2. Extend `builder_claim_newsletter_jobs_v1` so a site job is claimable when it is queued, retryable and due, or leased with `lease_expires_at <= clock_timestamp()`.
-3. Reclaim an expired lease atomically under `FOR UPDATE SKIP LOCKED`: assign the new worker, increment `lease_fencing_token`, increment `attempt_count`, and set a new expiry. An unexpired lease is never preempted.
-4. Set the reconciliation ceiling to eight total claims. Claim eight may run; any retryable failure from claim eight becomes `terminal_failed`, opens the site reconciliation circuit, and inserts a latest `blocked` readiness revision in one transaction. An expired job already at eight claims is terminalized rather than reclaimed.
-5. Continue to reject completion, failure, checkpoint, or finalization from an old worker, an old fencing token, or an expired current lease.
-6. Add one site/provider reconciliation-circuit row. While the circuit is open, Cron and operation requests return `blocked`; the scheduler cannot create a replacement job and cannot reset attempt history.
-7. Closing the circuit requires an authenticated site-owner recovery command with a nonempty reason. The server records the operator, exhausted job, reason, and timestamp, closes the circuit, and requests a new run. This is the only path that can resume after terminal exhaustion.
+3. Track `invocation_count` separately from `consecutive_failure_count`. Every claim increments the invocation audit count. A normal claim of queued yielded work does not consume failure budget.
+4. Add a fenced checkpoint-and-yield transition. After the bounded page budget, the current worker commits the cursor/evidence, clears the lease, sets the same job back to `queued`, resets `consecutive_failure_count` to zero, and preserves the same run. It succeeds only for the current owner, fence, and unexpired lease.
+5. Reclaim an expired lease atomically under `FOR UPDATE SKIP LOCKED`: treat the expired lease as one abandoned-worker failure, increment `consecutive_failure_count`, assign a new worker and fence only when the new failure count is below eight, and set a new expiry. An unexpired lease is never preempted.
+6. An explicit retryable handler failure increments `consecutive_failure_count`; a successful page checkpoint resets it. The eighth consecutive actual handler failure or abandoned lease becomes `terminal_failed`, opens the site reconciliation circuit, and inserts a latest `blocked` readiness revision in one transaction. A terminal policy failure opens the circuit immediately.
+7. Continue to reject yield, completion, failure, checkpoint, or finalization from an old worker, an old fencing token, or an expired current lease.
+8. Add one site/provider reconciliation-circuit row. While the circuit is open, Cron and operation requests return `blocked`; the scheduler cannot create a replacement job and cannot reset failure history.
+9. Closing the circuit requires an authenticated site-owner recovery command with a nonempty reason. The server records the operator, exhausted job, reason, and timestamp, closes the circuit, and requests a new run. This is the only path that can resume after terminal exhaustion or disabled abandonment.
 
 ### Reconciliation run and evidence
 
@@ -58,7 +60,10 @@ Add:
 - `builder_newsletter_reconciliation_runs`, keyed by site and run ID, containing the owning site-job ID, phase, provider cursor, local cursor, page counts, audience counts, safe state/code, and timestamps;
 - `builder_newsletter_reconciliation_members`, keyed by site, run, and provider Contact ID, containing only provider IDs, local subscription IDs when matched, source flags, eligibility flags, and safe dispositions. It stores no email address or provider response body;
 - `builder_newsletter_reconciliation_requests`, keyed by site and command ID, containing the operation kind, request time, bound run ID, and resulting readiness revision ID; and
-- `builder_newsletter_reconciliation_circuits`, keyed by site/provider scope, containing circuit state and safe terminal/recovery audit metadata.
+- `builder_newsletter_reconciliation_circuits`, keyed by site/provider scope, containing circuit state and safe terminal/recovery audit metadata; and
+- `builder_newsletter_provider_inventory_attestations`, containing only the owner, resource-policy version, non-API inventory categories reviewed, timestamp, expiry, and a safe evidence digest.
+
+Add a site-scoped eligibility epoch row. Each run records `expected_eligibility_epoch` when it starts.
 
 One active job owns one run. The run moves through these phases:
 
@@ -75,11 +80,13 @@ The provider walk retrieves each Segment Contact's global unsubscribe state and 
 
 Provider-only and locally ineligible Segment members are removed from the Segment idempotently and recorded with a safe disposition. They are never opted in, resubscribed, or added to another audience. A transient read/removal failure leaves the evidence unresolved and the run not ready. The local walk then proves that every active local subscription appears in the provider evidence and remains eligible. Missing, suppressed, wrong-Topic, or missing-Segment records block readiness; the reconciliation does not silently opt them in.
 
-Each provider page and local page is committed through a security-definer checkpoint RPC that verifies the current site-job owner, fencing token, unexpired lease, expected phase, and prior cursor before writing evidence, advancing the cursor, and renewing the lease. A process termination can therefore resume the same run after atomic lease reclamation; a stale process cannot write a later checkpoint.
+Each provider page and local page is committed through a security-definer checkpoint RPC that locks the site epoch and verifies the current site-job owner, fencing token, unexpired lease, expected phase, prior cursor, and expected epoch before writing evidence and advancing the cursor. If the invocation has more work, checkpoint-and-yield clears the lease and returns the same run to `queued`; healthy pagination can therefore span any number of invocations without using failure budget. A process termination resumes the same run after atomic lease reclamation; a stale process cannot write a later checkpoint or yield.
 
-The finalization RPC obtains a site-scoped transaction lock, re-verifies the current lease/fence and completed cursors, computes the audience count and SHA-256 eligibility digest from the resolved eligible local subscription IDs, allocates `max(revision) + 1`, inserts exactly one thirty-minute `builder_newsletter_readiness_revisions` row, and completes the job in the same transaction. Concurrent finalizers cannot allocate the same revision or complete the same run twice.
+Every eligibility-changing database transaction locks and increments the site epoch. A checkpoint or finalizer that finds `current_epoch <> expected_eligibility_epoch` marks the partial run `superseded`, compacts its member evidence, and starts a successor run from page one without consuming failure budget. A reconciliation-owned Resend mutation uses a fenced saga: a reservation RPC first locks and verifies the epoch and contact eligibility generation, marks the idempotent action pending, advances the epoch, and updates the run's expected epoch; the worker rechecks that generation immediately before the provider call; and a confirmation checkpoint verifies the fence/epoch and records the provider result. A concurrent outside change cannot be absorbed as owned work; it changes the epoch or generation and forces a full restart. Replayed provider removal remains idempotent, and no ready revision is possible until a new full walk observes the post-mutation provider state.
 
-Successful finalization retains the immutable run summary, page counts, audience count, digest, and linked readiness/command evidence but deletes its per-member rows in the same transaction. Retryable runs retain member rows only because they are required to resume. Terminal runs retain per-member rows for at most seven days; the protected Cron invokes a service-role purge RPC that excludes queued, leased, and retryable runs, deletes expired terminal member rows, and reports only a safe aggregate count. An open circuit therefore preserves its immutable terminal run summary without retaining provider or subscription identifiers indefinitely.
+The finalization RPC obtains the site epoch and revision locks, re-verifies the current lease/fence, completed cursors, and exact expected epoch, computes the audience count and SHA-256 eligibility digest from the resolved eligible local subscription IDs, allocates `max(revision) + 1`, inserts exactly one thirty-minute `builder_newsletter_readiness_revisions` row, and completes the job in the same transaction. If finalization locks first, a concurrent eligibility change waits and then writes a newer stale revision; if the change locks first, finalization observes the epoch mismatch and restarts. Concurrent finalizers cannot allocate the same revision or complete the same run twice.
+
+Successful finalization retains the immutable run summary, page counts, audience count, digest, and linked readiness/command evidence but deletes its per-member rows in the same transaction. Retryable and leased runs retain member rows only while resumable. On every protected Cron call, including disabled mode, a database-only housekeeping RPC atomically marks a queued, retryable, or expired-leased run `abandoned` when no checkpoint has succeeded for forty-eight hours, terminalizes its job with safe code `disabled_abandoned` or `worker_abandoned`, opens the circuit, and starts a seven-day member-retention clock without calling Resend. The purge RPC excludes genuinely active/resumable runs and deletes terminal or abandoned member rows after seven days, reporting only a safe aggregate count. Re-enablement cannot resume purged cursors; audited owner recovery closes the circuit and starts a new run from page one. Thus member identifiers survive at most nine days after the last successful checkpoint during long containment, while the immutable run summary remains.
 
 ### Least privilege
 
@@ -130,16 +137,29 @@ The server-only semantic preflight uses the actual hidden Production values insi
 
 - the management credential can read the configured Segment, Topic, sending domain, webhook registrations, and complete Broadcast inventory;
 - the send credential cannot perform the chosen management-only probe, proving it is not interchangeable with the management credential;
-- the complete team inventory matches an explicit allowlist: exactly the verified `updates.assemblywomanmorales.com` sending domain, the configured `District Newsletter` Segment, the configured public default-`opt_out` Topic, the expected Production webhook, and the approved purpose-specific API keys; no unrelated domain, Segment, Topic, webhook, key, application, or other enumerable team resource is permitted;
-- every provider Contact maps to a site-local subscription or an approved retained withdrawal/suppression record, and no unrelated Contact is present;
-- `updates.assemblywomanmorales.com` is verified and matches the configured sender domain;
-- an enabled webhook registration targets the expected Production webhook URL with the required email-delivery and audience events;
-- a webhook signing secret is structurally present. Exact secret/register matching is later proven by accepting an authentic signed event, because Resend does not return the signing secret for comparison;
-- no Broadcast is queued or scheduled anywhere in the team;
-- each draft belongs to this site and uses only the approved sender/audience boundary; and
-- each previously sent Broadcast matches a recorded validation and provider-audit observation for this site. An unmatched historical send fails closed as an incident.
+The versioned `resend-district-newsletter-v1` resource policy is explicit by category:
 
-The preflight enumerates every provider resource category exposed by the Resend account API. If a required category cannot be enumerated, it fails with `unsupported_inventory`; a dashboard assumption is not accepted as automated proof. It makes no send, Contact, Topic, Segment, webhook, domain, key, or Broadcast mutation.
+| Category | Required policy |
+| --- | --- |
+| Domains | Exactly one verified domain: `updates.assemblywomanmorales.com`. |
+| Segments | Exactly the configured `District Newsletter` Segment. |
+| Topics | Exactly the configured public `District Newsletter` Topic with immutable default `opt_out`. |
+| Webhooks | Exactly the enabled Production endpoint and required delivery, Contact, and suppression events. The signing secret must be structurally present; an authentic signed event later proves the secret/register match because Resend does not return the secret. |
+| API-key metadata | Exactly the approved sending-only and full-access management keys. The unused Onboarding key must be revoked. The sending key must fail a management-only probe. |
+| Contacts | Every Contact maps to a site-local subscription or approved retained withdrawal/suppression record; no unrelated Contact is allowed. |
+| Suppressions | Every suppression maps to a recorded local complaint, bounce, or global-withdrawal state; no unrelated suppression is allowed. |
+| Broadcast drafts | Each draft must use this site's sender, Segment, and Topic boundary. |
+| Queued or scheduled Broadcasts | Must be empty everywhere in the team. |
+| Sent Broadcasts | Each must match this site's stored validation and provider-audit observation; unmatched history opens an incident and fails closed. |
+| Transactional email history | Confirmation messages must match site-local delivery/provider message IDs; Staff Portal magic-link mail must match an authorized site user plus Supabase Auth audit evidence and the approved auth sender/template boundary; staff tests must match a staff-test window; Broadcast deliveries must match validated/audited Broadcast evidence. Unmapped mail fails closed. |
+| Imports | Must be empty; this design never imports an audience. |
+| Provider templates | Must be empty; confirmation content is application-owned and Broadcast content remains a reviewed dashboard draft. |
+| Automations | Must be empty. |
+| OAuth grants/applications | Must be empty. |
+
+The provider adapter fully paginates every API-listable category above. A category exposed by the current Resend API but omitted from the versioned policy fails with `unclassified_resource`; a required list endpoint that fails or truncates returns `unsupported_inventory`. Account settings not exposed by API, currently team membership, billing ownership, and any non-enumerable OAuth/application view, require a site-owner dashboard review recorded in `builder_newsletter_provider_inventory_attestations`. The attestation names the policy categories, contains no screenshot or secret, expires after thirty days, and is required by both initial and steady preflight. It is evidence for non-API scope only and cannot override a failed automated category.
+
+The preflight makes no send, Contact, Topic, Segment, webhook, domain, key, or Broadcast mutation.
 
 Every list operation follows cursors until exhaustion, with a bounded maximum page count that fails closed rather than accepting a truncated result. Valid-looking but wrong IDs or credentials cannot pass. Only safe aggregate counts and status codes may enter build logs.
 
@@ -178,7 +198,7 @@ The existing privacy notice and pre-form confirmation explanation remain visible
 - A structural or semantic Production preflight failure rejects the candidate build.
 - A provider or database reconciliation failure creates no ready revision and keeps or returns the public page to its phone fallback when the latest revision is absent, blocked, stale, or expired.
 - A stale worker cannot checkpoint, finalize, complete, or fail a reclaimed job.
-- Expired leases are reclaimed with a new fence through claim eight; terminal exhaustion opens the durable circuit and repeated Cron calls cannot bypass it.
+- Healthy checkpoint-and-yield pagination is unlimited. Eight consecutive real handler failures or abandoned leases open the durable circuit, and repeated Cron calls cannot bypass it.
 - First-activation evidence is required independently of the feature flag. Missing or mismatched evidence keeps the public form unavailable.
 - No failure path reports a successful subscription, Contact sync, email delivery, or Broadcast send.
 - Immediate containment remains `NEWSLETTER_EMAIL_ENABLED=false` plus a fresh Production deployment.
@@ -195,11 +215,13 @@ Implementation follows red-green-refactor.
 - a newer blocked or stale revision overrides an older ready revision;
 - readiness inside the fifteen-minute refresh window queues one job;
 - concurrent scheduler calls cannot create multiple active jobs;
-- an expired lease is reclaimed once with a higher fence and preserved/incremented attempt history;
+- a successful run can checkpoint and yield across more than eight invocations without consuming failure budget;
+- yield versus reclaim/claim races produce one current owner and one committed cursor;
+- an expired lease is reclaimed once with a higher fence and increments the consecutive abandoned-worker failure count;
 - an unexpired lease is not preempted;
 - concurrent reclaimers yield one owner;
 - the old owner cannot checkpoint, finalize, complete, or fail after reclamation;
-- claim eight is the final runnable reconciliation attempt, terminal exhaustion opens the site circuit, and repeated Cron calls cannot create a replacement job;
+- a successful checkpoint resets consecutive failures, while eight consecutive actual failures or abandoned leases open the site circuit and repeated Cron calls cannot create a replacement job;
 - only an audited owner recovery command closes the circuit and creates a new attempt lineage;
 - concurrent finalizers allocate one readiness revision and one completion;
 - every new table denies browser-role `SELECT`, `INSERT`, `UPDATE`, and `DELETE`;
@@ -218,8 +240,12 @@ Implementation follows red-green-refactor.
 - simultaneous manual and Cron requests share one job/run;
 - a command request arriving after a run starts waits for a successor and cannot reuse that run's revision;
 - stale finalization is rejected and provider effects remain idempotent;
+- an outside eligibility change after either cursor has passed the affected record supersedes the run through the site epoch;
+- an eligibility change immediately before or concurrent with finalization either prevents ready finalization or creates a newer stale revision;
+- a fenced reconciliation-owned mutation advances the run epoch without accepting an unrelated concurrent change;
 - successful finalization compacts all member evidence while preserving the immutable run summary;
-- active/retryable evidence is never purged, terminal member evidence is purged after seven days, and cleanup is service-only and site-isolated.
+- long disabled containment converts forty-eight-hour queued/retryable/expired-leased runs to abandoned without a provider call, purges member evidence seven days later, and requires audited recovery to start from page one;
+- genuinely active/resumable evidence is not purged, and cleanup is service-only and site-isolated.
 
 ### Provider preflight and route tests
 
@@ -228,8 +254,11 @@ Implementation follows red-green-refactor.
 - send-key management access fails the separation requirement;
 - every Segment, Broadcast, and resource page is inspected;
 - unexpected Segment members, local eligible subscribers, or scheduled/queued/sent Broadcasts fail first-activation preflight;
-- the complete domain, Contact, Segment, Topic, webhook, API-key, application, and Broadcast inventory rejects unrelated resources or an unsupported/unlistable required category;
+- the complete versioned policies for domains, Contacts, suppressions, Segments, Topics, webhooks, API keys, Broadcasts, transactional history, imports, templates, automations, and OAuth/applications reject unrelated, unmapped, unclassified, or unsupported resources;
+- the unused Onboarding key, any import/template/automation/OAuth application, or an expired non-API owner attestation fails preflight;
 - steady-state preflight permits authentic subscribers and previously sent Broadcasts only when they match site-local and validation/audit evidence;
+- steady-state preflight permits the authentic confirmation message only when its provider message ID maps to local delivery evidence;
+- approved Staff Portal magic-link history passes only when it maps to an authorized site user and Supabase Auth audit event without logging the recipient;
 - first activation creates a durable resource-digest revision only after the runtime recheck; an environment flag alone cannot create or spoof it;
 - post-signup redeployment, disabled containment, and steady-state re-enablement do not reimpose the zero-audience first-activation premise;
 - a provider/resource identity change invalidates activation evidence and fails closed for reviewed migration;
@@ -258,20 +287,21 @@ Implementation follows red-green-refactor.
 ## Production Sequence
 
 1. Record the promoted deployment and encrypted backup as rollback evidence.
-2. Implement the migration, durable state machine, provider pagination, semantic preflight, serialized operations, and exact form-copy tests red-first.
+2. Implement the migration, durable state machine, provider pagination, semantic preflight, serialized operations, inventory-attestation control, and exact form-copy tests red-first.
 3. Run migration dry-run, database tests, advisor review, lint, full tests, and local Production build.
 4. Apply the additive migration and publish the immutable newsletter form revision; verify its projection and history.
-5. Confirm Supabase active eligibility, the complete Resend Segment, and historical sends satisfy the first-activation zero boundary without creating records.
-6. Set `NEWSLETTER_EMAIL_ENABLED=true` for Production only.
-7. Create a fresh `--prod --skip-domain` candidate. Its structural and initial semantic gates must pass using actual hidden Production values.
-8. Verify candidate routes and security boundaries without submitting the public form.
-9. Promote that exact candidate; verify `/newsletter` remains on the fallback because durable first-activation evidence is still absent.
-10. Invoke the authenticated owner-only first-activation operation, repeat the complete initial preflight, and record the matching resource-digest revision.
-11. Observe Cron schedule, page through, finalize, and complete the initial zero-audience reconciliation.
-12. Verify the public form, latest readiness, runtime logs, and fallback behavior.
-13. Have the user submit one authentic approved inbox and open its confirmation link.
-14. Verify consent evidence, Contact state, explicit Topic opt-in, Segment membership, and one authentic signed webhook without recording the address in release evidence.
-15. Build a steady-state candidate after the authentic signup to prove future deployments no longer require an empty audience while all dedicated-team and evidence checks remain enforced.
+5. Deploy and promote the infrastructure/UI release with `NEWSLETTER_EMAIL_ENABLED=false`; verify that it performs no provider mutation and keeps the public fallback.
+6. In the protected Staff Portal, record the owner review for non-API account categories and verify the automated inventories, Supabase active eligibility, complete Resend Segment, and historical sends satisfy the first-activation boundary without creating records. Revoke the unused Onboarding key before continuing.
+7. Set `NEWSLETTER_EMAIL_ENABLED=true` for Production only.
+8. Create a fresh `--prod --skip-domain` candidate. Its structural and initial semantic gates must pass using actual hidden Production values.
+9. Verify candidate routes and security boundaries without submitting the public form.
+10. Promote that exact candidate; verify `/newsletter` remains on the fallback because durable first-activation evidence is still absent.
+11. Invoke the authenticated owner-only first-activation operation, repeat the complete initial preflight, and record the matching resource-digest revision.
+12. Observe Cron schedule, page through, finalize, and complete the initial zero-audience reconciliation.
+13. Verify the public form, latest readiness, runtime logs, and fallback behavior.
+14. Have the user submit one authentic approved inbox and open its confirmation link.
+15. Verify consent evidence, Contact state, explicit Topic opt-in, Segment membership, and one authentic signed webhook without recording the address in release evidence.
+16. Build a steady-state candidate after the authentic signup to prove future deployments no longer require an empty audience while all dedicated-team and evidence checks remain enforced.
 
 ## Scope Boundary
 
