@@ -1,9 +1,68 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHttpPostsClient, listLinkablePosts } from "../lib/builder/posts-client";
+import {
+  applyPostDefaults,
+  editablePostToSnapshot,
+  validateEditablePostForStage
+} from "../lib/builder/posts";
+
+const incompleteDraft = {
+  entryId: null,
+  draftVersionId: null,
+  publishedVersionId: null,
+  title: "District update",
+  slug: "",
+  excerpt: "",
+  body: { version: 1 as const, type: "doc" as const, content: [] },
+  featuredImage: null,
+  authorName: "",
+  authorKey: null,
+  categoryKeys: [],
+  tagKeys: [],
+  displayDate: "",
+  expiresAt: null,
+  featured: false,
+  pinned: false,
+  seoTitle: "",
+  seoDescription: "",
+  canonicalUrl: null,
+  noIndex: false,
+  status: "draft" as const
+};
 
 describe("live posts HTTP client", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("creates deterministic server defaults while drafts require only a title", () => {
+    expect(validateEditablePostForStage(incompleteDraft, "draft")).toEqual([]);
+    const normalized = applyPostDefaults(incompleteDraft, {
+      authorName: "Office of Assemblywoman Carmen Theresa Morales",
+      now: "2026-08-07T04:00:00.000Z",
+      timeZone: "America/New_York"
+    });
+
+    expect(normalized).toMatchObject({
+      title: "District update",
+      slug: "district-update",
+      authorName: "Office of Assemblywoman Carmen Theresa Morales",
+      displayDate: "2026-08-07T04:00:00.000Z"
+    });
+    expect(editablePostToSnapshot(normalized).displayTimeZone).toBe("America/New_York");
+  });
+
+  it("uses the same publish-only body and descriptive image rules as the editor", () => {
+    expect(validateEditablePostForStage(incompleteDraft, "publish")).toEqual([
+      { field: "body", message: "Add post body text before publishing." }
+    ]);
+    expect(validateEditablePostForStage({
+      ...incompleteDraft,
+      body: { version: 1, type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Update" }] }] },
+      featuredImage: { kind: "managed", mediaId: "media-1", revisionId: "revision-1", alt: "IMG_0042.jpg" }
+    }, "publish")).toEqual([
+      { field: "featuredImageAlt", message: "Describe the image instead of using its filename." }
+    ]);
+  });
 
   it("uses the authenticated posts API and sends CSRF protection on mutations", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({

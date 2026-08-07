@@ -60,6 +60,7 @@ export const siteConfig = {
   officeName: "Office of Assemblywoman Carmen Theresa Morales",
   representativeName: "Carmen Morales",
   districtLabel: "New Jersey Legislative District 34",
+  timeZone: "America/New_York",
   tagline:
     "Constituent services, legislative information, voting resources, and district office access for New Jersey's 34th Legislative District.",
   officeAddress: "152 Franklin Street, Belleville, NJ 07109",
