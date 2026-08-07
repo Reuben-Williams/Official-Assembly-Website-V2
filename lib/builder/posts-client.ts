@@ -12,9 +12,24 @@ export type PostsClientOptions = {
   onLinkablePostsRefreshError?: (error: Error) => void;
 };
 
+export class PostsClientError extends Error {
+  readonly code: string;
+  readonly status: number;
+
+  constructor(message: string, input: { code: string; status: number }) {
+    super(message);
+    this.name = "PostsClientError";
+    this.code = input.code;
+    this.status = input.status;
+  }
+}
+
 async function readResponse<T>(response: Response): Promise<T> {
-  const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-  if (!response.ok) throw new Error(payload?.error?.message ?? "The posts service is unavailable.");
+  const payload = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
+  if (!response.ok) throw new PostsClientError(
+    payload?.error?.message ?? "The posts service is unavailable.",
+    { code: payload?.error?.code ?? "POSTS_UNAVAILABLE", status: response.status }
+  );
   return payload as T;
 }
 
@@ -61,7 +76,7 @@ export function createHttpPostsClient(options: PostsClientOptions): AttachedPost
 
   async function mutate<T>(path: string, init: { method: string; body: unknown; mutation: true }) {
     const result = await request<T>(path, init);
-    await refreshLinkablePosts();
+    void refreshLinkablePosts();
     return result;
   }
 

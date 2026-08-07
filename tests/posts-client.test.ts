@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createHttpPostsClient, listLinkablePosts } from "../lib/builder/posts-client";
+import { PostsClientError, createHttpPostsClient, listLinkablePosts } from "../lib/builder/posts-client";
 import {
   applyPostDefaults,
   editablePostToSnapshot,
@@ -156,7 +156,7 @@ describe("live posts HTTP client", () => {
       "/api/builder/posts?scope=linkable",
       expect.objectContaining({ cache: "no-store", credentials: "same-origin" })
     );
-    expect(onLinkablePostsChanged).toHaveBeenCalledWith(linkable);
+    await vi.waitFor(() => expect(onLinkablePostsChanged).toHaveBeenCalledWith(linkable));
   });
 
   it("keeps a successful post transition successful when the secondary linkable refresh fails", async () => {
@@ -200,8 +200,24 @@ describe("live posts HTTP client", () => {
 
     await expect(client.publishPost(post.entryId)).resolves.toEqual(post);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(onLinkablePostsRefreshError).toHaveBeenCalledWith(
+    await vi.waitFor(() => expect(onLinkablePostsRefreshError).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Linkable posts could not be refreshed." })
-    );
+    ));
+  });
+
+  it("preserves the server error category for authorization and validation failures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      error: { code: "ROLE_DENIED", message: "This account cannot perform that post action." }
+    }), { status: 403, headers: { "content-type": "application/json" } })));
+    const client = createHttpPostsClient({
+      baseUrl: "/api/builder/posts",
+      getCsrfToken: () => "csrf-token"
+    });
+
+    await expect(client.publishPost("11111111-1111-4111-8111-111111111111")).rejects.toMatchObject({
+      name: "PostsClientError",
+      code: "ROLE_DENIED",
+      status: 403
+    } satisfies Partial<PostsClientError>);
   });
 });
