@@ -62,6 +62,7 @@ describe("editor page navigation", () => {
 
     const frame = container?.querySelector<HTMLIFrameElement>("iframe[data-builder-preview-frame]");
     expect(frame?.src).toContain("https://assembly.example/resources?builderPreview=1");
+    expect(container?.querySelector('[data-builder-preview-visible="true"]')).not.toBeNull();
     expect(new URL(window.location.href).searchParams.get("workspace")).toBe("website.pages");
     expect(new URL(window.location.href).searchParams.get("path")).toBe("/resources");
   });

@@ -9,6 +9,7 @@ export type PostsClientOptions = {
   baseUrl: string;
   getCsrfToken: () => string | null;
   onLinkablePostsChanged?: (posts: LinkablePost[]) => void;
+  onLinkablePostsRefreshError?: (error: Error) => void;
 };
 
 async function readResponse<T>(response: Response): Promise<T> {
@@ -49,7 +50,13 @@ export function createHttpPostsClient(options: PostsClientOptions): AttachedPost
 
   async function refreshLinkablePosts() {
     if (!options.onLinkablePostsChanged) return;
-    options.onLinkablePostsChanged(await listLinkablePosts(options));
+    try {
+      options.onLinkablePostsChanged(await listLinkablePosts(options));
+    } catch (error) {
+      options.onLinkablePostsRefreshError?.(
+        error instanceof Error ? error : new Error("Linkable posts could not be refreshed.")
+      );
+    }
   }
 
   async function mutate<T>(path: string, init: { method: string; body: unknown; mutation: true }) {

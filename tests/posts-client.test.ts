@@ -131,13 +131,18 @@ describe("live posts HTTP client", () => {
         headers: { "content-type": "application/json" }
       }));
     vi.stubGlobal("fetch", fetchMock);
+    const onLinkablePostsRefreshError = vi.fn();
     const client = createHttpPostsClient({
       baseUrl: "/api/builder/posts",
       getCsrfToken: () => "csrf-token",
-      onLinkablePostsChanged: vi.fn()
+      onLinkablePostsChanged: vi.fn(),
+      onLinkablePostsRefreshError
     });
 
     await expect(client.publishPost(post.entryId)).resolves.toEqual(post);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onLinkablePostsRefreshError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Linkable posts could not be refreshed." })
+    );
   });
 });

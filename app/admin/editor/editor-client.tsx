@@ -47,6 +47,7 @@ export function editorPageNavigation(currentPath: string, onPageChange: (path: s
       if (normalizedPath === currentPath) return;
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
+        url.searchParams.set("workspace", "website.pages");
         url.searchParams.set("path", normalizedPath);
         window.history.pushState({}, "", url);
       }
