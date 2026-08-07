@@ -15,6 +15,7 @@
     "test:db": "supabase test db --local",
     "test:newsletter": "vitest run newsletter && npm run test:db && node scripts/check-newsletter-boundaries.mjs",
     "test:e2e": "npm run build && playwright test",
+    "builder:recovery:bootstrap": "node --import tsx scripts/bootstrap-builder-recovery.mjs",
     "verify:platform-migrations": "node scripts/verify-platform-migration-checksums.mjs",
     "verify:production-migrations": "node scripts/verify-production-migration-lineage.mjs"
   },
@@ -53,6 +54,7 @@
     "@tiptap/extension-underline": "3.29.2",
     "@tiptap/extensions": "3.29.2",
     "@tiptap/pm": "3.29.2",
+    "@vercel/blob": "2.6.1",
     "lucide-react": "^0.468.0",
     "next": "16.3.0",
     "react": "19.2.8",

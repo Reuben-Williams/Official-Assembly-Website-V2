@@ -10,6 +10,7 @@ import { cache } from "react";
 import site from "../../builder.config";
 import { getBuilderAdminClient } from "../supabase/admin";
 import { createSiteKeyResolvingAdapter } from "./repositories";
+import { createOfficialAssemblyRecoveryRuntime } from "./recovery";
 
 const GLOBAL_CONTENT_PATH = "/__builder/global";
 
@@ -19,6 +20,7 @@ export type BuilderServerContent = Readonly<{
 
 type LoaderDependencies = Readonly<{
   adapter?: BuilderContentAdapter;
+  recovery?: (pagePath: string) => Promise<BuilderServerContent | null>;
 }>;
 
 export class BuilderPublishedContentUnavailableError extends Error {
@@ -76,6 +78,15 @@ function readPublishedScope(path: string, dependencies: LoaderDependencies) {
     : readDefaultPublishedScope(path);
 }
 
+function readRecovery(pagePath: string, dependencies: LoaderDependencies) {
+  if (dependencies.recovery) return dependencies.recovery(pagePath);
+  try {
+    return createOfficialAssemblyRecoveryRuntime().readContent(pagePath);
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+
 export async function loadBuilderServerContent(
   pagePath: string,
   dependencies: LoaderDependencies = {},
@@ -90,6 +101,8 @@ export async function loadBuilderServerContent(
     return { regions: registeredValues(kinds, stored) };
   } catch (cause) {
     if (cause instanceof BuilderPublishedContentUnavailableError) throw cause;
+    const recovered = await readRecovery(pagePath, dependencies);
+    if (recovered) return { regions: registeredValues(kinds, recovered.regions) };
     throw new BuilderPublishedContentUnavailableError(pagePath, {
       cause: cause instanceof Error ? cause : undefined,
     });
@@ -103,6 +116,8 @@ export async function loadBuilderGlobalContent(
     const global = await readPublishedScope(GLOBAL_CONTENT_PATH, dependencies);
     return { regions: registeredValues(globalKinds(), global.regions) };
   } catch (cause) {
+    const recovered = await readRecovery("/", dependencies);
+    if (recovered) return { regions: registeredValues(globalKinds(), recovered.regions) };
     throw new BuilderPublishedContentUnavailableError(GLOBAL_CONTENT_PATH, {
       cause: cause instanceof Error ? cause : undefined,
     });

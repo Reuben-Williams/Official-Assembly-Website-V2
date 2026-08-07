@@ -75,4 +75,27 @@ describe("server-rendered builder content", () => {
 
     await expect(operation).rejects.toBeInstanceOf(BuilderPublishedContentUnavailableError);
   });
+
+  it("uses only an exact validated recovery result after an authoritative failure", async () => {
+    const recovery = vi.fn(async () => ({
+      regions: { "home.hero.title": { type: "text" as const, value: "Recovered home" } }
+    }));
+    const content = await loadBuilderServerContent("/", {
+      adapter: adapter(vi.fn(async () => { throw new Error("database unavailable"); })),
+      recovery
+    });
+
+    expect(recovery).toHaveBeenCalledOnce();
+    expect(recovery).toHaveBeenCalledWith("/");
+    expect(content.regions["home.hero.title"]).toEqual({ type: "text", value: "Recovered home" });
+  });
+
+  it("does not infer fallback content when recovery cannot prove an exact route", async () => {
+    const operation = loadBuilderServerContent("/about", {
+      adapter: adapter(vi.fn(async () => { throw new Error("database unavailable"); })),
+      recovery: async () => null
+    });
+
+    await expect(operation).rejects.toBeInstanceOf(BuilderPublishedContentUnavailableError);
+  });
 });
