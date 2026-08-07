@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createNewsletterAuthSmtpProofDigest,
   createNewsletterProviderAttestationDigest,
   createNewsletterProviderOperationsRepository,
   NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES
@@ -54,6 +55,15 @@ describe("newsletter provider operations repository", () => {
       operatorId,
       resourceIdentityDigest: "b".repeat(64)
     });
+    await repository.recordAuthSmtpProof({
+      commandId: "34000000-0000-4000-8000-000000000013",
+      operatorId,
+      proofKind: "replacement_login",
+      providerMessageId: "auth-message-1",
+      providerCreatedAt: "2026-08-07T18:00:00.000Z",
+      authLastSignInAt: "2026-08-07T18:01:00.000Z",
+      safeEvidenceDigest: "c".repeat(64)
+    });
 
     expect(rpc).toHaveBeenNthCalledWith(1,
       "builder_record_newsletter_inventory_attestation_v1",
@@ -73,5 +83,30 @@ describe("newsletter provider operations repository", () => {
         historicalSendCount: 0
       }) }
     );
+    expect(rpc).toHaveBeenNthCalledWith(3,
+      "builder_record_newsletter_auth_smtp_proof_v1",
+      { p_request: expect.objectContaining({
+        siteId,
+        operatorId,
+        proofKind: "replacement_login",
+        providerMessageId: "auth-message-1"
+      }) }
+    );
+  });
+
+  it("derives secret-safe Auth SMTP evidence without an address or message body", () => {
+    const input = {
+      siteId,
+      operatorId,
+      proofKind: "replacement_login" as const,
+      providerMessageId: "auth-message-1",
+      providerCreatedAt: "2026-08-07T18:00:00.000Z",
+      authLastSignInAt: "2026-08-07T18:01:00.000Z"
+    };
+    const first = createNewsletterAuthSmtpProofDigest(input);
+    const second = createNewsletterAuthSmtpProofDigest(input);
+    expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(first).not.toContain("example.com");
   });
 });

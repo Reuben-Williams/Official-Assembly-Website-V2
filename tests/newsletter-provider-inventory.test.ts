@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   evaluateNewsletterProviderInventory,
+  findRecentNewsletterAuthSmtpLoginEmail,
   NEWSLETTER_INVENTORY_POLICY_VERSION,
   REQUIRED_NEWSLETTER_WEBHOOK_EVENTS,
   resolveNewsletterInventoryActivationStage,
@@ -85,6 +86,86 @@ function evidence(
 }
 
 describe("newsletter provider inventory policy", () => {
+  it("matches only a recent delivered Auth email for the exact signed-in owner", () => {
+    const signedInAt = new Date("2026-08-07T18:05:00.000Z");
+    const matched = findRecentNewsletterAuthSmtpLoginEmail(snapshot({
+      emails: [
+        {
+          id: "wrong-recipient",
+          status: "delivered",
+          createdAt: "2026-08-07T18:04:00.000Z",
+          from: "Office <auth@updates.assemblywomanmorales.com>",
+          to: ["other@example.com"],
+          subject: "Sign in"
+        },
+        {
+          id: "auth-message-1",
+          status: "opened",
+          createdAt: "2026-08-07T18:03:00.000Z",
+          from: "Office <auth@updates.assemblywomanmorales.com>",
+          to: ["OWNER@EXAMPLE.COM"],
+          subject: "Your sign-in link"
+        }
+      ]
+    }), {
+      email: "owner@example.com",
+      lastSignInAt: signedInAt,
+      excludedProviderMessageIds: new Set()
+    });
+
+    expect(matched?.id).toBe("auth-message-1");
+  });
+
+  it("rejects failed, stale, wrong-domain, future, and previously used Auth messages", () => {
+    const candidates: NewsletterProviderInventorySnapshot["emails"] = [
+      {
+        id: "failed",
+        status: "failed",
+        createdAt: "2026-08-07T18:04:00.000Z",
+        from: "Office <auth@updates.assemblywomanmorales.com>",
+        to: ["owner@example.com"],
+        subject: "Sign in"
+      },
+      {
+        id: "stale",
+        status: "delivered",
+        createdAt: "2026-08-07T16:00:00.000Z",
+        from: "Office <auth@updates.assemblywomanmorales.com>",
+        to: ["owner@example.com"],
+        subject: "Sign in"
+      },
+      {
+        id: "wrong-domain",
+        status: "delivered",
+        createdAt: "2026-08-07T18:04:00.000Z",
+        from: "attacker@example.com",
+        to: ["owner@example.com"],
+        subject: "Sign in"
+      },
+      {
+        id: "future",
+        status: "delivered",
+        createdAt: "2026-08-07T18:06:00.000Z",
+        from: "Office <auth@updates.assemblywomanmorales.com>",
+        to: ["owner@example.com"],
+        subject: "Sign in"
+      },
+      {
+        id: "already-used",
+        status: "clicked",
+        createdAt: "2026-08-07T18:04:30.000Z",
+        from: "Office <auth@updates.assemblywomanmorales.com>",
+        to: ["owner@example.com"],
+        subject: "Sign in"
+      }
+    ];
+    expect(findRecentNewsletterAuthSmtpLoginEmail(snapshot({ emails: candidates }), {
+      email: "owner@example.com",
+      lastSignInAt: new Date("2026-08-07T18:05:00.000Z"),
+      excludedProviderMessageIds: new Set(["already-used"])
+    })).toBeNull();
+  });
+
   it("uses initial mode only before activation and fails on provider identity drift", () => {
     const digest = "a".repeat(64);
     expect(resolveNewsletterInventoryActivationStage(null, digest)).toBe("initial");
@@ -158,7 +239,14 @@ describe("newsletter provider inventory policy", () => {
           segmentId: configuration.segmentId,
           topicId: configuration.topicId
         }],
-        emails: [{ id: "email-unmapped", status: "scheduled" }],
+        emails: [{
+          id: "email-unmapped",
+          status: "scheduled",
+          createdAt: "2026-08-07T18:00:00.000Z",
+          from: "Office <newsletter@updates.assemblywomanmorales.com>",
+          to: ["resident@example.com"],
+          subject: "Scheduled email"
+        }],
         imports: [{ id: "import-1" }],
         templates: [{ id: "template-1" }],
         automations: [{ id: "automation-1" }],

@@ -65,7 +65,14 @@ export type NewsletterProviderInventorySnapshot = {
     readonly segmentId: string;
     readonly topicId: string;
   }[];
-  readonly emails: readonly { readonly id: string; readonly status: string }[];
+  readonly emails: readonly {
+    readonly id: string;
+    readonly status: string;
+    readonly createdAt: string;
+    readonly from: string;
+    readonly to: readonly string[];
+    readonly subject: string;
+  }[];
   readonly imports: readonly { readonly id: string }[];
   readonly templates: readonly { readonly id: string }[];
   readonly automations: readonly { readonly id: string }[];
@@ -198,6 +205,42 @@ function canonicalResourceIdentity(
 
 function normalizedEmails(values: ReadonlySet<string>) {
   return new Set([...values].map((value) => value.trim().toLowerCase()));
+}
+
+const AUTH_SMTP_DELIVERY_STATES = new Set(["sent", "delivered", "opened", "clicked"]);
+
+function mailbox(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  const bracketed = trimmed.match(/<([^<>]+)>$/)?.[1];
+  return (bracketed ?? trimmed).trim();
+}
+
+export function findRecentNewsletterAuthSmtpLoginEmail(
+  snapshot: NewsletterProviderInventorySnapshot,
+  input: {
+    readonly email: string;
+    readonly lastSignInAt: Date;
+    readonly excludedProviderMessageIds: ReadonlySet<string>;
+  }
+) {
+  const ownerEmail = input.email.trim().toLowerCase();
+  const signedInAt = input.lastSignInAt.getTime();
+  if (!ownerEmail || !Number.isFinite(signedInAt)) return null;
+
+  return snapshot.emails
+    .filter((message) => {
+      const createdAt = Date.parse(message.createdAt);
+      const sender = mailbox(message.from);
+      return Boolean(message.subject.trim()) &&
+        AUTH_SMTP_DELIVERY_STATES.has(message.status) &&
+        sender.endsWith(`@${NEWSLETTER_DOMAIN}`) &&
+        message.to.some((recipient) => recipient.trim().toLowerCase() === ownerEmail) &&
+        !input.excludedProviderMessageIds.has(message.id) &&
+        Number.isFinite(createdAt) &&
+        createdAt <= signedInAt &&
+        signedInAt - createdAt <= 60 * 60 * 1_000;
+    })
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0] ?? null;
 }
 
 export function evaluateNewsletterProviderInventory(input: {

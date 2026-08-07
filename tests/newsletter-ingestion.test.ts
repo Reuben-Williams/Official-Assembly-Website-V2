@@ -7,6 +7,7 @@ import {
   createNewsletterPublicFormIngestionService
 } from "../lib/newsletter/ingestion";
 import { readNewsletterPublicReadiness } from "../lib/newsletter/readiness";
+import { approvedNewsletterConsentLanguageDigest } from "../lib/newsletter/managed-form-revision";
 
 const command = {
   version: 2,
@@ -93,7 +94,13 @@ describe("newsletter public ingestion", () => {
         version: 1,
         confirmationKeyId: "2026-08",
         addressFingerprint: "4".repeat(64),
-        ingestion: command
+        ingestion: {
+          ...command,
+          consentEvidence: {
+            ...command.consentEvidence,
+            languageDigest: approvedNewsletterConsentLanguageDigest()
+          }
+        }
       }
     });
     expect(accepted).toEqual({

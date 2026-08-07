@@ -10,6 +10,7 @@ select has_table('public', 'builder_newsletter_reconciliation_circuits', 'site r
 select has_table('public', 'builder_newsletter_eligibility_epochs', 'site eligibility epochs exist');
 select has_table('public', 'builder_newsletter_provider_activation_revisions', 'provider activation evidence exists');
 select has_table('public', 'builder_newsletter_provider_inventory_attestations', 'non-api inventory attestations exist');
+select has_table('public', 'builder_newsletter_auth_smtp_proofs', 'verified Auth SMTP login proofs exist');
 
 select has_column('public', 'builder_newsletter_site_jobs', 'invocation_count', 'site jobs separate invocation count');
 select has_column('public', 'builder_newsletter_site_jobs', 'consecutive_failure_count', 'site jobs separate consecutive failures');
@@ -17,6 +18,40 @@ select has_column('public', 'builder_newsletter_site_jobs', 'last_checkpoint_at'
 select has_column('public', 'builder_newsletter_provider_activation_revisions', 'command_id', 'provider activation is command-idempotent');
 select has_column('public', 'builder_newsletter_provider_inventory_attestations', 'command_id', 'inventory attestation is command-idempotent');
 select has_column('public', 'builder_newsletter_reconciliation_circuits', 'recovery_command_id', 'circuit recovery is command-idempotent');
+select has_column('public', 'builder_newsletter_auth_smtp_proofs', 'command_id', 'Auth SMTP proof is command-idempotent');
+
+select ok(
+  builder_private.validate_managed_form_configuration($json${
+    "templateId":"local-business.newsletter-signup",
+    "templateVersion":"1.0.0",
+    "displayName":"District Newsletter",
+    "fields":[
+      {"key":"email","label":"Email address","helpText":"","placeholder":"you@example.com","visible":true,"required":true},
+      {"key":"firstName","label":"First name","helpText":"","placeholder":"First name","visible":true,"required":false},
+      {"key":"marketingConsent","label":"I agree to receive District Newsletter emails from the Office of Assemblywoman Carmen Morales. I understand that submitting this form is a confirmation request, that I am not subscribed until I confirm by email, and that I can unsubscribe at any time.","helpText":"","placeholder":"","visible":true,"required":true}
+    ],
+    "qualification":{"enabled":false,"allowedZipCodes":[]},
+    "completion":{"mode":"inline_success","successCopy":"Check your inbox to continue. Your request is pending, and you are not subscribed unless you complete the confirmation step."},
+    "consentPolicyVersion":"marketing-v1"
+  }$json$::jsonb),
+  'the exact approved newsletter consent and completion revision is database-valid'
+);
+select ok(
+  not builder_private.validate_managed_form_configuration($json${
+    "templateId":"local-business.newsletter-signup",
+    "templateVersion":"1.0.0",
+    "displayName":"District Newsletter",
+    "fields":[
+      {"key":"email","label":"Email address","helpText":"","placeholder":"you@example.com","visible":true,"required":true},
+      {"key":"firstName","label":"First name","helpText":"","placeholder":"First name","visible":true,"required":false},
+      {"key":"marketingConsent","label":"Generic marketing consent","helpText":"","placeholder":"","visible":true,"required":true}
+    ],
+    "qualification":{"enabled":false,"allowedZipCodes":[]},
+    "completion":{"mode":"inline_success","successCopy":"Check your inbox to continue. Your request is pending, and you are not subscribed unless you complete the confirmation step."},
+    "consentPolicyVersion":"marketing-v1"
+  }$json$::jsonb),
+  'newsletter revisions cannot substitute generic consent wording'
+);
 
 select has_function('public', 'builder_schedule_newsletter_reconciliation_v1', array['jsonb'], 'generic reconciliation scheduler exists');
 select has_function('public', 'builder_request_newsletter_reconciliation_v1', array['jsonb'], 'force-fresh reconciliation request exists');
@@ -29,6 +64,7 @@ select has_function('public', 'builder_purge_newsletter_reconciliation_members_v
 select has_function('public', 'builder_recover_newsletter_reconciliation_v1', array['jsonb'], 'audited owner recovery exists');
 select has_function('public', 'builder_record_newsletter_provider_activation_v1', array['jsonb'], 'provider activation evidence RPC exists');
 select has_function('public', 'builder_record_newsletter_inventory_attestation_v1', array['jsonb'], 'inventory attestation RPC exists');
+select has_function('public', 'builder_record_newsletter_auth_smtp_proof_v1', array['jsonb'], 'verified Auth SMTP proof RPC exists');
 
 select has_trigger(
   'public', 'builder_newsletter_subscriptions',
@@ -64,7 +100,8 @@ select ok(
         'builder_newsletter_reconciliation_circuits',
         'builder_newsletter_eligibility_epochs',
         'builder_newsletter_provider_activation_revisions',
-        'builder_newsletter_provider_inventory_attestations'
+        'builder_newsletter_provider_inventory_attestations',
+        'builder_newsletter_auth_smtp_proofs'
       )
       and not relation.relrowsecurity
   ),
@@ -85,7 +122,8 @@ select ok(
         'builder_newsletter_reconciliation_circuits',
         'builder_newsletter_eligibility_epochs',
         'builder_newsletter_provider_activation_revisions',
-        'builder_newsletter_provider_inventory_attestations'
+        'builder_newsletter_provider_inventory_attestations',
+        'builder_newsletter_auth_smtp_proofs'
       )
       and has_table_privilege(
         browser.role_name,
@@ -113,7 +151,8 @@ select ok(
         'builder_purge_newsletter_reconciliation_members_v1',
         'builder_recover_newsletter_reconciliation_v1',
         'builder_record_newsletter_provider_activation_v1',
-        'builder_record_newsletter_inventory_attestation_v1'
+        'builder_record_newsletter_inventory_attestation_v1',
+        'builder_record_newsletter_auth_smtp_proof_v1'
       )
       and (
         has_function_privilege('anon', routine.oid, 'execute')
@@ -552,6 +591,82 @@ select is(
   ),
   1,
   'attestation command replay creates one immutable row'
+);
+
+set local role service_role;
+select throws_ok(
+  format(
+    $$ select public.builder_record_newsletter_auth_smtp_proof_v1(%L::jsonb) $$,
+    jsonb_build_object(
+      'version', 1,
+      'commandId', '39000000-0000-4000-8000-000000000231',
+      'siteId', '39000000-0000-4000-8000-000000000001',
+      'operatorId', '39000000-0000-4000-8000-000000000202',
+      'proofKind', 'replacement_login',
+      'providerMessageId', 'auth-message-1',
+      'providerCreatedAt', '2026-08-07T18:00:00Z',
+      'authLastSignInAt', '2026-08-07T18:01:00Z',
+      'safeEvidenceDigest', repeat('f', 64)
+    )::text
+  ),
+  '42501',
+  'newsletter Auth SMTP proof not authorized',
+  'Auth SMTP proof requires a site owner'
+);
+select is(
+  public.builder_record_newsletter_auth_smtp_proof_v1(jsonb_build_object(
+    'version', 1,
+    'commandId', '39000000-0000-4000-8000-000000000232',
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'operatorId', '39000000-0000-4000-8000-000000000201',
+    'proofKind', 'replacement_login',
+    'providerMessageId', 'auth-message-1',
+    'providerCreatedAt', '2026-08-07T18:00:00Z',
+    'authLastSignInAt', '2026-08-07T18:01:00Z',
+    'safeEvidenceDigest', repeat('f', 64)
+  )) ->> 'status',
+  'recorded',
+  'owner records a verified replacement Auth SMTP login proof'
+);
+select is(
+  public.builder_record_newsletter_auth_smtp_proof_v1(jsonb_build_object(
+    'version', 1,
+    'commandId', '39000000-0000-4000-8000-000000000232',
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'operatorId', '39000000-0000-4000-8000-000000000201',
+    'proofKind', 'replacement_login',
+    'providerMessageId', 'auth-message-1',
+    'providerCreatedAt', '2026-08-07T18:00:00Z',
+    'authLastSignInAt', '2026-08-07T18:01:00Z',
+    'safeEvidenceDigest', repeat('f', 64)
+  )) ->> 'replayed',
+  'true',
+  'replacement Auth SMTP proof command replay is idempotent'
+);
+select is(
+  public.builder_record_newsletter_auth_smtp_proof_v1(jsonb_build_object(
+    'version', 1,
+    'commandId', '39000000-0000-4000-8000-000000000233',
+    'siteId', '39000000-0000-4000-8000-000000000001',
+    'operatorId', '39000000-0000-4000-8000-000000000201',
+    'proofKind', 'post_revocation_login',
+    'providerMessageId', 'auth-message-2',
+    'providerCreatedAt', '2026-08-07T19:00:00Z',
+    'authLastSignInAt', '2026-08-07T19:01:00Z',
+    'safeEvidenceDigest', repeat('e', 64)
+  )) ->> 'status',
+  'recorded',
+  'post-revocation login proof must follow the replacement proof'
+);
+reset role;
+select is(
+  (
+    select count(*)::integer
+    from public.builder_newsletter_auth_smtp_proofs
+    where site_id = '39000000-0000-4000-8000-000000000001'
+  ),
+  2,
+  'exactly two immutable Auth SMTP proof phases are retained'
 );
 
 insert into public.builder_sites (id, site_key, display_name)

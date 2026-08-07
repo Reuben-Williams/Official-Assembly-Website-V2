@@ -117,6 +117,12 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .eq("disposition", "matched")
         .order("id", { ascending: true })
         .range(from, to));
+      const authSmtpProofs = await allRows((from, to) => client
+        .from("builder_newsletter_auth_smtp_proofs")
+        .select("proof_kind,provider_message_id")
+        .eq("site_id", siteId)
+        .order("created_at", { ascending: true })
+        .range(from, to));
 
       const attestation = await client
         .from("builder_newsletter_provider_inventory_attestations")
@@ -163,6 +169,7 @@ export function createNewsletterProviderInventoryEvidenceRepository(
       const allowedProviderMessageIds = new Set([
         ...confirmationJobs.map((row) => text(row.provider_message_id)),
         ...staffTests.map((row) => text(row.provider_message_id)),
+        ...authSmtpProofs.map((row) => text(row.provider_message_id)),
         ...receipts
           .filter((row) => allowedSentBroadcastIds.has(text(row.provider_broadcast_id)))
           .map((row) => text(row.provider_message_id))
@@ -173,6 +180,11 @@ export function createNewsletterProviderInventoryEvidenceRepository(
           ? attestation.data.categories.filter((value): value is string => typeof value === "string")
           : []
       );
+      const authSmtpProofKinds = new Set(
+        authSmtpProofs.map((row) => text(row.proof_kind)).filter(Boolean)
+      );
+      const replacementLoginProved = authSmtpProofKinds.has("replacement_login");
+      const postRevocationLoginProved = authSmtpProofKinds.has("post_revocation_login");
 
       return {
         providerContactIds,
@@ -182,9 +194,9 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         allowedSentBroadcastIds,
         localEligibleCount: subscriptions.filter((row) => row.status === "active").length,
         manualAttestationCurrent: REQUIRED_MANUAL_CATEGORIES.every((name) => categories.has(name)),
-        authSmtpPermissionAttested: categories.has("auth_smtp_sending_only"),
-        authSmtpLoginBeforeRevocationProved: categories.has("auth_smtp_login_before_revocation"),
-        authSmtpLoginAfterRevocationProved: categories.has("auth_smtp_login_after_revocation")
+        authSmtpPermissionAttested: replacementLoginProved,
+        authSmtpLoginBeforeRevocationProved: replacementLoginProved,
+        authSmtpLoginAfterRevocationProved: postRevocationLoginProved
       };
     }
   };

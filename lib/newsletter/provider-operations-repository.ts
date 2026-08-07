@@ -12,6 +12,10 @@ export const NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES = [
   "team_membership"
 ] as const;
 
+export type NewsletterAuthSmtpProofKind =
+  | "replacement_login"
+  | "post_revocation_login";
+
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("newsletter provider operation unavailable");
@@ -33,6 +37,25 @@ export function createNewsletterProviderAttestationDigest(input: {
   }), "utf8").digest("hex");
 }
 
+export function createNewsletterAuthSmtpProofDigest(input: {
+  readonly siteId: string;
+  readonly operatorId: string;
+  readonly proofKind: NewsletterAuthSmtpProofKind;
+  readonly providerMessageId: string;
+  readonly providerCreatedAt: string;
+  readonly authLastSignInAt: string;
+}) {
+  return createHash("sha256").update(JSON.stringify({
+    version: 1,
+    siteId: input.siteId,
+    operatorId: input.operatorId,
+    proofKind: input.proofKind,
+    providerMessageId: input.providerMessageId,
+    providerCreatedAt: input.providerCreatedAt,
+    authLastSignInAt: input.authLastSignInAt
+  }), "utf8").digest("hex");
+}
+
 export function createNewsletterProviderOperationsRepository(
   client: SupabaseClient,
   siteId: string
@@ -46,7 +69,7 @@ export function createNewsletterProviderOperationsRepository(
   return {
     async status() {
       const now = new Date().toISOString();
-      const [activation, attestation, circuit] = await Promise.all([
+      const [activation, attestation, circuit, authSmtpProofs] = await Promise.all([
         client.from("builder_newsletter_provider_activation_revisions")
           .select("recorded_at")
           .eq("site_id", siteId)
@@ -65,11 +88,17 @@ export function createNewsletterProviderOperationsRepository(
           .select("state,safe_failure_code")
           .eq("site_id", siteId)
           .eq("provider_scope_id", "resend-team-production")
-          .maybeSingle()
+          .maybeSingle(),
+        client.from("builder_newsletter_auth_smtp_proofs")
+          .select("proof_kind")
+          .eq("site_id", siteId)
       ]);
-      if (activation.error || attestation.error || circuit.error) {
+      if (activation.error || attestation.error || circuit.error || authSmtpProofs.error) {
         throw new Error("newsletter provider operation unavailable");
       }
+      const proofKinds = new Set(
+        (authSmtpProofs.data ?? []).map((row) => String(row.proof_kind ?? ""))
+      );
       return {
         providerActivation: {
           active: Boolean(activation.data),
@@ -78,6 +107,10 @@ export function createNewsletterProviderOperationsRepository(
         providerAttestation: {
           current: Boolean(attestation.data),
           expiresAt: attestation.data?.expires_at ? String(attestation.data.expires_at) : ""
+        },
+        authSmtpProofs: {
+          replacementLogin: proofKinds.has("replacement_login"),
+          postRevocationLogin: proofKinds.has("post_revocation_login")
         },
         reconciliationCircuit: {
           state: circuit.data?.state === "open" ? "open" as const : "closed" as const,
@@ -116,6 +149,28 @@ export function createNewsletterProviderOperationsRepository(
         providerContactCount: 0,
         localEligibleCount: 0,
         historicalSendCount: 0
+      });
+    },
+
+    recordAuthSmtpProof(input: {
+      readonly commandId: string;
+      readonly operatorId: string;
+      readonly proofKind: NewsletterAuthSmtpProofKind;
+      readonly providerMessageId: string;
+      readonly providerCreatedAt: string;
+      readonly authLastSignInAt: string;
+      readonly safeEvidenceDigest: string;
+    }) {
+      return rpc("builder_record_newsletter_auth_smtp_proof_v1", {
+        version: 1,
+        commandId: input.commandId,
+        siteId,
+        operatorId: input.operatorId,
+        proofKind: input.proofKind,
+        providerMessageId: input.providerMessageId,
+        providerCreatedAt: input.providerCreatedAt,
+        authLastSignInAt: input.authLastSignInAt,
+        safeEvidenceDigest: input.safeEvidenceDigest
       });
     },
 

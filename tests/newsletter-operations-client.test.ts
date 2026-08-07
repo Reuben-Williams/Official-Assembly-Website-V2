@@ -38,14 +38,19 @@ describe("newsletter operations client", () => {
     const client = createNewsletterOperationsClient(() => "csrf-token");
 
     await client.recordProviderAttestation("34000000-0000-4000-8000-000000000011");
-    await client.activateProvider("34000000-0000-4000-8000-000000000012");
+    await client.recordAuthSmtpProof(
+      "34000000-0000-4000-8000-000000000012",
+      "replacement_login"
+    );
+    await client.activateProvider("34000000-0000-4000-8000-000000000013");
     await client.recoverReconciliation(
-      "34000000-0000-4000-8000-000000000013",
+      "34000000-0000-4000-8000-000000000014",
       "Provider incident reviewed by the site owner."
     );
 
     expect(fetch.mock.calls.map(([url]) => url)).toEqual([
       "/api/newsletter/operations/provider-attestation",
+      "/api/newsletter/operations/auth-smtp-proof",
       "/api/newsletter/operations/provider-activation",
       "/api/newsletter/operations/recovery"
     ]);
@@ -54,10 +59,14 @@ describe("newsletter operations client", () => {
       confirmed: true
     });
     expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body))).toEqual({
-      commandId: "34000000-0000-4000-8000-000000000012"
+      commandId: "34000000-0000-4000-8000-000000000012",
+      phase: "replacement_login"
     });
     expect(JSON.parse(String(fetch.mock.calls[2]?.[1]?.body))).toEqual({
-      commandId: "34000000-0000-4000-8000-000000000013",
+      commandId: "34000000-0000-4000-8000-000000000013"
+    });
+    expect(JSON.parse(String(fetch.mock.calls[3]?.[1]?.body))).toEqual({
+      commandId: "34000000-0000-4000-8000-000000000014",
       reason: "Provider incident reviewed by the site owner."
     });
   });

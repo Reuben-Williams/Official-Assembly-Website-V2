@@ -1,3 +1,139 @@
+create or replace function builder_private.validate_managed_form_configuration(p_configuration jsonb)
+returns boolean
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_completion jsonb;
+  v_qualification jsonb;
+begin
+  if jsonb_typeof(p_configuration) <> 'object'
+    or octet_length(p_configuration::text) > 65536
+    or not (p_configuration ?& array[
+      'templateId', 'templateVersion', 'displayName', 'fields', 'qualification',
+      'completion', 'consentPolicyVersion'
+    ])
+    or exists (
+      select 1 from pg_catalog.jsonb_object_keys(p_configuration) key
+      where key <> all(array[
+        'templateId', 'templateVersion', 'displayName', 'fields', 'qualification',
+        'completion', 'consentPolicyVersion'
+      ])
+    )
+    or (p_configuration ->> 'templateId') !~ '^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$'
+    or (p_configuration ->> 'templateVersion') !~ '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+    or char_length(btrim(p_configuration ->> 'displayName')) not between 1 and 80
+    or (p_configuration ->> 'consentPolicyVersion') !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$'
+    or jsonb_typeof(p_configuration -> 'fields') <> 'array'
+    or jsonb_array_length(p_configuration -> 'fields') not between 1 and 32
+  then
+    return false;
+  end if;
+
+  if exists (
+    select 1
+    from pg_catalog.jsonb_array_elements(p_configuration -> 'fields') field(value)
+    where jsonb_typeof(field.value) <> 'object'
+      or not (field.value ?& array['key', 'label', 'helpText', 'placeholder', 'visible', 'required'])
+      or exists (
+        select 1 from pg_catalog.jsonb_object_keys(field.value) field_key
+        where field_key <> all(array['key', 'label', 'helpText', 'placeholder', 'visible', 'required', 'optionIds'])
+      )
+      or (field.value ->> 'key') !~ '^[a-z][A-Za-z0-9]{0,63}$'
+      or (
+        (p_configuration ->> 'templateId') = 'local-business.newsletter-signup'
+        and (field.value ->> 'key') = 'marketingConsent'
+        and (field.value ->> 'label') <>
+          'I agree to receive District Newsletter emails from the Office of Assemblywoman Carmen Morales. I understand that submitting this form is a confirmation request, that I am not subscribed until I confirm by email, and that I can unsubscribe at any time.'
+      )
+      or (
+        not (
+          (p_configuration ->> 'templateId') = 'local-business.newsletter-signup'
+          and (field.value ->> 'key') = 'marketingConsent'
+        )
+        and char_length(btrim(field.value ->> 'label')) not between 1 and 80
+      )
+      or char_length(field.value ->> 'helpText') > 160
+      or char_length(field.value ->> 'placeholder') > 120
+      or jsonb_typeof(field.value -> 'visible') <> 'boolean'
+      or jsonb_typeof(field.value -> 'required') <> 'boolean'
+      or (
+        field.value ? 'optionIds'
+        and (
+          jsonb_typeof(field.value -> 'optionIds') <> 'array'
+          or jsonb_array_length(field.value -> 'optionIds') not between 1 and 50
+          or exists (
+            select 1 from pg_catalog.jsonb_array_elements_text(field.value -> 'optionIds') option_id
+            where option_id !~ '^[a-z][a-z0-9-]{0,63}$'
+          )
+        )
+      )
+  ) then
+    return false;
+  end if;
+
+  if (
+    select count(*) from (
+      select field.value ->> 'key'
+      from pg_catalog.jsonb_array_elements(p_configuration -> 'fields') field(value)
+      group by field.value ->> 'key'
+      having count(*) > 1
+    ) duplicate_keys
+  ) > 0 then
+    return false;
+  end if;
+
+  v_qualification := p_configuration -> 'qualification';
+  if jsonb_typeof(v_qualification) <> 'object'
+    or not (v_qualification ?& array['enabled', 'allowedZipCodes'])
+    or exists (
+      select 1 from pg_catalog.jsonb_object_keys(v_qualification) key
+      where key <> all(array['enabled', 'allowedZipCodes'])
+    )
+    or jsonb_typeof(v_qualification -> 'enabled') <> 'boolean'
+    or jsonb_typeof(v_qualification -> 'allowedZipCodes') <> 'array'
+    or jsonb_array_length(v_qualification -> 'allowedZipCodes') > 500
+    or exists (
+      select 1 from pg_catalog.jsonb_array_elements_text(v_qualification -> 'allowedZipCodes') zip
+      where zip !~ '^[0-9]{5}$'
+    )
+  then
+    return false;
+  end if;
+
+  v_completion := p_configuration -> 'completion';
+  if jsonb_typeof(v_completion) <> 'object'
+    or (v_completion ->> 'mode') not in ('inline_success', 'same_site_redirect')
+    or char_length(btrim(v_completion ->> 'successCopy')) not between 1 and 240
+    or (v_completion ? 'outOfAreaSuccessCopy' and char_length(btrim(v_completion ->> 'outOfAreaSuccessCopy')) not between 1 and 240)
+  then
+    return false;
+  end if;
+
+  if v_completion ->> 'mode' = 'inline_success' then
+    if exists (
+      select 1 from pg_catalog.jsonb_object_keys(v_completion) key
+      where key <> all(array['mode', 'successCopy', 'outOfAreaSuccessCopy'])
+    ) then return false; end if;
+  else
+    if not (v_completion ? 'defaultRedirectPath')
+      or (v_completion ->> 'defaultRedirectPath') !~ '^/(?!/)[^?]*$'
+      or (v_completion ? 'outOfAreaRedirectPath' and (v_completion ->> 'outOfAreaRedirectPath') !~ '^/(?!/)[^?]*$')
+      or exists (
+        select 1 from pg_catalog.jsonb_object_keys(v_completion) key
+        where key <> all(array[
+          'mode', 'successCopy', 'outOfAreaSuccessCopy',
+          'defaultRedirectPath', 'outOfAreaRedirectPath'
+        ])
+      )
+    then return false; end if;
+  end if;
+
+  return true;
+end;
+$$;
+
 alter table public.builder_newsletter_site_jobs
   add column if not exists invocation_count integer not null default 0
     check (invocation_count >= 0),
@@ -181,6 +317,29 @@ create table public.builder_newsletter_provider_inventory_attestations (
   check (expires_at > attested_at and expires_at <= attested_at + interval '30 days')
 );
 
+create table public.builder_newsletter_auth_smtp_proofs (
+  site_id uuid not null references public.builder_sites(id) on delete cascade,
+  id uuid not null default extensions.gen_random_uuid(),
+  command_id uuid not null,
+  proof_kind text not null check (proof_kind in ('replacement_login', 'post_revocation_login')),
+  operator_id uuid not null,
+  provider_message_id text not null check (char_length(provider_message_id) between 1 and 200),
+  provider_created_at timestamptz not null,
+  auth_last_sign_in_at timestamptz not null,
+  safe_evidence_digest text not null check (safe_evidence_digest ~ '^[a-f0-9]{64}$'),
+  created_at timestamptz not null default clock_timestamp(),
+  primary key (site_id, id),
+  unique (site_id, command_id),
+  unique (site_id, proof_kind),
+  unique (site_id, provider_message_id),
+  foreign key (site_id, operator_id)
+    references public.builder_site_members(site_id, user_id) on delete restrict,
+  check (
+    auth_last_sign_in_at >= provider_created_at
+    and auth_last_sign_in_at <= provider_created_at + interval '1 hour'
+  )
+);
+
 alter table public.builder_newsletter_eligibility_epochs enable row level security;
 alter table public.builder_newsletter_reconciliation_circuits enable row level security;
 alter table public.builder_newsletter_reconciliation_runs enable row level security;
@@ -188,6 +347,7 @@ alter table public.builder_newsletter_reconciliation_members enable row level se
 alter table public.builder_newsletter_reconciliation_requests enable row level security;
 alter table public.builder_newsletter_provider_activation_revisions enable row level security;
 alter table public.builder_newsletter_provider_inventory_attestations enable row level security;
+alter table public.builder_newsletter_auth_smtp_proofs enable row level security;
 
 revoke all on table
   public.builder_newsletter_eligibility_epochs,
@@ -196,7 +356,8 @@ revoke all on table
   public.builder_newsletter_reconciliation_members,
   public.builder_newsletter_reconciliation_requests,
   public.builder_newsletter_provider_activation_revisions,
-  public.builder_newsletter_provider_inventory_attestations
+  public.builder_newsletter_provider_inventory_attestations,
+  public.builder_newsletter_auth_smtp_proofs
 from public, anon, authenticated;
 
 grant select, insert, update, delete on table
@@ -209,7 +370,8 @@ to service_role;
 
 grant select, insert on table
   public.builder_newsletter_provider_activation_revisions,
-  public.builder_newsletter_provider_inventory_attestations
+  public.builder_newsletter_provider_inventory_attestations,
+  public.builder_newsletter_auth_smtp_proofs
 to service_role;
 
 create function builder_private.invalidate_newsletter_readiness_v1(
@@ -1443,6 +1605,114 @@ begin
 end;
 $$;
 
+create function public.builder_record_newsletter_auth_smtp_proof_v1(p_request jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_site_id uuid;
+  v_operator_id uuid;
+  v_command_id uuid;
+  v_proof_kind text;
+  v_provider_message_id text;
+  v_provider_created_at timestamptz;
+  v_auth_last_sign_in_at timestamptz;
+  v_digest text;
+  v_id uuid;
+  v_existing record;
+  v_replacement record;
+begin
+  begin
+    v_site_id := (p_request ->> 'siteId')::uuid;
+    v_operator_id := (p_request ->> 'operatorId')::uuid;
+    v_command_id := (p_request ->> 'commandId')::uuid;
+    v_proof_kind := p_request ->> 'proofKind';
+    v_provider_message_id := btrim(p_request ->> 'providerMessageId');
+    v_provider_created_at := (p_request ->> 'providerCreatedAt')::timestamptz;
+    v_auth_last_sign_in_at := (p_request ->> 'authLastSignInAt')::timestamptz;
+    v_digest := p_request ->> 'safeEvidenceDigest';
+  exception when others then
+    raise exception 'invalid newsletter Auth SMTP proof' using errcode = '22023';
+  end;
+
+  if (p_request ->> 'version') <> '1'
+    or v_proof_kind not in ('replacement_login', 'post_revocation_login')
+    or char_length(v_provider_message_id) not between 1 and 200
+    or v_digest !~ '^[a-f0-9]{64}$'
+    or v_auth_last_sign_in_at < v_provider_created_at
+    or v_auth_last_sign_in_at > v_provider_created_at + interval '1 hour'
+  then
+    raise exception 'invalid newsletter Auth SMTP proof' using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1 from public.builder_site_members member
+    where member.site_id = v_site_id
+      and member.user_id = v_operator_id
+      and member.role = 'owner'
+  ) then
+    raise exception 'newsletter Auth SMTP proof not authorized' using errcode = '42501';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 201));
+
+  select proof.id, proof.operator_id, proof.proof_kind, proof.provider_message_id,
+         proof.provider_created_at, proof.auth_last_sign_in_at, proof.safe_evidence_digest
+  into v_existing
+  from public.builder_newsletter_auth_smtp_proofs proof
+  where proof.site_id = v_site_id and proof.command_id = v_command_id;
+  if found then
+    if v_existing.operator_id <> v_operator_id
+      or v_existing.proof_kind <> v_proof_kind
+      or v_existing.provider_message_id <> v_provider_message_id
+      or v_existing.provider_created_at <> v_provider_created_at
+      or v_existing.auth_last_sign_in_at <> v_auth_last_sign_in_at
+      or v_existing.safe_evidence_digest <> v_digest
+    then
+      raise exception 'newsletter Auth SMTP proof command conflict' using errcode = '23505';
+    end if;
+    return jsonb_build_object(
+      'version', 1, 'status', 'recorded', 'proofId', v_existing.id, 'replayed', true
+    );
+  end if;
+
+  if exists (
+    select 1 from public.builder_newsletter_auth_smtp_proofs proof
+    where proof.site_id = v_site_id and proof.proof_kind = v_proof_kind
+  ) then
+    raise exception 'newsletter Auth SMTP proof phase already recorded' using errcode = '55000';
+  end if;
+
+  if v_proof_kind = 'post_revocation_login' then
+    select proof.provider_message_id, proof.provider_created_at, proof.auth_last_sign_in_at
+    into v_replacement
+    from public.builder_newsletter_auth_smtp_proofs proof
+    where proof.site_id = v_site_id and proof.proof_kind = 'replacement_login';
+    if not found
+      or v_replacement.provider_message_id = v_provider_message_id
+      or v_replacement.provider_created_at >= v_provider_created_at
+      or v_replacement.auth_last_sign_in_at >= v_auth_last_sign_in_at
+    then
+      raise exception 'replacement Auth SMTP proof is required first' using errcode = '55000';
+    end if;
+  end if;
+
+  insert into public.builder_newsletter_auth_smtp_proofs (
+    site_id, command_id, proof_kind, operator_id, provider_message_id,
+    provider_created_at, auth_last_sign_in_at, safe_evidence_digest
+  ) values (
+    v_site_id, v_command_id, v_proof_kind, v_operator_id, v_provider_message_id,
+    v_provider_created_at, v_auth_last_sign_in_at, v_digest
+  ) returning id into v_id;
+
+  return jsonb_build_object(
+    'version', 1, 'status', 'recorded', 'proofId', v_id, 'replayed', false
+  );
+end;
+$$;
+
 create or replace function public.builder_get_newsletter_public_readiness_v1(p_site_id uuid)
 returns jsonb
 language sql
@@ -1859,7 +2129,8 @@ revoke all on function
   public.builder_purge_newsletter_reconciliation_members_v1(jsonb),
   public.builder_recover_newsletter_reconciliation_v1(jsonb),
   public.builder_record_newsletter_provider_activation_v1(jsonb),
-  public.builder_record_newsletter_inventory_attestation_v1(jsonb)
+  public.builder_record_newsletter_inventory_attestation_v1(jsonb),
+  public.builder_record_newsletter_auth_smtp_proof_v1(jsonb)
 from public, anon, authenticated;
 
 grant execute on function
@@ -1873,5 +2144,6 @@ grant execute on function
   public.builder_purge_newsletter_reconciliation_members_v1(jsonb),
   public.builder_recover_newsletter_reconciliation_v1(jsonb),
   public.builder_record_newsletter_provider_activation_v1(jsonb),
-  public.builder_record_newsletter_inventory_attestation_v1(jsonb)
+  public.builder_record_newsletter_inventory_attestation_v1(jsonb),
+  public.builder_record_newsletter_auth_smtp_proof_v1(jsonb)
 to service_role;

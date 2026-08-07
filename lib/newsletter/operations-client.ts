@@ -12,6 +12,10 @@ export type NewsletterOperationsStatus = {
     readonly current: boolean;
     readonly expiresAt: string;
   };
+  readonly authSmtpProofs: {
+    readonly replacementLogin: boolean;
+    readonly postRevocationLogin: boolean;
+  };
   readonly reconciliationCircuit: {
     readonly state: "closed" | "open";
     readonly code: string;
@@ -60,6 +64,10 @@ export interface NewsletterOperationsClient {
   status(): Promise<NewsletterOperationsStatus>;
   providerInventory(): Promise<NewsletterProviderInventoryStatus>;
   recordProviderAttestation(commandId: string): Promise<Record<string, unknown>>;
+  recordAuthSmtpProof(
+    commandId: string,
+    phase: "replacement_login" | "post_revocation_login"
+  ): Promise<Record<string, unknown>>;
   activateProvider(commandId: string): Promise<Record<string, unknown>>;
   recoverReconciliation(commandId: string, reason: string): Promise<Record<string, unknown>>;
   activationCheck(broadcastId: string): Promise<Record<string, unknown>>;
@@ -125,6 +133,7 @@ function boundedStatus(value: unknown): NewsletterOperationsStatus {
   const validation = source.validation ? record(source.validation) : null;
   const activation = source.providerActivation ? record(source.providerActivation) : {};
   const attestation = source.providerAttestation ? record(source.providerAttestation) : {};
+  const authSmtpProofs = source.authSmtpProofs ? record(source.authSmtpProofs) : {};
   const circuit = source.reconciliationCircuit ? record(source.reconciliationCircuit) : {};
   return {
     version: 1,
@@ -137,6 +146,10 @@ function boundedStatus(value: unknown): NewsletterOperationsStatus {
     providerAttestation: {
       current: attestation.current === true,
       expiresAt: text(attestation.expiresAt, attestation.expires_at).slice(0, 40)
+    },
+    authSmtpProofs: {
+      replacementLogin: authSmtpProofs.replacementLogin === true,
+      postRevocationLogin: authSmtpProofs.postRevocationLogin === true
     },
     reconciliationCircuit: {
       state: circuit.state === "open" ? "open" : "closed",
@@ -213,6 +226,9 @@ export function createNewsletterOperationsClient(
     },
     recordProviderAttestation: (commandId) => mutation(
       "provider-attestation", { commandId, confirmed: true }
+    ),
+    recordAuthSmtpProof: (commandId, phase) => mutation(
+      "auth-smtp-proof", { commandId, phase }
     ),
     activateProvider: (commandId) => mutation("provider-activation", { commandId }),
     recoverReconciliation: (commandId, reason) => mutation(

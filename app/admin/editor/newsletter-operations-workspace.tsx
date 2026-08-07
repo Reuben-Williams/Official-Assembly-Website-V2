@@ -169,6 +169,13 @@ export function NewsletterOperationsWorkspace({
               : "Owner review is limited to non-API account settings."}</p>
           </article>
           <article>
+            <span>Auth SMTP login proofs</span>
+            <strong>{status.authSmtpProofs.postRevocationLogin
+              ? "Complete"
+              : status.authSmtpProofs.replacementLogin ? "1 of 2 recorded" : "Required"}</strong>
+            <p>Verified from provider delivery metadata and the owner login timestamp.</p>
+          </article>
+          <article>
             <span>Confirmed staff test</span>
             <strong>{status.confirmedTest ? digest(status.confirmedTest.digest) : "Required"}</strong>
             <p>{status.confirmedTest ? `Observed ${localTime(status.confirmedTest.confirmedAt)}` : "Open a bounded window before the Resend test."}</p>
@@ -233,6 +240,54 @@ export function NewsletterOperationsWorkspace({
               </ul>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {owner && status ? (
+        <section className="newsletter-operations-panel" aria-label="Auth SMTP proof controls">
+          <div className="newsletter-control-copy">
+            <p className="newsletter-operations-eyebrow">Authentication email verification</p>
+            <h2>Prove the replacement Auth SMTP credential</h2>
+            <p>
+              Sign out, request a new editor sign-in link, complete that link, then return here
+              immediately. This records delivery metadata only; addresses, message bodies, and
+              sign-in tokens are never stored in newsletter evidence.
+            </p>
+          </div>
+          <div className="newsletter-operation-actions">
+            <button
+              disabled={Boolean(busy) || status.authSmtpProofs.replacementLogin}
+              onClick={() => void run(
+                "auth-smtp-replacement",
+                () => operations.recordAuthSmtpProof(
+                  crypto.randomUUID(),
+                  "replacement_login"
+                ),
+                "The replacement Auth SMTP login proof was recorded."
+              )}
+              type="button"
+            >{busy === "auth-smtp-replacement"
+              ? "Verifying replacement loginâ€¦"
+              : "Record replacement login proof"}</button>
+            <button
+              disabled={Boolean(busy) || !status.authSmtpProofs.replacementLogin || status.authSmtpProofs.postRevocationLogin}
+              onClick={() => void run(
+                "auth-smtp-post-revocation",
+                () => operations.recordAuthSmtpProof(
+                  crypto.randomUUID(),
+                  "post_revocation_login"
+                ),
+                "The post-revocation Auth SMTP login proof was recorded."
+              )}
+              type="button"
+            >{busy === "auth-smtp-post-revocation"
+              ? "Verifying post-revocation loginâ€¦"
+              : "Record post-revocation login proof"}</button>
+          </div>
+          <p className="newsletter-control-hint">
+            The second proof becomes available after the replacement proof is recorded. It also
+            requires the legacy Onboarding API key to be absent from the dedicated Resend team.
+          </p>
         </section>
       ) : null}
 

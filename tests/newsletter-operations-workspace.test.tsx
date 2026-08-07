@@ -16,6 +16,7 @@ const status = {
   openIncidents: 0,
   providerActivation: { active: false, recordedAt: "" },
   providerAttestation: { current: false, expiresAt: "" },
+  authSmtpProofs: { replacementLogin: false, postRevocationLogin: false },
   reconciliationCircuit: { state: "closed" as const, code: "" },
   confirmedTest: {
     id: "34700000-0000-4000-8000-000000000001",
@@ -72,6 +73,7 @@ describe("newsletter operations workspace", () => {
         counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 0, localEligible: 0 }
       })),
       recordProviderAttestation: vi.fn(async () => ({ state: "recorded" as const })),
+      recordAuthSmtpProof: vi.fn(async () => ({ state: "recorded" as const })),
       activateProvider: vi.fn(async () => ({ state: "active" as const })),
       recoverReconciliation: vi.fn(async () => ({ state: "queued" as const })),
       activationCheck: vi.fn(),
@@ -93,6 +95,8 @@ describe("newsletter operations workspace", () => {
     expect(Array.from(host.querySelectorAll("button")).map((button) => button.textContent)).toEqual(
       expect.arrayContaining([
         "Confirm dashboard review",
+        "Record replacement login proof",
+        "Record post-revocation login proof",
         "Run activation check",
         "Open staff test window",
         "Validate newsletter"
@@ -111,6 +115,15 @@ describe("newsletter operations workspace", () => {
     await act(async () => attestationButton.click());
     await settle();
     expect(client.recordProviderAttestation).toHaveBeenCalledWith(expect.stringMatching(/^[0-9a-f-]{36}$/));
+
+    const authProofButton = Array.from(host.querySelectorAll("button"))
+      .find((button) => button.textContent === "Record replacement login proof")!;
+    await act(async () => authProofButton.click());
+    await settle();
+    expect(client.recordAuthSmtpProof).toHaveBeenCalledWith(
+      expect.stringMatching(/^[0-9a-f-]{36}$/),
+      "replacement_login"
+    );
   });
 
   it("keeps non-owner roles read-only and exposes loading and error states", async () => {
@@ -119,6 +132,7 @@ describe("newsletter operations workspace", () => {
       status: vi.fn(() => new Promise<typeof status>((_, reject) => { rejectStatus = reject; })),
       providerInventory: vi.fn(),
       recordProviderAttestation: vi.fn(),
+      recordAuthSmtpProof: vi.fn(),
       activateProvider: vi.fn(),
       recoverReconciliation: vi.fn(),
       activationCheck: vi.fn(),

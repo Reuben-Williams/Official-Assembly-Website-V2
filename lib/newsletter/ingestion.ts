@@ -7,6 +7,7 @@ import {
   type PublicFormIngestionAcceptance,
   type PublicFormIngestionService
 } from "@reuben-williams/next/forms/server";
+import { withApprovedNewsletterConsentEvidence } from "./managed-form-revision";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -69,7 +70,7 @@ export function createNewsletterPublicFormIngestionService(
           version: 1,
           confirmationKeyId: options.confirmationKeyId,
           addressFingerprint: identity.bucketKeyHmac,
-          ingestion: command
+          ingestion: withApprovedNewsletterConsentEvidence(command)
         }
       });
       if (response.error) {

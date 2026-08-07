@@ -266,7 +266,11 @@ export function createProductionNewsletterInventoryReader(input: {
     async listEmails(page) {
       return cursorPage(await providerRequest(() => management.emails.list(providerPage(page))), (item) => ({
         id: item.id,
-        status: item.last_event
+        status: item.last_event,
+        createdAt: item.created_at,
+        from: item.from,
+        to: item.to,
+        subject: item.subject
       }));
     },
     async listImports(page) {

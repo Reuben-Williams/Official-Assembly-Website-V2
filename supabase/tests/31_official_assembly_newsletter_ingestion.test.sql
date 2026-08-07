@@ -49,10 +49,10 @@ insert into public.builder_form_revisions (
     "fields":[
       {"key":"email","label":"Email","helpText":"","placeholder":"you@example.com","visible":true,"required":true},
       {"key":"firstName","label":"First name","helpText":"","placeholder":"First name","visible":true,"required":false},
-      {"key":"marketingConsent","label":"Marketing email consent","helpText":"","placeholder":"","visible":true,"required":true}
+      {"key":"marketingConsent","label":"I agree to receive District Newsletter emails from the Office of Assemblywoman Carmen Morales. I understand that submitting this form is a confirmation request, that I am not subscribed until I confirm by email, and that I can unsubscribe at any time.","helpText":"","placeholder":"","visible":true,"required":true}
     ],
     "qualification":{"enabled":false,"allowedZipCodes":[]},
-    "completion":{"mode":"inline_success","successCopy":"Thanks. Your signup was received."},
+    "completion":{"mode":"inline_success","successCopy":"Check your inbox to continue. Your request is pending, and you are not subscribed unless you complete the confirmation step."},
     "consentPolicyVersion":"marketing-v1"
   }$json$::jsonb
 );

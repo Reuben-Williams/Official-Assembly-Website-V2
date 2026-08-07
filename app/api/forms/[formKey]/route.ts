@@ -16,8 +16,10 @@ import {
 import { allowedBuilderOrigins } from "../../../../lib/builder/authorization";
 import { readNewsletterConfiguration } from "../../../../lib/newsletter/config";
 import { createManagedPublicFormIngestionService } from "../../../../lib/newsletter/ingestion";
+import { createPackageCompatibleNewsletterSubmissionRequest } from "../../../../lib/newsletter/managed-form-revision";
 import { readNewsletterPublicReadiness } from "../../../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
+import { APPROVED_FORM_TEMPLATES } from "@reuben-williams/forms";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -93,5 +95,21 @@ export async function POST(
     now: () => new Date(),
     uuid: () => crypto.randomUUID()
   });
-  return route.handle(request, { formKey });
+  let submissionRequest = request;
+  if (type === "newsletter") {
+    const template = APPROVED_FORM_TEMPLATES.find((candidate) =>
+      candidate.id === definition.templateId && candidate.version === definition.templateVersion
+    );
+    if (!template) return unavailable();
+    try {
+      submissionRequest = await createPackageCompatibleNewsletterSubmissionRequest({
+        request,
+        template,
+        businessName: siteConfig.officeName
+      });
+    } catch {
+      return unavailable(400, "INVALID_SUBMISSION");
+    }
+  }
+  return route.handle(submissionRequest, { formKey });
 }
