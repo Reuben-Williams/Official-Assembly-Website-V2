@@ -1,4 +1,5 @@
 import { createNewsletterBroadcastRepository } from "../../../../../lib/newsletter/broadcast-repository";
+import { createNewsletterProviderOperationsRepository } from "../../../../../lib/newsletter/provider-operations-repository";
 import {
   authorizeNewsletterOperation,
   newsletterOperationError
@@ -13,8 +14,11 @@ export async function GET(request: Request) {
     const identity = await authorizeNewsletterOperation(request, false);
     const client = getBuilderAdminClient();
     if (!client) throw new Error("newsletter database unavailable");
-    const status = await createNewsletterBroadcastRepository(client, identity.siteId).status();
-    return Response.json({ ...status, role: identity.role }, {
+    const [status, providerStatus] = await Promise.all([
+      createNewsletterBroadcastRepository(client, identity.siteId).status(),
+      createNewsletterProviderOperationsRepository(client, identity.siteId).status()
+    ]);
+    return Response.json({ ...status, ...providerStatus, role: identity.role }, {
       headers: { "cache-control": "no-store" }
     });
   } catch (error) {

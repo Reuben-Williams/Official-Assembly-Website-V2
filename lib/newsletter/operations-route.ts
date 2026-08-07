@@ -36,6 +36,25 @@ export async function newsletterOperationBody(request: Request, allowed: readonl
   return result;
 }
 
+const COMMAND_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function newsletterOperationCommandId(value: unknown) {
+  if (typeof value !== "string" || !COMMAND_ID_PATTERN.test(value)) {
+    throw new TypeError("The newsletter command is invalid.");
+  }
+  return value.toLowerCase();
+}
+
+export function newsletterOperationReason(value: unknown) {
+  if (typeof value !== "string") throw new TypeError("The newsletter reason is invalid.");
+  const reason = value.trim();
+  if (reason.length < 1 || reason.length > 500) {
+    throw new TypeError("The newsletter reason is invalid.");
+  }
+  return reason;
+}
+
 export function newsletterOperationError(error: unknown) {
   if (error instanceof NewsletterStaffAuthorizationError) {
     return Response.json({ error: { code: error.code } }, {

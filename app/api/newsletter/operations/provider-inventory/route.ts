@@ -1,5 +1,6 @@
 import {
   evaluateNewsletterProviderInventory,
+  resolveNewsletterInventoryActivationStage,
   type NewsletterInventoryStage
 } from "../../../../../lib/newsletter/provider-inventory";
 import { createNewsletterProviderInventoryEvidenceRepository } from "../../../../../lib/newsletter/provider-inventory-repository";
@@ -38,17 +39,34 @@ export async function GET(request: Request) {
       client,
       identity.siteId
     ).read();
-    const stage: NewsletterInventoryStage = process.env.NEWSLETTER_EMAIL_ENABLED === "true"
-      ? "initial"
-      : "disabled_setup";
-    const result = evaluateNewsletterProviderInventory({
-      stage,
+    const initial = evaluateNewsletterProviderInventory({
+      stage: process.env.NEWSLETTER_EMAIL_ENABLED === "true" ? "initial" : "disabled_setup",
       configuration,
       snapshot,
       evidence
     });
+    let result = initial;
+    if (process.env.NEWSLETTER_EMAIL_ENABLED === "true") {
+      const activeDigest = await createNewsletterProviderInventoryEvidenceRepository(
+        client,
+        identity.siteId
+      ).activeActivationDigest();
+      const stage: NewsletterInventoryStage = resolveNewsletterInventoryActivationStage(
+        activeDigest,
+        initial.resourceIdentityDigest
+      );
+      if (stage === "steady") {
+        result = evaluateNewsletterProviderInventory({
+          stage,
+          configuration,
+          snapshot,
+          evidence
+        });
+      }
+    }
+    const { resourceIdentityDigest: _serverOnlyDigest, ...safeResult } = result;
 
-    return Response.json(result, {
+    return Response.json(safeResult, {
       status: result.state === "ready" ? 200 : 409,
       headers: { "cache-control": "no-store" }
     });

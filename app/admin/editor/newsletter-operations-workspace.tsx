@@ -44,6 +44,7 @@ export function NewsletterOperationsWorkspace({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [broadcastId, setBroadcastId] = useState("");
+  const [recoveryReason, setRecoveryReason] = useState("");
   const [inventory, setInventory] = useState<NewsletterProviderInventoryStatus | null>(null);
   const owner = role === "owner";
 
@@ -117,6 +118,7 @@ export function NewsletterOperationsWorkspace({
 
   const normalizedBroadcastId = broadcastId.trim();
   const hasIncident = (status?.openIncidents ?? 0) > 0;
+  const circuitOpen = status?.reconciliationCircuit.state === "open";
   const canValidate = Boolean(status?.confirmedTest) && !hasIncident && normalizedBroadcastId.length >= 3;
 
   return (
@@ -153,6 +155,20 @@ export function NewsletterOperationsWorkspace({
             <p>{hasIncident ? "Validation is locked until incidents are resolved." : "No current send-evidence lockout."}</p>
           </article>
           <article>
+            <span>Provider activation</span>
+            <strong>{status.providerActivation.active ? "Active" : "Not active"}</strong>
+            <p>{status.providerActivation.active
+              ? `Recorded ${localTime(status.providerActivation.recordedAt)}`
+              : "Required before audience reconciliation can run."}</p>
+          </article>
+          <article>
+            <span>Dashboard review</span>
+            <strong>{status.providerAttestation.current ? "Current" : "Required"}</strong>
+            <p>{status.providerAttestation.current
+              ? `Expires ${localTime(status.providerAttestation.expiresAt)}`
+              : "Owner review is limited to non-API account settings."}</p>
+          </article>
+          <article>
             <span>Confirmed staff test</span>
             <strong>{status.confirmedTest ? digest(status.confirmedTest.digest) : "Required"}</strong>
             <p>{status.confirmedTest ? `Observed ${localTime(status.confirmedTest.confirmedAt)}` : "Open a bounded window before the Resend test."}</p>
@@ -181,6 +197,24 @@ export function NewsletterOperationsWorkspace({
               onClick={() => void runProviderInventory()}
               type="button"
             >{busy === "inventory" ? "Auditing provider…" : "Run provider inventory"}</button>
+            <button
+              disabled={Boolean(busy)}
+              onClick={() => void run(
+                "attestation",
+                () => operations.recordProviderAttestation(crypto.randomUUID()),
+                "The bounded owner dashboard review was recorded for thirty days."
+              )}
+              type="button"
+            >{busy === "attestation" ? "Recording review…" : "Confirm dashboard review"}</button>
+            <button
+              disabled={Boolean(busy) || !inventory?.activationReady || status?.providerActivation.active === true}
+              onClick={() => void run(
+                "provider-activation",
+                () => operations.activateProvider(crypto.randomUUID()),
+                "The dedicated provider boundary is active. No email was sent."
+              )}
+              type="button"
+            >{busy === "provider-activation" ? "Activating boundary…" : "Activate provider boundary"}</button>
           </div>
           {inventory ? (
             <div className="newsletter-inventory-results" aria-label="Provider inventory results">
@@ -199,6 +233,39 @@ export function NewsletterOperationsWorkspace({
               </ul>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {owner && circuitOpen ? (
+        <section className="newsletter-operations-panel" aria-label="Reconciliation recovery controls">
+          <div className="newsletter-control-copy">
+            <p className="newsletter-operations-eyebrow">Owner recovery</p>
+            <h2>Review the reconciliation incident</h2>
+            <p>
+              Recovery closes the current circuit and queues a new full reconciliation from the
+              beginning. It does not send email.
+            </p>
+          </div>
+          <label>
+            Recovery reason
+            <input
+              autoComplete="off"
+              maxLength={500}
+              onChange={(event) => setRecoveryReason(event.currentTarget.value)}
+              value={recoveryReason}
+            />
+          </label>
+          <div className="newsletter-operation-actions">
+            <button
+              disabled={Boolean(busy) || recoveryReason.trim().length < 1}
+              onClick={() => void run(
+                "recovery",
+                () => operations.recoverReconciliation(crypto.randomUUID(), recoveryReason.trim()),
+                "The reconciliation circuit was recovered and a fresh run was queued."
+              )}
+              type="button"
+            >{busy === "recovery" ? "Queuing recovery…" : "Recover reconciliation"}</button>
+          </div>
         </section>
       ) : null}
 

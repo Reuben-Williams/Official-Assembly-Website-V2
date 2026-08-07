@@ -14,6 +14,9 @@ const status = {
   version: 1 as const,
   queuedJobs: 2,
   openIncidents: 0,
+  providerActivation: { active: false, recordedAt: "" },
+  providerAttestation: { current: false, expiresAt: "" },
+  reconciliationCircuit: { state: "closed" as const, code: "" },
   confirmedTest: {
     id: "34700000-0000-4000-8000-000000000001",
     providerBroadcastId: "broadcast_1",
@@ -68,6 +71,9 @@ describe("newsletter operations workspace", () => {
         }],
         counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 0, localEligible: 0 }
       })),
+      recordProviderAttestation: vi.fn(async () => ({ state: "recorded" as const })),
+      activateProvider: vi.fn(async () => ({ state: "active" as const })),
+      recoverReconciliation: vi.fn(async () => ({ state: "queued" as const })),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(async () => ({ state: "open" as const, windowId: "window_1" })),
       validate: vi.fn()
@@ -85,7 +91,12 @@ describe("newsletter operations workspace", () => {
     expect(host.textContent).not.toContain("message body");
     expect(host.querySelector('a[href="https://resend.com/broadcasts"]')?.textContent).toContain("Open Resend");
     expect(Array.from(host.querySelectorAll("button")).map((button) => button.textContent)).toEqual(
-      expect.arrayContaining(["Run activation check", "Open staff test window", "Validate newsletter"])
+      expect.arrayContaining([
+        "Confirm dashboard review",
+        "Run activation check",
+        "Open staff test window",
+        "Validate newsletter"
+      ])
     );
     const inventoryButton = Array.from(host.querySelectorAll("button"))
       .find((button) => button.textContent === "Run provider inventory")!;
@@ -94,6 +105,12 @@ describe("newsletter operations workspace", () => {
     expect(client.providerInventory).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain("manual attestation missing");
     expect(host.textContent).not.toContain("resourceIdentityDigest");
+
+    const attestationButton = Array.from(host.querySelectorAll("button"))
+      .find((button) => button.textContent === "Confirm dashboard review")!;
+    await act(async () => attestationButton.click());
+    await settle();
+    expect(client.recordProviderAttestation).toHaveBeenCalledWith(expect.stringMatching(/^[0-9a-f-]{36}$/));
   });
 
   it("keeps non-owner roles read-only and exposes loading and error states", async () => {
@@ -101,6 +118,9 @@ describe("newsletter operations workspace", () => {
     const client = {
       status: vi.fn(() => new Promise<typeof status>((_, reject) => { rejectStatus = reject; })),
       providerInventory: vi.fn(),
+      recordProviderAttestation: vi.fn(),
+      activateProvider: vi.fn(),
+      recoverReconciliation: vi.fn(),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(),
       validate: vi.fn()

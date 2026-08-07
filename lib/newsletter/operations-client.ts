@@ -4,6 +4,18 @@ export type NewsletterOperationsStatus = {
   readonly version: 1;
   readonly queuedJobs: number;
   readonly openIncidents: number;
+  readonly providerActivation: {
+    readonly active: boolean;
+    readonly recordedAt: string;
+  };
+  readonly providerAttestation: {
+    readonly current: boolean;
+    readonly expiresAt: string;
+  };
+  readonly reconciliationCircuit: {
+    readonly state: "closed" | "open";
+    readonly code: string;
+  };
   readonly confirmedTest: null | {
     readonly id: string;
     readonly providerBroadcastId: string;
@@ -47,6 +59,9 @@ export type NewsletterProviderInventoryStatus = {
 export interface NewsletterOperationsClient {
   status(): Promise<NewsletterOperationsStatus>;
   providerInventory(): Promise<NewsletterProviderInventoryStatus>;
+  recordProviderAttestation(commandId: string): Promise<Record<string, unknown>>;
+  activateProvider(commandId: string): Promise<Record<string, unknown>>;
+  recoverReconciliation(commandId: string, reason: string): Promise<Record<string, unknown>>;
   activationCheck(broadcastId: string): Promise<Record<string, unknown>>;
   openStaffTestWindow(broadcastId: string, commandId: string): Promise<Record<string, unknown>>;
   validate(
@@ -108,10 +123,25 @@ function boundedStatus(value: unknown): NewsletterOperationsStatus {
   const source = record(value);
   const confirmed = source.confirmedTest ? record(source.confirmedTest) : null;
   const validation = source.validation ? record(source.validation) : null;
+  const activation = source.providerActivation ? record(source.providerActivation) : {};
+  const attestation = source.providerAttestation ? record(source.providerAttestation) : {};
+  const circuit = source.reconciliationCircuit ? record(source.reconciliationCircuit) : {};
   return {
     version: 1,
     queuedJobs: Math.max(0, Math.min(10_000, Number(source.queuedJobs) || 0)),
     openIncidents: Math.max(0, Math.min(10_000, Number(source.openIncidents) || 0)),
+    providerActivation: {
+      active: activation.active === true,
+      recordedAt: text(activation.recordedAt, activation.recorded_at).slice(0, 40)
+    },
+    providerAttestation: {
+      current: attestation.current === true,
+      expiresAt: text(attestation.expiresAt, attestation.expires_at).slice(0, 40)
+    },
+    reconciliationCircuit: {
+      state: circuit.state === "open" ? "open" : "closed",
+      code: text(circuit.code, circuit.safe_failure_code).slice(0, 64)
+    },
     confirmedTest: confirmed ? {
       id: text(confirmed.id).slice(0, 100),
       providerBroadcastId: text(confirmed.providerBroadcastId, confirmed.provider_broadcast_id).slice(0, 200),
@@ -181,6 +211,13 @@ export function createNewsletterOperationsClient(
       }
       return boundedInventory(await response.json());
     },
+    recordProviderAttestation: (commandId) => mutation(
+      "provider-attestation", { commandId, confirmed: true }
+    ),
+    activateProvider: (commandId) => mutation("provider-activation", { commandId }),
+    recoverReconciliation: (commandId, reason) => mutation(
+      "recovery", { commandId, reason }
+    ),
     activationCheck: (broadcastId) => commandMutation(
       "activation-check", broadcastId, crypto.randomUUID()
     ),

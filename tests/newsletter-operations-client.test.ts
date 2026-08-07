@@ -28,4 +28,37 @@ describe("newsletter operations client", () => {
     expect(second.commandId).toBe(first.commandId);
     expect(first.broadcastId).toBe("broadcast-1");
   });
+
+  it("sends bounded owner commands without accepting provider identity or counts", async () => {
+    const fetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ state: "recorded" }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    }));
+    vi.stubGlobal("fetch", fetch);
+    const client = createNewsletterOperationsClient(() => "csrf-token");
+
+    await client.recordProviderAttestation("34000000-0000-4000-8000-000000000011");
+    await client.activateProvider("34000000-0000-4000-8000-000000000012");
+    await client.recoverReconciliation(
+      "34000000-0000-4000-8000-000000000013",
+      "Provider incident reviewed by the site owner."
+    );
+
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      "/api/newsletter/operations/provider-attestation",
+      "/api/newsletter/operations/provider-activation",
+      "/api/newsletter/operations/recovery"
+    ]);
+    expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({
+      commandId: "34000000-0000-4000-8000-000000000011",
+      confirmed: true
+    });
+    expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body))).toEqual({
+      commandId: "34000000-0000-4000-8000-000000000012"
+    });
+    expect(JSON.parse(String(fetch.mock.calls[2]?.[1]?.body))).toEqual({
+      commandId: "34000000-0000-4000-8000-000000000013",
+      reason: "Provider incident reviewed by the site owner."
+    });
+  });
 });

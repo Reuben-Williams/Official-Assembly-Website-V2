@@ -1,0 +1,77 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  createNewsletterProviderAttestationDigest,
+  createNewsletterProviderOperationsRepository,
+  NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES
+} from "../lib/newsletter/provider-operations-repository";
+
+const siteId = "34000000-0000-4000-8000-000000000001";
+const operatorId = "34300000-0000-4000-8000-000000000001";
+
+describe("newsletter provider operations repository", () => {
+  it("derives bounded evidence from fixed categories and a UTC day", () => {
+    const first = createNewsletterProviderAttestationDigest({
+      siteId,
+      operatorId,
+      observedAt: new Date("2026-08-07T14:00:00.000Z")
+    });
+    const sameDay = createNewsletterProviderAttestationDigest({
+      siteId,
+      operatorId,
+      observedAt: new Date("2026-08-07T23:59:59.000Z")
+    });
+    const nextDay = createNewsletterProviderAttestationDigest({
+      siteId,
+      operatorId,
+      observedAt: new Date("2026-08-08T00:00:00.000Z")
+    });
+
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(sameDay).toBe(first);
+    expect(nextDay).not.toBe(first);
+    expect(NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES).toEqual([
+      "billing_ownership",
+      "oauth_application_view",
+      "team_membership"
+    ]);
+  });
+
+  it("keeps provider identifiers and zero-boundary evidence server-owned", async () => {
+    const rpc = vi.fn(async () => ({
+      data: { version: 1, status: "active", replayed: false },
+      error: null
+    }));
+    const repository = createNewsletterProviderOperationsRepository({ rpc } as never, siteId);
+
+    await repository.recordAttestation({
+      commandId: "34000000-0000-4000-8000-000000000011",
+      operatorId,
+      safeEvidenceDigest: "a".repeat(64)
+    });
+    await repository.activate({
+      commandId: "34000000-0000-4000-8000-000000000012",
+      operatorId,
+      resourceIdentityDigest: "b".repeat(64)
+    });
+
+    expect(rpc).toHaveBeenNthCalledWith(1,
+      "builder_record_newsletter_inventory_attestation_v1",
+      { p_request: expect.objectContaining({
+        siteId,
+        operatorId,
+        categories: NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES
+      }) }
+    );
+    expect(rpc).toHaveBeenNthCalledWith(2,
+      "builder_record_newsletter_provider_activation_v1",
+      { p_request: expect.objectContaining({
+        siteId,
+        operatorId,
+        providerContactCount: 0,
+        localEligibleCount: 0,
+        historicalSendCount: 0
+      }) }
+    );
+  });
+});
