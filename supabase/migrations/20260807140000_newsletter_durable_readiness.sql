@@ -30,10 +30,15 @@ create table public.builder_newsletter_reconciliation_circuits (
   recovery_reason text check (
     recovery_reason is null or char_length(btrim(recovery_reason)) between 1 and 500
   ),
+  recovery_command_id uuid,
+  recovery_job_id uuid,
   updated_at timestamptz not null default clock_timestamp(),
   primary key (site_id, provider_scope_id),
   foreign key (site_id, exhausted_job_id)
     references public.builder_newsletter_site_jobs(site_id, id) on delete set null,
+  foreign key (site_id, recovery_job_id)
+    references public.builder_newsletter_site_jobs(site_id, id) on delete set null,
+  unique (site_id, recovery_command_id),
   check ((state = 'open') = (opened_at is not null))
 );
 
@@ -135,6 +140,7 @@ create table public.builder_newsletter_reconciliation_requests (
 create table public.builder_newsletter_provider_activation_revisions (
   site_id uuid not null references public.builder_sites(id) on delete cascade,
   id uuid not null default extensions.gen_random_uuid(),
+  command_id uuid not null,
   revision integer not null check (revision > 0),
   provider_scope_id text not null check (provider_scope_id = 'resend-team-production'),
   resource_identity_digest text not null check (resource_identity_digest ~ '^[a-f0-9]{64}$'),
@@ -146,7 +152,10 @@ create table public.builder_newsletter_provider_activation_revisions (
   recorded_at timestamptz not null default clock_timestamp(),
   created_at timestamptz not null default clock_timestamp(),
   primary key (site_id, id),
-  unique (site_id, revision)
+  unique (site_id, revision),
+  unique (site_id, command_id),
+  foreign key (site_id, recorded_by)
+    references public.builder_site_members(site_id, user_id) on delete restrict
 );
 
 create unique index builder_newsletter_one_active_provider_activation_idx
@@ -156,6 +165,7 @@ create unique index builder_newsletter_one_active_provider_activation_idx
 create table public.builder_newsletter_provider_inventory_attestations (
   site_id uuid not null references public.builder_sites(id) on delete cascade,
   id uuid not null default extensions.gen_random_uuid(),
+  command_id uuid not null,
   policy_version text not null check (policy_version = 'resend-district-newsletter-v1'),
   operator_id uuid not null,
   categories text[] not null,
@@ -164,6 +174,9 @@ create table public.builder_newsletter_provider_inventory_attestations (
   expires_at timestamptz not null,
   created_at timestamptz not null default clock_timestamp(),
   primary key (site_id, id),
+  unique (site_id, command_id),
+  foreign key (site_id, operator_id)
+    references public.builder_site_members(site_id, user_id) on delete restrict,
   check (cardinality(categories) between 1 and 20),
   check (expires_at > attested_at and expires_at <= attested_at + interval '30 days')
 );
@@ -414,6 +427,16 @@ begin
     where circuit.site_id = v_site_id
       and circuit.provider_scope_id = 'resend-team-production'
       and circuit.state = 'open'
+  ) then
+    return jsonb_build_object('version', 1, 'status', 'blocked');
+  end if;
+
+  if not exists (
+    select 1
+    from public.builder_newsletter_provider_activation_revisions activation
+    where activation.site_id = v_site_id
+      and activation.provider_scope_id = 'resend-team-production'
+      and activation.state = 'active'
   ) then
     return jsonb_build_object('version', 1, 'status', 'blocked');
   end if;
@@ -908,6 +931,7 @@ begin
     set state = 'open', safe_failure_code = excluded.safe_failure_code,
         exhausted_job_id = excluded.exhausted_job_id, opened_at = excluded.opened_at,
         recovered_at = null, recovery_operator_id = null, recovery_reason = null,
+        recovery_command_id = null, recovery_job_id = null,
         updated_at = clock_timestamp();
 
     perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
@@ -969,6 +993,7 @@ as $$
 declare
   v_site_id uuid;
   v_operator_id uuid;
+  v_command_id uuid;
   v_reason text;
   v_job_id uuid;
   v_changed integer;
@@ -976,6 +1001,7 @@ begin
   begin
     v_site_id := (p_request ->> 'siteId')::uuid;
     v_operator_id := (p_request ->> 'operatorId')::uuid;
+    v_command_id := (p_request ->> 'commandId')::uuid;
     v_reason := btrim(p_request ->> 'reason');
   exception when others then
     raise exception 'invalid newsletter recovery' using errcode = '22023';
@@ -983,11 +1009,29 @@ begin
   if (p_request ->> 'version') <> '1' or char_length(v_reason) not between 1 and 500 then
     raise exception 'invalid newsletter recovery' using errcode = '22023';
   end if;
+  if not exists (
+    select 1 from public.builder_site_members member
+    where member.site_id = v_site_id and member.user_id = v_operator_id and member.role = 'owner'
+  ) then
+    raise exception 'newsletter recovery not authorized' using errcode = '42501';
+  end if;
 
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 196));
+  select circuit.recovery_job_id into v_job_id
+  from public.builder_newsletter_reconciliation_circuits circuit
+  where circuit.site_id = v_site_id
+    and circuit.provider_scope_id = 'resend-team-production'
+    and circuit.recovery_command_id = v_command_id;
+  if found then
+    return jsonb_build_object(
+      'version', 1, 'status', 'queued', 'jobId', v_job_id, 'replayed', true
+    );
+  end if;
+
   update public.builder_newsletter_reconciliation_circuits
   set state = 'closed', recovered_at = clock_timestamp(),
       recovery_operator_id = v_operator_id, recovery_reason = v_reason,
+      recovery_command_id = v_command_id,
       opened_at = null, updated_at = clock_timestamp()
   where site_id = v_site_id and provider_scope_id = 'resend-team-production' and state = 'open';
   get diagnostics v_changed = row_count;
@@ -1002,7 +1046,14 @@ begin
     'queued', clock_timestamp(), clock_timestamp()
   ) returning id into v_job_id;
 
-  return jsonb_build_object('version', 1, 'status', 'queued', 'jobId', v_job_id);
+  update public.builder_newsletter_reconciliation_circuits
+  set recovery_job_id = v_job_id, updated_at = clock_timestamp()
+  where site_id = v_site_id and provider_scope_id = 'resend-team-production'
+    and recovery_command_id = v_command_id;
+
+  return jsonb_build_object(
+    'version', 1, 'status', 'queued', 'jobId', v_job_id, 'replayed', false
+  );
 end;
 $$;
 
@@ -1015,13 +1066,16 @@ as $$
 declare
   v_site_id uuid;
   v_operator_id uuid;
+  v_command_id uuid;
   v_digest text;
   v_revision integer;
   v_id uuid;
+  v_existing record;
 begin
   begin
     v_site_id := (p_request ->> 'siteId')::uuid;
     v_operator_id := (p_request ->> 'operatorId')::uuid;
+    v_command_id := (p_request ->> 'commandId')::uuid;
     v_digest := p_request ->> 'resourceIdentityDigest';
   exception when others then
     raise exception 'invalid newsletter provider activation' using errcode = '22023';
@@ -1033,21 +1087,70 @@ begin
   then
     raise exception 'invalid newsletter provider activation' using errcode = '22023';
   end if;
+  if not exists (
+    select 1 from public.builder_site_members member
+    where member.site_id = v_site_id and member.user_id = v_operator_id and member.role = 'owner'
+  ) then
+    raise exception 'newsletter provider activation not authorized' using errcode = '42501';
+  end if;
 
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 197));
-  update public.builder_newsletter_provider_activation_revisions
-  set state = 'superseded'
-  where site_id = v_site_id and provider_scope_id = 'resend-team-production' and state = 'active';
+  select activation.id, activation.resource_identity_digest
+  into v_existing
+  from public.builder_newsletter_provider_activation_revisions activation
+  where activation.site_id = v_site_id and activation.command_id = v_command_id;
+  if found then
+    if v_existing.resource_identity_digest <> v_digest then
+      raise exception 'newsletter provider activation command conflict' using errcode = '23505';
+    end if;
+    return jsonb_build_object(
+      'version', 1, 'status', 'active',
+      'activationRevisionId', v_existing.id, 'replayed', true
+    );
+  end if;
+
+  if not exists (
+    select 1
+    from public.builder_newsletter_provider_inventory_attestations attestation
+    where attestation.site_id = v_site_id
+      and attestation.policy_version = 'resend-district-newsletter-v1'
+      and attestation.expires_at > clock_timestamp()
+      and attestation.categories = array[
+        'billing_ownership', 'oauth_application_view', 'team_membership'
+      ]::text[]
+  ) then
+    raise exception 'newsletter provider inventory attestation is required' using errcode = '55000';
+  end if;
+
+  select activation.id, activation.resource_identity_digest
+  into v_existing
+  from public.builder_newsletter_provider_activation_revisions activation
+  where activation.site_id = v_site_id
+    and activation.provider_scope_id = 'resend-team-production'
+    and activation.state = 'active';
+  if found then
+    if v_existing.resource_identity_digest <> v_digest then
+      raise exception 'newsletter provider identity changed' using errcode = '55000';
+    end if;
+    return jsonb_build_object(
+      'version', 1, 'status', 'active',
+      'activationRevisionId', v_existing.id, 'replayed', true
+    );
+  end if;
+
   select coalesce(max(activation.revision), 0) + 1 into v_revision
   from public.builder_newsletter_provider_activation_revisions activation
   where activation.site_id = v_site_id;
   insert into public.builder_newsletter_provider_activation_revisions (
-    site_id, revision, provider_scope_id, resource_identity_digest,
+    site_id, command_id, revision, provider_scope_id, resource_identity_digest,
     provider_contact_count, local_eligible_count, historical_send_count, recorded_by
   ) values (
-    v_site_id, v_revision, 'resend-team-production', v_digest, 0, 0, 0, v_operator_id
+    v_site_id, v_command_id, v_revision, 'resend-team-production', v_digest,
+    0, 0, 0, v_operator_id
   ) returning id into v_id;
-  return jsonb_build_object('version', 1, 'status', 'active', 'activationRevisionId', v_id);
+  return jsonb_build_object(
+    'version', 1, 'status', 'active', 'activationRevisionId', v_id, 'replayed', false
+  );
 end;
 $$;
 
@@ -1060,13 +1163,17 @@ as $$
 declare
   v_site_id uuid;
   v_operator_id uuid;
+  v_command_id uuid;
   v_digest text;
   v_categories text[];
   v_id uuid;
+  v_existing record;
+  v_attested_at timestamptz;
 begin
   begin
     v_site_id := (p_request ->> 'siteId')::uuid;
     v_operator_id := (p_request ->> 'operatorId')::uuid;
+    v_command_id := (p_request ->> 'commandId')::uuid;
     v_digest := p_request ->> 'safeEvidenceDigest';
     select array_agg(value order by value) into v_categories
     from jsonb_array_elements_text(p_request -> 'categories') value;
@@ -1076,19 +1183,49 @@ begin
   if (p_request ->> 'version') <> '1'
     or (p_request ->> 'policyVersion') <> 'resend-district-newsletter-v1'
     or v_digest !~ '^[a-f0-9]{64}$'
-    or cardinality(v_categories) not between 1 and 20
+    or coalesce(v_categories, '{}'::text[]) <> array[
+      'billing_ownership', 'oauth_application_view', 'team_membership'
+    ]::text[]
   then
     raise exception 'invalid newsletter inventory attestation' using errcode = '22023';
   end if;
+  if not exists (
+    select 1 from public.builder_site_members member
+    where member.site_id = v_site_id and member.user_id = v_operator_id and member.role = 'owner'
+  ) then
+    raise exception 'newsletter inventory attestation not authorized' using errcode = '42501';
+  end if;
 
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 198));
+  select attestation.id, attestation.operator_id, attestation.categories,
+         attestation.safe_evidence_digest
+  into v_existing
+  from public.builder_newsletter_provider_inventory_attestations attestation
+  where attestation.site_id = v_site_id and attestation.command_id = v_command_id;
+  if found then
+    if v_existing.operator_id <> v_operator_id
+      or v_existing.categories <> v_categories
+      or v_existing.safe_evidence_digest <> v_digest
+    then
+      raise exception 'newsletter inventory attestation command conflict' using errcode = '23505';
+    end if;
+    return jsonb_build_object(
+      'version', 1, 'status', 'recorded',
+      'attestationId', v_existing.id, 'replayed', true
+    );
+  end if;
+
+  v_attested_at := clock_timestamp();
   insert into public.builder_newsletter_provider_inventory_attestations (
-    site_id, policy_version, operator_id, categories, safe_evidence_digest,
+    site_id, command_id, policy_version, operator_id, categories, safe_evidence_digest,
     attested_at, expires_at
   ) values (
-    v_site_id, 'resend-district-newsletter-v1', v_operator_id, v_categories,
-    v_digest, clock_timestamp(), clock_timestamp() + interval '30 days'
+    v_site_id, v_command_id, 'resend-district-newsletter-v1', v_operator_id, v_categories,
+    v_digest, v_attested_at, v_attested_at + interval '30 days'
   ) returning id into v_id;
-  return jsonb_build_object('version', 1, 'status', 'recorded', 'attestationId', v_id);
+  return jsonb_build_object(
+    'version', 1, 'status', 'recorded', 'attestationId', v_id, 'replayed', false
+  );
 end;
 $$;
 
@@ -1288,6 +1425,7 @@ begin
               exhausted_job_id = excluded.exhausted_job_id,
               opened_at = excluded.opened_at, recovered_at = null,
               recovery_operator_id = null, recovery_reason = null,
+              recovery_command_id = null, recovery_job_id = null,
               updated_at = clock_timestamp();
           continue;
         end if;
@@ -1449,6 +1587,7 @@ begin
             exhausted_job_id = excluded.exhausted_job_id,
             opened_at = excluded.opened_at, recovered_at = null,
             recovery_operator_id = null, recovery_reason = null,
+            recovery_command_id = null, recovery_job_id = null,
             updated_at = clock_timestamp();
 
         perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
