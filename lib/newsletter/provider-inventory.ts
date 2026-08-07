@@ -149,6 +149,16 @@ export type NewsletterProviderInventoryResult = {
   };
 };
 
+export function disabledNewsletterInventoryCanEnterInitialActivation(
+  result: NewsletterProviderInventoryResult
+) {
+  return result.mode === "disabled_setup" && result.categories.some((category) =>
+    category.category === "api_keys" &&
+    category.status === "ready" &&
+    category.code === "policy_satisfied"
+  );
+}
+
 export function resolveNewsletterInventoryActivationStage(
   activeResourceIdentityDigest: string | null,
   currentResourceIdentityDigest: string

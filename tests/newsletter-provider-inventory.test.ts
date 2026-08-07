@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   evaluateNewsletterProviderInventory,
+  disabledNewsletterInventoryCanEnterInitialActivation,
   findRecentNewsletterAuthSmtpLoginEmail,
   NEWSLETTER_INVENTORY_POLICY_VERSION,
   REQUIRED_NEWSLETTER_WEBHOOK_EVENTS,
@@ -219,6 +220,17 @@ describe("newsletter provider inventory policy", () => {
       expect.objectContaining({ category: "manual_attestation", status: "blocked" }),
       expect.objectContaining({ category: "auth_smtp", status: "blocked" })
     ]));
+    expect(disabledNewsletterInventoryCanEnterInitialActivation(result)).toBe(false);
+  });
+
+  it("allows the disabled owner workflow to enter initial activation only after legacy key removal", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "disabled_setup",
+      configuration,
+      snapshot: snapshot(),
+      evidence: evidence()
+    });
+    expect(disabledNewsletterInventoryCanEnterInitialActivation(result)).toBe(true);
   });
 
   it("fails closed on unrelated resources, scheduled mail, and unmapped personal records", () => {

@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const commandId = newsletterOperationCommandId(body.commandId);
     const structural = readNewsletterConfiguration();
     const configuration = readNewsletterProviderInventoryConfiguration();
-    if (structural.status !== "ready" || configuration.status !== "ready") {
+    if ((structural.status !== "ready" && structural.status !== "disabled")
+      || configuration.status !== "ready") {
       throw new Error("newsletter activation unavailable");
     }
     const client = getBuilderAdminClient();

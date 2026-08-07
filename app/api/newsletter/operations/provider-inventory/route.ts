@@ -1,5 +1,6 @@
 import {
   evaluateNewsletterProviderInventory,
+  disabledNewsletterInventoryCanEnterInitialActivation,
   resolveNewsletterInventoryActivationStage,
   type NewsletterInventoryStage
 } from "../../../../../lib/newsletter/provider-inventory";
@@ -39,14 +40,23 @@ export async function GET(request: Request) {
       client,
       identity.siteId
     ).read();
+    const emailEnabled = process.env.NEWSLETTER_EMAIL_ENABLED === "true";
     const initial = evaluateNewsletterProviderInventory({
-      stage: process.env.NEWSLETTER_EMAIL_ENABLED === "true" ? "initial" : "disabled_setup",
+      stage: emailEnabled ? "initial" : "disabled_setup",
       configuration,
       snapshot,
       evidence
     });
     let result = initial;
-    if (process.env.NEWSLETTER_EMAIL_ENABLED === "true") {
+    if (!emailEnabled && disabledNewsletterInventoryCanEnterInitialActivation(initial)) {
+      result = evaluateNewsletterProviderInventory({
+        stage: "initial",
+        configuration,
+        snapshot,
+        evidence
+      });
+    }
+    if (emailEnabled) {
       const activeDigest = await createNewsletterProviderInventoryEvidenceRepository(
         client,
         identity.siteId

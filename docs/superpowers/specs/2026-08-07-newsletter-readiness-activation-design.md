@@ -125,7 +125,7 @@ When `NEWSLETTER_EMAIL_ENABLED=false`, the Cron route does not schedule or claim
 
 ## Production Provider Preflight
 
-Two gates run before `next build` when the candidate has `NEWSLETTER_EMAIL_ENABLED=true`. A separate protected first-activation operation records the durable transition from initial to steady-state mode; changing an environment variable alone cannot skip it. The same inventory engine is also available through an owner-authorized read-only route while the feature remains disabled.
+Two gates run before `next build` when the candidate has `NEWSLETTER_EMAIL_ENABLED=true`. A separate protected first-activation operation records the durable transition from initial to steady-state mode; changing an environment variable alone cannot skip it. The same inventory engine and the non-sending, zero-audience activation command are available to the owner while email remains disabled, so the durable provider boundary is recorded before the enabled candidate is built.
 
 ### Structural gate
 
