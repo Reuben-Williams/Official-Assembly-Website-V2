@@ -22,6 +22,18 @@
   min-height: 70vh;
 }
 
+.editor-operational-header :where(button:not(:disabled), a[href], summary),
+.newsletter-operations :where(button:not(:disabled), a[href], summary),
+.admin-login :where(button:not(:disabled), a[href], summary) {
+  cursor: pointer;
+}
+
+.editor-operational-header button:disabled,
+.newsletter-operations button:disabled,
+.admin-login button:disabled {
+  cursor: not-allowed;
+}
+
 .admin-login-panel {
   margin-inline: auto;
   max-width: 36rem;

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -35,5 +37,14 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("<details");
     expect(html).toContain("Sign out and revoke editor session");
     expect(html).not.toContain("editor-attachment-note");
+  });
+
+  it("scopes pointer and disabled cursors to client-owned editor controls", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8").replace(/\s+/g, " ");
+
+    expect(css).toMatch(/\.editor-operational-header :where\(button:not\(:disabled\), a\[href\], summary\)[^{]*\{[^}]*cursor: pointer/);
+    expect(css).toMatch(/\.newsletter-operations :where\(button:not\(:disabled\), a\[href\], summary\)[^{]*\{[^}]*cursor: pointer/);
+    expect(css).toMatch(/\.editor-operational-header button:disabled[^{]*\{[^}]*cursor: not-allowed/);
+    expect(css).not.toMatch(/\.editor-operational-header\s+(?:span|p|label)\s*\{[^}]*cursor: pointer/);
   });
 });
