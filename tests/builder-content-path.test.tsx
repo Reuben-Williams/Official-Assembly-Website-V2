@@ -4,14 +4,9 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/missing-page" }));
-
-vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
 vi.mock("@reuben-williams/next", () => ({
-  BuilderDomContentBridge: ({ pathname }: { pathname?: string }) => (
-    <div data-testid="dom-content-bridge" data-pathname={pathname ?? ""} />
-  ),
-  BuilderPreviewBridge: () => <div data-testid="preview-bridge" />
+  BuilderDomContentBridge: () => <div data-testid="dom-content-bridge" />,
+  BuilderPreviewBridge: () => <div data-testid="preview-bridge" />,
 }));
 
 import { BuilderContentBridge } from "../app/builder-content-bridge";
@@ -32,33 +27,13 @@ afterEach(async () => {
   root = null;
   container?.remove();
   container = null;
-  navigation.pathname = "/missing-page";
 });
 
-describe("builder content path resolution", () => {
-  it("loads the canonical /404 record for a rendered not-found view", async () => {
-    await act(async () => root?.render(
-      <>
-        <main data-builder-content-path="/404" />
-        <BuilderContentBridge />
-      </>
-    ));
+describe("builder content browser boundary", () => {
+  it("keeps authenticated preview messaging without mounting the public DOM replacement bridge", async () => {
+    await act(async () => root?.render(<BuilderContentBridge />));
 
-    expect(container?.querySelector('[data-testid="dom-content-bridge"]')?.getAttribute("data-pathname"))
-      .toBe("/404");
-  });
-
-  it("loads the actual pathname for a normal page", async () => {
-    navigation.pathname = "/about";
-
-    await act(async () => root?.render(
-      <>
-        <main />
-        <BuilderContentBridge />
-      </>
-    ));
-
-    expect(container?.querySelector('[data-testid="dom-content-bridge"]')?.getAttribute("data-pathname"))
-      .toBe("/about");
+    expect(container?.querySelector('[data-testid="preview-bridge"]')).not.toBeNull();
+    expect(container?.querySelector('[data-testid="dom-content-bridge"]')).toBeNull();
   });
 });

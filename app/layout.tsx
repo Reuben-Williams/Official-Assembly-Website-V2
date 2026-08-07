@@ -8,6 +8,7 @@ import { AppFooter } from "./ui/AppFooter";
 import { AppHeader } from "./ui/AppHeader";
 import { siteConfig } from "./data/site";
 import { BuilderContentBridge } from "./builder-content-bridge";
+import { builderText, loadBuilderGlobalContent } from "../lib/builder/server-content";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -15,16 +16,20 @@ const publicSans = Public_Sans({
   variable: "--font-public-sans"
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: siteConfig.officeName,
-    template: `%s | ${siteConfig.officeName}`
-  },
-  description: siteConfig.tagline,
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-  )
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await loadBuilderGlobalContent();
+  const officeName = builderText(content, "global.office.name", siteConfig.officeName);
+  return {
+    title: {
+      default: builderText(content, "metadata.home.title", officeName),
+      template: `%s | ${officeName}`,
+    },
+    description: builderText(content, "metadata.home.description", siteConfig.tagline),
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    ),
+  };
+}
 
 export default async function RootLayout({
   children
@@ -32,6 +37,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   await headers();
+  const content = await loadBuilderGlobalContent();
   return (
     <html lang="en">
       <body className={publicSans.className}>
@@ -42,11 +48,11 @@ export default async function RootLayout({
           data-i18n-key="global.skip"
           href="#main"
         >
-          Skip to content
+          {builderText(content, "global.accessibility.skip", "Skip to content")}
         </a>
-        <AppHeader />
+        <AppHeader content={content} />
         <main id="main">{children}</main>
-        <AppFooter />
+        <AppFooter content={content} />
         <Suspense fallback={null}>
           <BuilderContentBridge />
         </Suspense>

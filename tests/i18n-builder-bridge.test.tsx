@@ -1,5 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../lib/builder/server-content", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
+  return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
+});
 
 import HomePage from "../app/page";
 import {
@@ -20,8 +25,8 @@ describe("stable-key translation bridge", () => {
     expect(translateStableText("home.hero.title", edited, "es")).toBe(edited);
   });
 
-  it("renders the same stable key for builder editing and translation", () => {
-    const html = renderToStaticMarkup(<HomePage />);
+  it("renders the same stable key for builder editing and translation", async () => {
+    const html = renderToStaticMarkup(await HomePage());
     expect(html).toContain(
       'data-builder-region="home.hero.title" data-builder-kind="text" data-i18n-key="home.hero.title"'
     );

@@ -5,24 +5,33 @@ import { getBuilderAdminClient } from "../../lib/supabase/admin";
 import { getPageBySlug, siteConfig } from "../data/site";
 import { PageTemplate } from "../ui/PageTemplate";
 import { PublishedPostList } from "../ui/PublishedPosts";
+import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: "News",
-  description: `Published legislative and district updates from ${siteConfig.officeName}.`
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await loadBuilderServerContent("/news");
+  return {
+    title: builderText(content, "metadata.news.title", "News"),
+    description: builderText(
+      content,
+      "metadata.news.description",
+      `Published legislative and district updates from ${siteConfig.officeName}.`,
+    ),
+  };
+}
 
 export default async function NewsPage() {
   const page = getPageBySlug("news");
   if (!page) throw new Error("The News page configuration is missing.");
   const client = getBuilderAdminClient();
   const posts = client ? await listPublishedPosts(client) : [];
+  const content = await loadBuilderServerContent("/news");
 
   return (
     <>
-      <PageTemplate page={page} />
+      <PageTemplate content={content} page={page} />
       <section className="section news-feed" aria-labelledby="district-updates-title">
         <div className="container">
           <div className="section-heading">

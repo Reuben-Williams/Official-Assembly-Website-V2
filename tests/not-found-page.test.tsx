@@ -2,7 +2,13 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../lib/builder/server-content", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
+  return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
+});
+vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 
 describe("editable not-found page", () => {
   it("renders the canonical 404 marker and every editable region", async () => {
@@ -13,7 +19,7 @@ describe("editable not-found page", () => {
     }
 
     const { default: NotFoundPage } = await import("../app/not-found");
-    const html = renderToStaticMarkup(<NotFoundPage />);
+    const html = renderToStaticMarkup(await NotFoundPage());
 
     expect(html).toContain('data-builder-content-path="/404"');
     expect(html.match(/<h1/g)).toHaveLength(1);

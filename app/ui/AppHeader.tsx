@@ -3,24 +3,50 @@ import { Landmark, Menu } from "lucide-react";
 
 import { pages, siteConfig } from "../data/site";
 import { LanguageToggle } from "./LanguageToggle";
+import {
+  builderLink,
+  builderSectionIds,
+  builderText,
+  type BuilderServerContent,
+} from "../../lib/builder/server-content";
 
 const navPages = pages.filter((page) =>
   ["/", "/about", "/resources", "/news", "/community", "/voting"].includes(page.href)
 );
 
-function NavigationLinks({ instance, all = false }: { instance: string; all?: boolean }) {
-  const entries = all ? pages : navPages;
+const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
+
+function NavigationLinks({
+  instance,
+  all = false,
+  content,
+}: {
+  instance: string;
+  all?: boolean;
+  content: BuilderServerContent;
+}) {
+  const fallbackEntries = all ? pages : navPages;
+  const entriesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
+  const entries = builderSectionIds(
+    content,
+    "global.navigation",
+    fallbackEntries.map((page) => page.slug ?? "home"),
+  ).flatMap((slug) => entriesBySlug.get(slug) ?? []);
   return (
     <>
       {entries.map((page) => {
         const slug = page.slug ?? "home";
+        const link = builderLink(content, `global.navigation.${slug}.link`, {
+          href: page.href,
+          label: page.navLabel,
+        });
         return (
           <Link
             data-builder-instance={instance}
             data-builder-item-id={slug}
             data-builder-kind="link"
             data-builder-region={`global.navigation.${slug}.link`}
-            href={page.href}
+            href={link.href}
             key={page.href}
           >
             <span
@@ -29,7 +55,7 @@ function NavigationLinks({ instance, all = false }: { instance: string; all?: bo
               data-builder-link-label
               data-builder-region={`global.navigation.${slug}.label`}
             >
-              {page.navLabel}
+              {builderText(content, `global.navigation.${slug}.label`, link.label)}
             </span>
           </Link>
         );
@@ -38,7 +64,11 @@ function NavigationLinks({ instance, all = false }: { instance: string; all?: bo
   );
 }
 
-export function AppHeader() {
+export function AppHeader({ content = EMPTY_CONTENT }: { content?: BuilderServerContent }) {
+  const contact = builderLink(content, "global.header.contact", {
+    href: "/contact",
+    label: "Contact Office",
+  });
   return (
     <header className="site-header">
       <div className="container">
@@ -48,7 +78,7 @@ export function AppHeader() {
               <Landmark size={24} />
             </span>
             <span data-builder-region="global.header.brand" data-builder-kind="text">
-              {siteConfig.officeName}
+              {builderText(content, "global.header.brand", siteConfig.officeName)}
             </span>
           </Link>
 
@@ -59,7 +89,7 @@ export function AppHeader() {
             data-builder-kind="sections"
             data-builder-region="global.navigation"
           >
-            <NavigationLinks instance="desktop" />
+            <NavigationLinks content={content} instance="desktop" />
           </nav>
 
           <div className="header-actions">
@@ -68,9 +98,9 @@ export function AppHeader() {
               className="cta-link nav-cta"
               data-builder-kind="link"
               data-builder-region="global.header.contact"
-              href="/contact"
+              href={contact.href}
             >
-              <span data-builder-link-label data-i18n-key="global.contact">Contact Office</span>
+              <span data-builder-link-label data-i18n-key="global.contact">{contact.label}</span>
             </Link>
           </div>
 
@@ -85,7 +115,7 @@ export function AppHeader() {
               data-builder-kind="sections"
               data-builder-region="global.navigation"
             >
-              <NavigationLinks all instance="mobile" />
+              <NavigationLinks all content={content} instance="mobile" />
             </nav>
           </details>
         </div>

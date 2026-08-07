@@ -5,17 +5,33 @@ import { getImage, siteConfig, type PageContent } from "../data/site";
 import { Cards } from "./Cards";
 import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
+import {
+  builderLink,
+  builderText,
+  type BuilderServerContent,
+} from "../../lib/builder/server-content";
 
 type PageTemplateProps = {
   page: PageContent;
+  content?: BuilderServerContent;
 };
 
-export async function PageTemplate({ page }: PageTemplateProps) {
+const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
+
+export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTemplateProps) {
   const slug = page.slug ?? "home";
   const formType =
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
   const supportingImage = slug === "community" ? "graduation" : "coverage";
   const residentForm = formType ? await ResidentForm({ type: formType }) : null;
+  const primaryCta = builderLink(content, `${slug}.hero.primary-cta`, {
+    href: "/contact",
+    label: "Contact the Office",
+  });
+  const secondaryCta = builderLink(content, `${slug}.hero.secondary-cta`, {
+    href: "/newsletter",
+    label: "Get Updates",
+  });
 
   return (
     <div data-builder-region={`${slug}.sections`} data-builder-kind="sections">
@@ -28,14 +44,14 @@ export async function PageTemplate({ page }: PageTemplateProps) {
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.eyebrow`}
             >
-              {page.eyebrow}
+              {builderText(content, `${slug}.hero.eyebrow`, page.eyebrow)}
             </p>
             <h1
               data-builder-region={`${slug}.hero.title`}
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.title`}
             >
-              {page.title}
+              {builderText(content, `${slug}.hero.title`, page.title)}
             </h1>
             <p
               className="lead"
@@ -43,25 +59,25 @@ export async function PageTemplate({ page }: PageTemplateProps) {
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.body`}
             >
-              {page.description}
+              {builderText(content, `${slug}.hero.body`, page.description)}
             </p>
             <div className="hero-actions">
               <Link
                 className="cta-link"
                 data-builder-region={`${slug}.hero.primary-cta`}
                 data-builder-kind="link"
-                href="/contact"
+                href={primaryCta.href}
               >
-                <span data-builder-link-label>Contact the Office</span>
+                <span data-builder-link-label>{primaryCta.label}</span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
                 className="secondary-link"
                 data-builder-region={`${slug}.hero.secondary-cta`}
                 data-builder-kind="link"
-                href="/newsletter"
+                href={secondaryCta.href}
               >
-                <span data-builder-link-label>Get Updates</span>
+                <span data-builder-link-label>{secondaryCta.label}</span>
               </Link>
             </div>
           </div>
@@ -71,6 +87,7 @@ export async function PageTemplate({ page }: PageTemplateProps) {
             instance={`${slug}-hero`}
             priority
             variant="hero"
+            content={content}
           />
         </div>
       </section>
@@ -84,23 +101,36 @@ export async function PageTemplate({ page }: PageTemplateProps) {
                 data-builder-region={`${slug}.features.eyebrow`}
                 data-builder-kind="text"
               >
-                Page Resources
+                {builderText(content, `${slug}.features.eyebrow`, "Page Resources")}
               </p>
               <h2
                 data-builder-region={`${slug}.features.title`}
                 data-builder-kind="text"
               >
-                Verified paths for District 34 residents
+                {builderText(
+                  content,
+                  `${slug}.features.title`,
+                  "Verified paths for District 34 residents",
+                )}
               </h2>
             </div>
             <p
               data-builder-region={`${slug}.features.body`}
               data-builder-kind="text"
             >
-              Use these links for current public information or contact the district office at {siteConfig.phoneDisplay}.
+              {builderText(
+                content,
+                `${slug}.features.body`,
+                `Use these links for current public information or contact the district office at ${siteConfig.phoneDisplay}.`,
+              )}
             </p>
           </div>
-          <Cards cards={page.cards} featuredFirst={slug === "contact"} regionId={`${slug}.cards`} />
+          <Cards
+            cards={page.cards}
+            content={content}
+            featuredFirst={slug === "contact"}
+            regionId={`${slug}.cards`}
+          />
         </div>
       </section>
 
@@ -113,22 +143,34 @@ export async function PageTemplate({ page }: PageTemplateProps) {
                 data-builder-region="global.template.form-eyebrow"
                 data-builder-kind="text"
               >
-                {formType === "newsletter" ? "Email Updates" : "Resident Form"}
+                {builderText(
+                  content,
+                  "global.template.form-eyebrow",
+                  formType === "newsletter" ? "Email Updates" : "Resident Form",
+                )}
               </p>
               <h2
                 data-builder-region="global.template.form-title"
                 data-builder-kind="text"
               >
-                {formType === "newsletter" ? "Request District Newsletter emails" : "District office intake"}
+                {builderText(
+                  content,
+                  "global.template.form-title",
+                  formType === "newsletter" ? "Request District Newsletter emails" : "District office intake",
+                )}
               </h2>
               <p
                 className="lead"
                 data-builder-region="global.template.form-body"
                 data-builder-kind="text"
               >
-                {formType === "newsletter"
-                  ? "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
-                  : "Online submission is shown only when an approved form revision and verification service are available."}
+                {builderText(
+                  content,
+                  "global.template.form-body",
+                  formType === "newsletter"
+                    ? "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
+                    : "Online submission is shown only when an approved form revision and verification service are available.",
+                )}
               </p>
             </div>
             <div
@@ -148,6 +190,7 @@ export async function PageTemplate({ page }: PageTemplateProps) {
             asset={getImage(supportingImage)}
             caption="Additional district media"
             instance={`${slug}-supporting`}
+            content={content}
           />
           <div className="timeline">
             <div className="timeline-item">
@@ -176,6 +219,7 @@ export async function PageTemplate({ page }: PageTemplateProps) {
               columns="two"
               instance="secondary"
               regionId={`${slug}.cards`}
+              content={content}
             />
           </div>
         </section>

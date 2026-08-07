@@ -4,9 +4,16 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { getImage, pages, stats } from "./data/site";
 import { Cards } from "./ui/Cards";
 import { ImagePanel } from "./ui/ImagePanel";
+import {
+  builderLink,
+  builderSectionIds,
+  builderText,
+  loadBuilderServerContent,
+  type BuilderServerContent,
+} from "../lib/builder/server-content";
 
-// The public route always has repository-local fallback content; the builder bridge
-// may enhance it after hydration, but it never depends on a remote request.
+// Checked-in values are used only when an authoritative server read confirms that
+// a registered region has no kind-correct published override.
 const homeFallback = pages[0];
 const workflowSteps = [
   {
@@ -26,7 +33,29 @@ const workflowSteps = [
   }
 ];
 
-export default function HomePage() {
+type HomePageViewProps = {
+  content: BuilderServerContent;
+};
+
+function HomePageView({ content }: HomePageViewProps) {
+  const primaryCta = builderLink(content, "home.hero.primary-cta", {
+    href: "/contact",
+    label: "Request Assistance",
+  });
+  const secondaryCta = builderLink(content, "home.hero.secondary-cta", {
+    href: "/resources",
+    label: "View Services",
+  });
+  const statsById = new Map(stats.map((stat) => [stat.id, stat]));
+  const orderedStats = builderSectionIds(content, "home.stats", stats.map((stat) => stat.id))
+    .flatMap((id) => statsById.get(id) ?? []);
+  const stepsById = new Map(workflowSteps.map((step) => [step.id, step]));
+  const orderedSteps = builderSectionIds(
+    content,
+    "home.workflow.steps",
+    workflowSteps.map((step) => step.id),
+  ).flatMap((id) => stepsById.get(id) ?? []);
+
   return (
     <div data-builder-region="home.sections" data-builder-kind="sections">
       <section className="hero" data-builder-item-id="hero">
@@ -38,14 +67,14 @@ export default function HomePage() {
               data-builder-kind="text"
               data-i18n-key="home.hero.eyebrow"
             >
-              {homeFallback.eyebrow}
+              {builderText(content, "home.hero.eyebrow", homeFallback.eyebrow)}
             </p>
             <h1
               data-builder-region="home.hero.title"
               data-builder-kind="text"
               data-i18n-key="home.hero.title"
             >
-              {homeFallback.title}
+              {builderText(content, "home.hero.title", homeFallback.title)}
             </h1>
             <p
               className="lead"
@@ -53,25 +82,25 @@ export default function HomePage() {
               data-builder-kind="text"
               data-i18n-key="home.hero.body"
             >
-              {homeFallback.description}
+              {builderText(content, "home.hero.body", homeFallback.description)}
             </p>
             <div className="hero-actions">
               <Link
                 className="cta-link"
                 data-builder-region="home.hero.primary-cta"
                 data-builder-kind="link"
-                href="/contact"
+                href={primaryCta.href}
               >
-                <span data-builder-link-label>Request Assistance</span>
+                <span data-builder-link-label>{primaryCta.label}</span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
                 className="secondary-link"
                 data-builder-region="home.hero.secondary-cta"
                 data-builder-kind="link"
-                href="/resources"
+                href={secondaryCta.href}
               >
-                <span data-builder-link-label>View Services</span>
+                <span data-builder-link-label>{secondaryCta.label}</span>
               </Link>
             </div>
           </div>
@@ -81,6 +110,7 @@ export default function HomePage() {
             instance="home-hero"
             priority
             variant="hero"
+            content={content}
           />
         </div>
       </section>
@@ -91,21 +121,21 @@ export default function HomePage() {
           data-builder-region="home.stats"
           data-builder-kind="sections"
         >
-          {stats.map((stat) => (
+          {orderedStats.map((stat) => (
             <div className="stat-item" data-builder-item-id={stat.id} key={stat.id}>
               <span
                 className="stat-value"
                 data-builder-region={`home.stats.${stat.id}.value`}
                 data-builder-kind="text"
               >
-                {stat.value}
+                {builderText(content, `home.stats.${stat.id}.value`, stat.value)}
               </span>
               <span
                 className="stat-label"
                 data-builder-region={`home.stats.${stat.id}.label`}
                 data-builder-kind="text"
               >
-                {stat.label}
+                {builderText(content, `home.stats.${stat.id}.label`, stat.label)}
               </span>
             </div>
           ))}
@@ -122,18 +152,22 @@ export default function HomePage() {
                 data-builder-kind="text"
                 data-i18n-key="home.portal.eyebrow"
               >
-                Constituent Portal
+                {builderText(content, "home.portal.eyebrow", "Constituent Portal")}
               </p>
               <h2
                 data-builder-region="home.portal.title"
                 data-builder-kind="text"
                 data-i18n-key="home.portal.title"
               >
-                Core public workflows
+                {builderText(content, "home.portal.title", "Core public workflows")}
               </h2>
             </div>
             <p data-builder-region="home.portal.body" data-builder-kind="text">
-              Start with the district office, verified state resources, or the current New Jersey Legislature record.
+              {builderText(
+                content,
+                "home.portal.body",
+                "Start with the district office, verified state resources, or the current New Jersey Legislature record.",
+              )}
             </p>
           </div>
           <Cards
@@ -141,6 +175,7 @@ export default function HomePage() {
             featuredFirst
             itemRegionPrefix="home.cards"
             regionId="home.portal.cards"
+            content={content}
           />
         </div>
       </section>
@@ -151,6 +186,7 @@ export default function HomePage() {
             asset={getImage("business")}
             caption="Community and small business engagement"
             instance="home-workflow"
+            content={content}
           />
           <div>
             <p
@@ -159,21 +195,21 @@ export default function HomePage() {
               data-builder-kind="text"
               data-i18n-key="home.workflow.eyebrow"
             >
-              Office Workflow
+              {builderText(content, "home.workflow.eyebrow", "Office Workflow")}
             </p>
             <h2
               data-builder-region="home.workflow.title"
               data-builder-kind="text"
               data-i18n-key="home.workflow.title"
             >
-              Built for clear constituent service
+              {builderText(content, "home.workflow.title", "Built for clear constituent service")}
             </h2>
             <div
               className="timeline"
               data-builder-region="home.workflow.steps"
               data-builder-kind="sections"
             >
-              {workflowSteps.map((step) => (
+              {orderedSteps.map((step) => (
                 <div className="timeline-item" data-builder-item-id={step.id} key={step.id}>
                   <CheckCircle2 color="var(--accent)" aria-hidden="true" />
                   <div>
@@ -181,13 +217,13 @@ export default function HomePage() {
                       data-builder-region={`home.workflow.steps.${step.id}.title`}
                       data-builder-kind="text"
                     >
-                      {step.title}
+                      {builderText(content, `home.workflow.steps.${step.id}.title`, step.title)}
                     </strong>
                     <p
                       data-builder-region={`home.workflow.steps.${step.id}.body`}
                       data-builder-kind="text"
                     >
-                      {step.body}
+                      {builderText(content, `home.workflow.steps.${step.id}.body`, step.body)}
                     </p>
                   </div>
                 </div>
@@ -198,4 +234,9 @@ export default function HomePage() {
       </section>
     </div>
   );
+}
+
+export default async function HomePage() {
+  const content = await loadBuilderServerContent("/");
+  return <HomePageView content={content} />;
 }

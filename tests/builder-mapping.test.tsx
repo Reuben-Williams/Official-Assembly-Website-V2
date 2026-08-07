@@ -1,5 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../lib/builder/server-content", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
+  return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
+});
 
 import site from "../builder.config";
 import HomePage from "../app/page";
@@ -66,8 +71,8 @@ describe("approved builder mapping", () => {
     ]);
   });
 
-  it("renders the home mapping on the real design elements", () => {
-    const html = renderToStaticMarkup(<HomePage />);
+  it("renders the home mapping on the real design elements", async () => {
+    const html = renderToStaticMarkup(await HomePage());
 
     expect(html).toContain('data-builder-region="home.sections"');
     expect(html).toContain('data-builder-item-id="hero"');
