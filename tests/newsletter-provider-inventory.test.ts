@@ -450,7 +450,24 @@ describe("newsletter provider inventory reader", () => {
   it("fails closed when a provider claims another page without a cursor", async () => {
     await expect(collectNewsletterProviderInventory(reader({
       listDomains: async () => ({ items: [], hasMore: true })
-    }))).rejects.toThrow("unsupported_inventory");
+    }))).rejects.toMatchObject({
+      name: "NewsletterProviderInventoryReadError",
+      code: "unsupported_inventory",
+      stage: "domains"
+    });
+  });
+
+  it("reports only the safe provider stage when a read fails", async () => {
+    await expect(collectNewsletterProviderInventory(reader({
+      listOauthGrants: async () => {
+        throw new Error("secret provider response containing owner@example.com");
+      }
+    }))).rejects.toMatchObject({
+      name: "NewsletterProviderInventoryReadError",
+      code: "unsupported_inventory",
+      stage: "oauth_grants",
+      message: "Newsletter provider inventory read failed at oauth_grants."
+    });
   });
 
   it("fails closed instead of accepting an unbounded provider inventory", async () => {
@@ -460,6 +477,9 @@ describe("newsletter provider inventory reader", () => {
         hasMore: true,
         after: String(Number(after ?? "0") + 1)
       })
-    }), { maximumPages: 2 })).rejects.toThrow("unsupported_inventory");
+    }), { maximumPages: 2 })).rejects.toMatchObject({
+      code: "unsupported_inventory",
+      stage: "templates"
+    });
   });
 });

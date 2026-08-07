@@ -10,7 +10,11 @@ import {
   authorizeNewsletterOperation,
   newsletterOperationError
 } from "../../../../../lib/newsletter/operations-route";
-import { createProductionNewsletterInventoryReader, collectNewsletterProviderInventory } from "../../../../../lib/newsletter/resend/inventory-adapter";
+import {
+  createProductionNewsletterInventoryReader,
+  collectNewsletterProviderInventory,
+  NewsletterProviderInventoryReadError
+} from "../../../../../lib/newsletter/resend/inventory-adapter";
 import { getBuilderAdminClient } from "../../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +26,11 @@ export async function GET(request: Request) {
     const identity = await authorizeNewsletterOperation(request, false, true);
     const configuration = readNewsletterProviderInventoryConfiguration();
     if (configuration.status !== "ready") {
+      console.error(JSON.stringify({
+        event: "newsletter_provider_inventory_failed",
+        stage: "configuration",
+        code: configuration.code
+      }));
       return Response.json({ state: "unavailable", code: configuration.code }, {
         status: 503,
         headers: { "cache-control": "no-store" }
@@ -81,6 +90,15 @@ export async function GET(request: Request) {
       headers: { "cache-control": "no-store" }
     });
   } catch (error) {
+    console.error(JSON.stringify({
+      event: "newsletter_provider_inventory_failed",
+      stage: error instanceof NewsletterProviderInventoryReadError
+        ? error.stage
+        : "database_or_evaluation",
+      code: error instanceof NewsletterProviderInventoryReadError
+        ? error.code
+        : "inventory_unavailable"
+    }));
     return newsletterOperationError(error);
   }
 }

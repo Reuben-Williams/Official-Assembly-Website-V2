@@ -38,6 +38,49 @@ export interface NewsletterProviderInventoryReader {
 
 const DEFAULT_MAXIMUM_PAGES = 10_000;
 
+export type NewsletterProviderInventoryReadStage =
+  | "management_credential"
+  | "send_credential"
+  | "api_keys"
+  | "automations"
+  | "broadcasts"
+  | "contacts"
+  | "segment_contacts"
+  | "domains"
+  | "emails"
+  | "imports"
+  | "oauth_grants"
+  | "segments"
+  | "suppressions"
+  | "templates"
+  | "topics"
+  | "webhooks"
+  | "contact_properties"
+  | "custom_events"
+  | "received_emails";
+
+export class NewsletterProviderInventoryReadError extends Error {
+  readonly code = "unsupported_inventory";
+
+  constructor(readonly stage: NewsletterProviderInventoryReadStage) {
+    super(`Newsletter provider inventory read failed at ${stage}.`);
+    this.name = "NewsletterProviderInventoryReadError";
+  }
+}
+
+async function inventoryRead<T>(
+  stage: NewsletterProviderInventoryReadStage,
+  operation: () => Promise<T>
+): Promise<T> {
+  try {
+    return await operation();
+  } catch {
+    // Do not retain the provider error as a cause: provider payloads can contain
+    // email addresses, resource identifiers, or other operational details.
+    throw new NewsletterProviderInventoryReadError(stage);
+  }
+}
+
 async function allPages<T>(
   list: (input: PageInput) => Promise<Page<T>>,
   maximumPages: number
@@ -69,31 +112,51 @@ export async function collectNewsletterProviderInventory(
     throw new Error("unsupported_inventory");
   }
 
-  const managementProbe = await reader.probeManagementCredential();
-  const sendProbe = await reader.probeSendCredential();
+  const managementProbe = await inventoryRead(
+    "management_credential",
+    () => reader.probeManagementCredential()
+  );
+  const sendProbe = await inventoryRead(
+    "send_credential",
+    () => reader.probeSendCredential()
+  );
 
   // Deliberately sequential: Resend applies a team-wide request rate limit and
   // inventory correctness is more important than shaving a few milliseconds.
-  const apiKeys = await allPages((page) => reader.listApiKeys(page), maximumPages);
-  const automations = await allPages((page) => reader.listAutomations(page), maximumPages);
-  const broadcasts = await allPages((page) => reader.listBroadcasts(page), maximumPages);
-  const contacts = await allPages((page) => reader.listContacts(page), maximumPages);
-  const segmentContacts = await allPages(
-    (page) => reader.listSegmentContacts(page),
-    maximumPages
-  );
-  const domains = await allPages((page) => reader.listDomains(page), maximumPages);
-  const emails = await allPages((page) => reader.listEmails(page), maximumPages);
-  const imports = await allPages((page) => reader.listImports(page), maximumPages);
-  const oauthGrants = await allPages((page) => reader.listOauthGrants(page), maximumPages);
-  const segments = await allPages((page) => reader.listSegments(page), maximumPages);
-  const suppressions = await allPages((page) => reader.listSuppressions(page), maximumPages);
-  const templates = await allPages((page) => reader.listTemplates(page), maximumPages);
-  const topics = await allPages((page) => reader.listTopics(page), maximumPages);
-  const webhooks = await allPages((page) => reader.listWebhooks(page), maximumPages);
-  const contactProperties = await allPages((page) => reader.listContactProperties(page), maximumPages);
-  const customEvents = await allPages((page) => reader.listCustomEvents(page), maximumPages);
-  const receivedEmails = await allPages((page) => reader.listReceivedEmails(page), maximumPages);
+  const apiKeys = await inventoryRead("api_keys", () =>
+    allPages((page) => reader.listApiKeys(page), maximumPages));
+  const automations = await inventoryRead("automations", () =>
+    allPages((page) => reader.listAutomations(page), maximumPages));
+  const broadcasts = await inventoryRead("broadcasts", () =>
+    allPages((page) => reader.listBroadcasts(page), maximumPages));
+  const contacts = await inventoryRead("contacts", () =>
+    allPages((page) => reader.listContacts(page), maximumPages));
+  const segmentContacts = await inventoryRead("segment_contacts", () =>
+    allPages((page) => reader.listSegmentContacts(page), maximumPages));
+  const domains = await inventoryRead("domains", () =>
+    allPages((page) => reader.listDomains(page), maximumPages));
+  const emails = await inventoryRead("emails", () =>
+    allPages((page) => reader.listEmails(page), maximumPages));
+  const imports = await inventoryRead("imports", () =>
+    allPages((page) => reader.listImports(page), maximumPages));
+  const oauthGrants = await inventoryRead("oauth_grants", () =>
+    allPages((page) => reader.listOauthGrants(page), maximumPages));
+  const segments = await inventoryRead("segments", () =>
+    allPages((page) => reader.listSegments(page), maximumPages));
+  const suppressions = await inventoryRead("suppressions", () =>
+    allPages((page) => reader.listSuppressions(page), maximumPages));
+  const templates = await inventoryRead("templates", () =>
+    allPages((page) => reader.listTemplates(page), maximumPages));
+  const topics = await inventoryRead("topics", () =>
+    allPages((page) => reader.listTopics(page), maximumPages));
+  const webhooks = await inventoryRead("webhooks", () =>
+    allPages((page) => reader.listWebhooks(page), maximumPages));
+  const contactProperties = await inventoryRead("contact_properties", () =>
+    allPages((page) => reader.listContactProperties(page), maximumPages));
+  const customEvents = await inventoryRead("custom_events", () =>
+    allPages((page) => reader.listCustomEvents(page), maximumPages));
+  const receivedEmails = await inventoryRead("received_emails", () =>
+    allPages((page) => reader.listReceivedEmails(page), maximumPages));
 
   return {
     managementCredentialReadable: managementProbe === "authorized",
