@@ -33,7 +33,8 @@ export const EXPECTED_PENDING_MIGRATIONS = Object.freeze([
   ["20260807032126_official_assembly_editor_content_publishing_v2.sql", "7877e78aa73f9fb39ae193c17950a78b34ea50500aadd83430414c3c9fd17563"],
   ["20260807040500_post_stage_validation_and_slug_reservations.sql", "35193343c34e1d50b6762eadaaa3b37b804d0a389d1a54cb27c79ffcab1be181"],
   ["20260807050000_managed_media_revision_recovery.sql", "6dc437c0b7e149c681965161202472b264d637bc1649e7f2655e1878c537f455"],
-  ["20260807060000_initial_content_recovery_generation.sql", "af04e83846b9111b7ca6fc44cb29e35877e3c9781cd37a210afd12821ec332e6"]
+  ["20260807060000_initial_content_recovery_generation.sql", "af04e83846b9111b7ca6fc44cb29e35877e3c9781cd37a210afd12821ec332e6"],
+  ["20260807140000_newsletter_durable_readiness.sql", "dd0460381df15249b9bb3bd3517bca6ad94b7e7ef9539f8acb5523ccc8278712"]
 ]);
 
 export async function verifyProductionMigrationLineage(repositoryRoot) {
