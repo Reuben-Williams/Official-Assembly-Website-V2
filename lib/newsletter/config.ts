@@ -263,34 +263,12 @@ export function readNewsletterProviderInventoryConfiguration(
     );
   }
 
-  const sendKeyId = input.RESEND_SEND_API_KEY_ID?.trim() ?? "";
-  if (!KEY_ID_PATTERN.test(sendKeyId)) {
-    return inventoryUnavailable(environment, NEWSLETTER_ERROR_CODES.missingSendKeyId);
-  }
-  const managementKeyId = input.RESEND_MANAGEMENT_API_KEY_ID?.trim() ?? "";
-  if (!KEY_ID_PATTERN.test(managementKeyId)) {
-    return inventoryUnavailable(
-      environment,
-      NEWSLETTER_ERROR_CODES.missingManagementKeyId
-    );
-  }
-  const authSmtpKeyId = input.RESEND_AUTH_SMTP_KEY_ID?.trim() ?? "";
-  if (!KEY_ID_PATTERN.test(authSmtpKeyId)) {
-    return inventoryUnavailable(
-      environment,
-      NEWSLETTER_ERROR_CODES.missingAuthSmtpKeyId
-    );
-  }
-
   return {
     status: "ready",
     environment: "production",
     canonicalSiteUrl: PRODUCTION_SITE_URL,
     segmentId: input.RESEND_NEWSLETTER_SEGMENT_ID,
     topicId: input.RESEND_NEWSLETTER_TOPIC_ID,
-    sendKeyId,
-    managementKeyId,
-    authSmtpKeyId,
     webhookUrl: `${PRODUCTION_SITE_URL}/api/webhooks/resend`
   };
 }

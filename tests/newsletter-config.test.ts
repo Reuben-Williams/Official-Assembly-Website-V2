@@ -32,10 +32,7 @@ const productionEnvironment = {
 
 const inventoryEnvironment = {
   ...productionEnvironment,
-  NEWSLETTER_EMAIL_ENABLED: "false",
-  RESEND_SEND_API_KEY_ID: "key_newsletter_send",
-  RESEND_MANAGEMENT_API_KEY_ID: "key_newsletter_management",
-  RESEND_AUTH_SMTP_KEY_ID: "key_site_auth_smtp"
+  NEWSLETTER_EMAIL_ENABLED: "false"
 } satisfies Record<string, string>;
 
 describe("readNewsletterConfiguration", () => {
@@ -182,9 +179,6 @@ describe("readNewsletterProviderInventoryConfiguration", () => {
       canonicalSiteUrl: "https://www.assemblywomanmorales.com",
       segmentId: inventoryEnvironment.RESEND_NEWSLETTER_SEGMENT_ID,
       topicId: inventoryEnvironment.RESEND_NEWSLETTER_TOPIC_ID,
-      sendKeyId: "key_newsletter_send",
-      managementKeyId: "key_newsletter_management",
-      authSmtpKeyId: "key_site_auth_smtp",
       webhookUrl: "https://www.assemblywomanmorales.com/api/webhooks/resend"
     });
   });
@@ -195,9 +189,6 @@ describe("readNewsletterProviderInventoryConfiguration", () => {
     "RESEND_WEBHOOK_SECRET",
     "RESEND_NEWSLETTER_SEGMENT_ID",
     "RESEND_NEWSLETTER_TOPIC_ID",
-    "RESEND_SEND_API_KEY_ID",
-    "RESEND_MANAGEMENT_API_KEY_ID",
-    "RESEND_AUTH_SMTP_KEY_ID",
     "NEXT_PUBLIC_SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY"
   ])("fails safely when disabled-stage inventory value %s is missing", (name) => {

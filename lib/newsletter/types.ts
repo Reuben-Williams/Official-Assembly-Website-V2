@@ -36,9 +36,6 @@ export type NewsletterProviderInventoryConfigurationState =
       canonicalSiteUrl: string;
       segmentId: string;
       topicId: string;
-      sendKeyId: string;
-      managementKeyId: string;
-      authSmtpKeyId: string;
       webhookUrl: string;
     };
 

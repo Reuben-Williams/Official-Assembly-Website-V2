@@ -10,7 +10,10 @@ import {
   createNewsletterProviderOperationsRepository,
   type NewsletterAuthSmtpProofKind
 } from "../../../../../lib/newsletter/provider-operations-repository";
-import { findRecentNewsletterAuthSmtpLoginEmail } from "../../../../../lib/newsletter/provider-inventory";
+import {
+  findRecentNewsletterAuthSmtpLoginEmail,
+  REQUIRED_NEWSLETTER_API_KEY_NAMES
+} from "../../../../../lib/newsletter/provider-inventory";
 import {
   collectNewsletterProviderInventory,
   createProductionNewsletterInventoryReader
@@ -69,15 +72,11 @@ export async function POST(request: Request) {
     );
 
     if (phase === "post_revocation_login") {
-      const requiredKeyIds = new Set([
-        configuration.sendKeyId,
-        configuration.managementKeyId,
-        configuration.authSmtpKeyId
-      ]);
-      const exactKeyPolicy = requiredKeyIds.size === 3 &&
-        snapshot.apiKeys.length === 3 &&
-        snapshot.apiKeys.every((key) => requiredKeyIds.has(key.id)) &&
-        snapshot.apiKeys.every((key) => key.name.trim().toLowerCase() !== "onboarding");
+      const exactKeyPolicy = snapshot.apiKeys.length === 3 &&
+        new Set(snapshot.apiKeys.map((key) => key.id)).size === 3 &&
+        REQUIRED_NEWSLETTER_API_KEY_NAMES.every((name) =>
+          snapshot.apiKeys.filter((key) => key.name === name).length === 1
+        );
       if (!exactKeyPolicy) throw new Error("legacy provider credential remains present");
     }
 

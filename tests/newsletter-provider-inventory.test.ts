@@ -20,9 +20,6 @@ const configuration = {
   canonicalSiteUrl: "https://www.assemblywomanmorales.com",
   segmentId: "78261eea-8f8b-4381-83c6-79fa7120f1cf",
   topicId: "b134d33a-4d91-4b5f-a186-04e48cfe0048",
-  sendKeyId: "key_newsletter_send",
-  managementKeyId: "key_newsletter_management",
-  authSmtpKeyId: "key_site_auth_smtp",
   webhookUrl: "https://www.assemblywomanmorales.com/api/webhooks/resend"
 };
 
@@ -47,9 +44,9 @@ function snapshot(
       events: REQUIRED_NEWSLETTER_WEBHOOK_EVENTS
     }],
     apiKeys: [
-      { id: configuration.sendKeyId, name: "Newsletter Send" },
-      { id: configuration.managementKeyId, name: "Newsletter Management" },
-      { id: configuration.authSmtpKeyId, name: "Site Auth SMTP" }
+      { id: "key_newsletter_send", name: "Newsletter Send" },
+      { id: "key_newsletter_management", name: "Newsletter Management" },
+      { id: "key_site_auth_smtp", name: "Site Auth SMTP" }
     ],
     contacts: [],
     segmentContacts: [],
@@ -199,7 +196,7 @@ describe("newsletter provider inventory policy", () => {
     expect(result.categories.every((category) => category.status === "ready")).toBe(true);
     expect(serialized).not.toContain(configuration.segmentId);
     expect(serialized).not.toContain(configuration.topicId);
-    expect(serialized).not.toContain(configuration.sendKeyId);
+    expect(serialized).not.toContain("key_newsletter_send");
   });
 
   it("allows only the named legacy key during disabled migration and still marks activation blocked", () => {
@@ -308,6 +305,27 @@ describe("newsletter provider inventory policy", () => {
       expect.objectContaining({ category: "topics", status: "blocked" }),
       expect.objectContaining({ category: "webhooks", status: "blocked" }),
       expect.objectContaining({ category: "api_keys", status: "blocked" })
+    ]));
+  });
+
+  it("rejects duplicate purpose names even when every expected key name is present", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({
+        apiKeys: [
+          ...snapshot().apiKeys,
+          { id: "duplicate-auth-key", name: "Site Auth SMTP" }
+        ]
+      }),
+      evidence: evidence()
+    });
+    expect(result.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        category: "api_keys",
+        status: "blocked",
+        code: "api_key_policy_mismatch"
+      })
     ]));
   });
 

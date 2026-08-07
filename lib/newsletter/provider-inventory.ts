@@ -26,6 +26,11 @@ const NEWSLETTER_DOMAIN = "updates.assemblywomanmorales.com";
 const NEWSLETTER_RESOURCE_NAME = "District Newsletter";
 const NEWSLETTER_SENDER =
   "Office of Assemblywoman Carmen Morales <newsletter@updates.assemblywomanmorales.com>";
+export const REQUIRED_NEWSLETTER_API_KEY_NAMES = [
+  "Newsletter Send",
+  "Newsletter Management",
+  "Site Auth SMTP"
+] as const;
 
 export type NewsletterInventoryStage = "disabled_setup" | "initial" | "steady";
 
@@ -192,14 +197,7 @@ function canonicalResourceIdentity(
     webhook: snapshot.webhooks
       .map((item) => [item.id, item.endpoint, item.status, [...item.events].sort()])
       .sort(),
-    apiKeyIds: snapshot.apiKeys.map((item) => item.id).sort(),
-    configuredIds: [
-      configuration.segmentId,
-      configuration.topicId,
-      configuration.sendKeyId,
-      configuration.managementKeyId,
-      configuration.authSmtpKeyId
-    ]
+    apiKeys: snapshot.apiKeys.map((item) => [item.id, item.name]).sort()
   });
 }
 
@@ -276,15 +274,22 @@ export function evaluateNewsletterProviderInventory(input: {
     snapshot.webhooks[0]?.status === "enabled" &&
     exactStrings(snapshot.webhooks[0]?.events ?? [], REQUIRED_NEWSLETTER_WEBHOOK_EVENTS);
 
-  const configuredKeyIds = new Set([
-    configuration.sendKeyId,
-    configuration.managementKeyId,
-    configuration.authSmtpKeyId
-  ]);
+  const configuredKeys = snapshot.apiKeys.filter((key) =>
+    REQUIRED_NEWSLETTER_API_KEY_NAMES.includes(
+      key.name as (typeof REQUIRED_NEWSLETTER_API_KEY_NAMES)[number]
+    )
+  );
   const configuredKeysPresent =
-    configuredKeyIds.size === 3 &&
-    [...configuredKeyIds].every((id) => snapshot.apiKeys.some((key) => key.id === id));
-  const extraKeys = snapshot.apiKeys.filter((key) => !configuredKeyIds.has(key.id));
+    configuredKeys.length === REQUIRED_NEWSLETTER_API_KEY_NAMES.length &&
+    new Set(configuredKeys.map((key) => key.id)).size === configuredKeys.length &&
+    REQUIRED_NEWSLETTER_API_KEY_NAMES.every((name) =>
+      configuredKeys.filter((key) => key.name === name).length === 1
+    );
+  const extraKeys = snapshot.apiKeys.filter((key) =>
+    !REQUIRED_NEWSLETTER_API_KEY_NAMES.includes(
+      key.name as (typeof REQUIRED_NEWSLETTER_API_KEY_NAMES)[number]
+    )
+  );
   const legacyMigrationAllowed =
     stage === "disabled_setup" &&
     extraKeys.length === 1 &&
