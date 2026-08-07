@@ -22,6 +22,11 @@ export type InspectedMediaFile = {
   sha256: string;
 };
 
+export type MediaUploadMetadata = {
+  label: string;
+  alt: string;
+};
+
 type SignedUploadStorage = {
   uploadToSignedUrl(
     path: string,
@@ -73,7 +78,7 @@ function emptyProgress(total: number): MediaBatchUploadProgress {
 }
 
 export function createHttpMediaUploadClient(options: MediaUploadClientOptions): {
-  uploadMedia(file: File): Promise<MediaAsset>;
+  uploadMedia(file: File, metadata?: MediaUploadMetadata): Promise<MediaAsset>;
   uploadMediaBatch: MediaBatchUploadHandler;
 } {
   const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
@@ -102,7 +107,7 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
     return payload as T;
   }
 
-  async function uploadOne(file: File, inspected: InspectedMediaFile, manifestId?: string): Promise<{
+  async function uploadOne(file: File, inspected: InspectedMediaFile, manifestId?: string, metadata?: MediaUploadMetadata): Promise<{
     asset?: MediaAsset;
     result: MediaBatchFileResult;
   }> {
@@ -114,6 +119,7 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
       mode: manifestId ? "batch" : "single",
       ...(manifestId ? { manifestId } : {}),
       sourceName: inspected.name,
+      ...(metadata ? { label: metadata.label, alt: metadata.alt } : {}),
       claimedMimeType: inspected.mimeType,
       claimedByteSize: inspected.byteSize,
       claimedWidth: inspected.width,
@@ -145,8 +151,8 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
     };
   }
 
-  async function uploadMedia(file: File) {
-    const completed = await uploadOne(file, await inspectFile(file));
+  async function uploadMedia(file: File, metadata?: MediaUploadMetadata) {
+    const completed = await uploadOne(file, await inspectFile(file), undefined, metadata);
     if (!completed.asset || completed.result.status === "archived") {
       throw new Error(completed.result.message ?? "The selected image matches an archived media asset.");
     }

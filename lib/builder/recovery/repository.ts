@@ -6,6 +6,7 @@ import type {
   RecoveryGenerationSource,
   RecoveryWorkerRepository
 } from "./worker";
+import type { MediaReplicaClaim, MediaReplicaRepository } from "./media-replica-worker";
 
 type GenerationRow = {
   site_id: unknown;
@@ -175,5 +176,71 @@ export function createSupabaseRecoveryWorkerRepository(
       if (result.error || !result.data?.status) throw new Error(errorMessage(result.error));
       return result.data.status === "dead_letter" ? "dead_letter" : "retry";
     }
+  };
+}
+
+export function createSupabaseMediaReplicaRepository(
+  client: SupabaseClient,
+  options: { mediaBucket?: string } = {}
+): MediaReplicaRepository {
+  const mediaBucket = options.mediaBucket ?? "builder-media";
+  return {
+    async claim(input) {
+      const result = await client.rpc("builder_claim_media_recovery_replica_v1", {
+        p_worker: input.workerId,
+        p_lease_seconds: input.leaseSeconds,
+      });
+      if (result.error) throw new Error(errorMessage(result.error));
+      const row = Array.isArray(result.data) ? result.data[0] : result.data;
+      if (!row) return null;
+      const value = row as Record<string, unknown>;
+      return {
+        siteId: String(value.site_id),
+        siteKey: String(value.site_key),
+        mediaId: String(value.media_id),
+        revisionId: String(value.revision_id),
+        objectKey: String(value.object_key),
+        contentDigest: String(value.content_digest),
+        byteSize: Number(value.byte_size),
+        mimeType: String(value.mime_type),
+        fenceToken: Number(value.fence_token),
+        attemptCount: Number(value.attempt_count),
+      } satisfies MediaReplicaClaim;
+    },
+
+    async download(claim) {
+      const result = await client.storage.from(mediaBucket).download(claim.objectKey);
+      if (result.error || !result.data) throw new Error(errorMessage(result.error));
+      return new Uint8Array(await result.data.arrayBuffer());
+    },
+
+    async complete(input) {
+      const result = await client.rpc("builder_complete_media_recovery_replica_v1", {
+        p_site_id: input.siteId,
+        p_media_id: input.mediaId,
+        p_revision_id: input.revisionId,
+        p_worker: input.workerId,
+        p_fence_token: input.fenceToken,
+        p_content_digest: input.contentDigest,
+        p_byte_size: input.byteSize,
+        p_mime_type: input.mimeType,
+        p_object_path: input.objectPath,
+      });
+      if (result.error) throw new Error(errorMessage(result.error));
+      return result.data === true;
+    },
+
+    async retry(input) {
+      const result = await client.rpc("builder_retry_media_recovery_replica_v1", {
+        p_site_id: input.siteId,
+        p_media_id: input.mediaId,
+        p_revision_id: input.revisionId,
+        p_worker: input.workerId,
+        p_fence_token: input.fenceToken,
+        p_safe_code: input.safeCode,
+      });
+      if (result.error) throw new Error(errorMessage(result.error));
+      return result.data === "failed" ? "failed" : result.data === "stale_fence" ? "stale_fence" : "pending";
+    },
   };
 }

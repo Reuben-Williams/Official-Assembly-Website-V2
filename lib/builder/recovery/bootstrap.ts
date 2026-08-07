@@ -9,7 +9,9 @@ export interface RecoveryBootstrapHealth {
 type WorkerResult =
   | { status: "idle" }
   | { status: "completed" | "stale_fence"; generationId: number }
-  | { status: "retry" | "dead_letter"; generationId: number; safeCode: string };
+  | { status: "retry" | "dead_letter"; generationId: number; safeCode: string }
+  | { status: "media_completed" | "media_stale_fence"; mediaId: string; revisionId: string }
+  | { status: "media_retry" | "media_dead_letter"; mediaId: string; revisionId: string; safeCode: string };
 
 export async function runRecoveryBootstrap(input: {
   environment: RecoveryEnvironment;
@@ -27,8 +29,10 @@ export async function runRecoveryBootstrap(input: {
   for (let index = 0; index < maximumJobs; index += 1) {
     const result = await input.runOnce();
     if (result.status === "idle") break;
-    if (result.status === "dead_letter") throw new Error(`Recovery bootstrap failed: ${result.safeCode}.`);
-    if (result.status === "completed") jobsProcessed += 1;
+    if (result.status === "dead_letter" || result.status === "media_dead_letter") {
+      throw new Error(`Recovery bootstrap failed: ${result.safeCode}.`);
+    }
+    if (result.status === "completed" || result.status === "media_completed") jobsProcessed += 1;
   }
   const health = await input.health();
   if (!health.ready || health.generationId === null) {

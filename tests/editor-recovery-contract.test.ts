@@ -53,7 +53,8 @@ describe("editor recovery contracts", () => {
         height: 800,
         created_at: "2026-08-05T20:01:00.000Z"
       }],
-      new Map([["site-1/media-1/photo.webp", "https://storage.example/signed-photo"]])
+      new Map([["site-1/media-1/photo.webp", "https://storage.example/signed-photo"]]),
+      [{ media_id: "media-1", revision_id: "revision-1", status: "ready" }]
     );
 
     expect(assets).toEqual([expect.objectContaining({
@@ -62,7 +63,9 @@ describe("editor recovery contracts", () => {
       url: "https://storage.example/signed-photo",
       alt: "Community event",
       mimeType: "image/webp",
-      source: "upload"
+      source: "upload",
+      revisionId: "revision-1",
+      replicaStatus: "ready"
     })]);
   });
 

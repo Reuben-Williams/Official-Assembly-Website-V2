@@ -141,6 +141,7 @@ type NormalizedMediaAssetRow = {
   id: unknown;
   site_id: unknown;
   label: unknown;
+  alt_text?: unknown;
   created_by: unknown;
   created_at: unknown;
 };
@@ -155,17 +156,33 @@ type NormalizedMediaRevisionRow = {
   created_at: unknown;
 };
 
+type MediaReplicaRow = {
+  media_id: unknown;
+  revision_id: unknown;
+  status: unknown;
+};
+
+export type ManagedMediaAsset = MediaAsset & {
+  revisionId: string;
+  replicaStatus: "pending" | "ready" | "failed";
+};
+
 export function mapNormalizedMediaAssets(
   assetRows: readonly NormalizedMediaAssetRow[],
   revisionRows: readonly NormalizedMediaRevisionRow[],
-  signedUrls: ReadonlyMap<string, string>
-): MediaAsset[] {
+  signedUrls: ReadonlyMap<string, string>,
+  replicaRows: readonly MediaReplicaRow[] = []
+): ManagedMediaAsset[] {
   const latestRevision = new Map<string, NormalizedMediaRevisionRow>();
   for (const revision of [...revisionRows].sort((left, right) =>
     String(right.created_at).localeCompare(String(left.created_at)))) {
     const mediaId = String(revision.media_id);
     if (!latestRevision.has(mediaId)) latestRevision.set(mediaId, revision);
   }
+  const replicaStatus = new Map(replicaRows.map((replica) => [
+    `${String(replica.media_id)}:${String(replica.revision_id)}`,
+    String(replica.status),
+  ]));
 
   return assetRows.flatMap((asset) => {
     const revision = latestRevision.get(String(asset.id));
@@ -178,10 +195,12 @@ export function mapNormalizedMediaAssets(
       siteId: String(asset.site_id),
       path: objectKey,
       url,
-      alt: String(asset.label),
+      alt: String(asset.alt_text ?? asset.label),
       label: String(asset.label),
       mimeType: String(revision.mime_type),
       source: "upload" as const,
+      revisionId: String(revision.id),
+      replicaStatus: (replicaStatus.get(`${String(asset.id)}:${String(revision.id)}`) ?? "pending") as ManagedMediaAsset["replicaStatus"],
       ...(revision.width ? { width: Number(revision.width) } : {}),
       ...(revision.height ? { height: Number(revision.height) } : {}),
       userId: String(asset.created_by),
@@ -193,10 +212,10 @@ export function mapNormalizedMediaAssets(
 export async function listNormalizedMediaAssets(
   client: SupabaseClient,
   siteId: string
-): Promise<MediaAsset[]> {
+): Promise<ManagedMediaAsset[]> {
   const assetsResult = await client
     .from("builder_media_assets")
-    .select("id, site_id, label, created_by, created_at")
+    .select("id, site_id, label, alt_text, created_by, created_at")
     .eq("site_id", siteId)
     .is("archived_at", null)
     .order("created_at", { ascending: false });
@@ -212,6 +231,12 @@ export async function listNormalizedMediaAssets(
     .order("created_at", { ascending: false });
   if (revisionsResult.error) throw revisionsResult.error;
   const revisions = (revisionsResult.data ?? []) as NormalizedMediaRevisionRow[];
+  const replicaResult = await client
+    .from("builder_media_recovery_replicas")
+    .select("media_id, revision_id, status")
+    .eq("site_id", siteId)
+    .in("revision_id", revisions.map((revision) => String(revision.id)));
+  if (replicaResult.error) throw replicaResult.error;
   const objectKeys = [...new Set(revisions.map((revision) => String(revision.object_key)))];
   const signedUrls = new Map<string, string>();
   await Promise.all(objectKeys.map(async (objectKey) => {
@@ -219,7 +244,7 @@ export async function listNormalizedMediaAssets(
     if (result.error) throw result.error;
     if (result.data?.signedUrl) signedUrls.set(objectKey, result.data.signedUrl);
   }));
-  return mapNormalizedMediaAssets(assets, revisions, signedUrls);
+  return mapNormalizedMediaAssets(assets, revisions, signedUrls, (replicaResult.data ?? []) as MediaReplicaRow[]);
 }
 
 function jsonError(status: number, code: string, message: string, extra?: Record<string, unknown>) {

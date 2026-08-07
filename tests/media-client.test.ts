@@ -38,13 +38,20 @@ describe("direct private media upload client", () => {
     });
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], "photo.jpg", { type: "image/jpeg" });
 
-    await expect(client.uploadMedia(file)).resolves.toEqual(asset);
+    await expect(client.uploadMedia(file, {
+      label: "Community town hall",
+      alt: "Residents speaking at a community town hall"
+    })).resolves.toEqual(asset);
     expect(uploadToSignedUrl).toHaveBeenCalledWith(asset.path, "signed-token", file, {
       contentType: "image/jpeg",
       upsert: false
     });
     expect(fetcher.mock.calls[0]?.[1]?.body).toEqual(expect.any(String));
     expect(String(fetcher.mock.calls[0]?.[1]?.body)).not.toContain("255,216,255");
+    expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
+      label: "Community town hall",
+      alt: "Residents speaking at a community town hall"
+    });
     expect(fetcher.mock.calls[1]?.[0]).toBe("/api/builder/media/plans/plan-1/finalize");
   });
 

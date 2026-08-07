@@ -4,6 +4,7 @@ export * from "./contracts";
 export * from "./cron-handler";
 export * from "./health";
 export * from "./media-grant";
+export * from "./media-replica-worker";
 export * from "./media-route";
 export * from "./reader";
 export * from "./repository";

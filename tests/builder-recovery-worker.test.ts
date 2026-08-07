@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   RecoveryStoreError,
   createRecoveryArtifactStore,
+  runMediaReplicaWorkerOnce,
   runRecoveryWorkerOnce,
+  type MediaReplicaClaim,
+  type MediaReplicaRepository,
   type RecoveryGenerationSource,
   type RecoveryObjectStore,
   type RecoveryWorkerRepository
@@ -60,6 +63,69 @@ function repository(overrides: Partial<RecoveryWorkerRepository> = {}): Recovery
     ...overrides
   };
 }
+
+const mediaClaim: MediaReplicaClaim = {
+  siteId: source.siteId,
+  siteKey: source.siteKey,
+  mediaId: source.media[0]!.mediaId,
+  revisionId: source.media[0]!.revisionId,
+  objectKey: "private/source.webp",
+  contentDigest: source.media[0]!.digest,
+  byteSize: source.media[0]!.bytes.byteLength,
+  mimeType: source.media[0]!.mimeType,
+  fenceToken: 5,
+  attemptCount: 1,
+};
+
+function mediaRepository(overrides: Partial<MediaReplicaRepository> = {}): MediaReplicaRepository {
+  return {
+    claim: vi.fn(async () => mediaClaim),
+    download: vi.fn(async () => source.media[0]!.bytes),
+    complete: vi.fn(async () => true),
+    retry: vi.fn(async () => "pending" as const),
+    ...overrides,
+  };
+}
+
+describe("managed media recovery worker", () => {
+  it("verifies and writes an immutable media revision before marking it ready", async () => {
+    const objects = new MemoryObjects();
+    const artifacts = createRecoveryArtifactStore({ objects, environment: "preview", siteKey: source.siteKey });
+    const repo = mediaRepository();
+
+    await expect(runMediaReplicaWorkerOnce({
+      environment: "preview",
+      workerId: "media-worker-a",
+      repository: repo,
+      artifacts,
+    })).resolves.toMatchObject({ status: "media_completed", revisionId: mediaClaim.revisionId });
+
+    expect(repo.complete).toHaveBeenCalledWith(expect.objectContaining({
+      workerId: "media-worker-a",
+      contentDigest: mediaClaim.contentDigest,
+      objectPath: expect.stringMatching(/recovery\/v1\/preview\/official-assembly-website-v2\/media\/.*\.webp$/),
+    }));
+    expect([...objects.values.keys()]).toEqual([
+      expect.stringMatching(/media\/ffffffff-ffff-4fff-8fff-ffffffffffff\/11111111-1111-4111-8111-111111111111\/2c8648d1.*\.webp$/),
+    ]);
+  });
+
+  it("never marks a revision ready when the downloaded bytes fail verification", async () => {
+    const artifacts = createRecoveryArtifactStore({
+      objects: new MemoryObjects(), environment: "preview", siteKey: source.siteKey,
+    });
+    const repo = mediaRepository({ download: vi.fn(async () => new TextEncoder().encode("wrong")) });
+
+    await expect(runMediaReplicaWorkerOnce({
+      environment: "preview",
+      workerId: "media-worker-a",
+      repository: repo,
+      artifacts,
+    })).resolves.toMatchObject({ status: "media_retry", safeCode: "MEDIA_DIGEST_MISMATCH" });
+    expect(repo.complete).not.toHaveBeenCalled();
+    expect(repo.retry).toHaveBeenCalledWith(expect.objectContaining({ safeCode: "MEDIA_DIGEST_MISMATCH" }));
+  });
+});
 
 describe("published snapshot recovery worker", () => {
   it("replicates media, exact route snapshots, a manifest, and then advances latest", async () => {

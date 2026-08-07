@@ -17,6 +17,7 @@ describe("recovery bootstrap runner", () => {
 
   it("drains due jobs and returns only safe readiness evidence", async () => {
     const runOnce = vi.fn()
+      .mockResolvedValueOnce({ status: "media_completed", mediaId: "media-1", revisionId: "revision-1" })
       .mockResolvedValueOnce({ status: "completed", generationId: 4 })
       .mockResolvedValueOnce({ status: "idle" });
     const result = await runRecoveryBootstrap({
@@ -33,7 +34,7 @@ describe("recovery bootstrap runner", () => {
       generationId: 4,
       routeCount: 11,
       mediaCount: 3,
-      jobsProcessed: 1,
+      jobsProcessed: 2,
       status: "ready"
     });
     expect(JSON.stringify(result)).not.toMatch(/token|secret|blob\.vercel|supabase/i);

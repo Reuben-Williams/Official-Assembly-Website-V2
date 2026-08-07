@@ -150,7 +150,7 @@ async function activeAsset(admin: SupabaseClient, identity: ActiveBuilderIdentit
 async function createPlan(request: Request, admin: SupabaseClient, identity: ActiveBuilderIdentity) {
   const value = await body(request, [
     "mode", "manifestId", "sourceName", "claimedMimeType", "claimedByteSize",
-    "claimedWidth", "claimedHeight", "expectedSha256"
+    "claimedWidth", "claimedHeight", "expectedSha256", "label", "alt"
   ]);
   const mode = value.mode;
   if (mode !== "single" && mode !== "batch") throw new TypeError("The media upload mode is invalid.");
@@ -166,6 +166,11 @@ async function createPlan(request: Request, admin: SupabaseClient, identity: Act
   });
   const expectedSha256 = String(value.expectedSha256 ?? "");
   if (!/^[0-9a-f]{64}$/.test(expectedSha256)) throw new TypeError("A valid media digest is required.");
+  const label = String(value.label ?? claim.name).trim();
+  const alt = String(value.alt ?? label).trim();
+  if (!label || label.length > 200 || !alt || alt.length > 500) {
+    throw new TypeError("Media name and alt text are required and must fit their allowed lengths.");
+  }
   const manifestId = mode === "batch" ? String(value.manifestId ?? "") : null;
   if (mode === "batch" && !manifestId) throw new TypeError("A batch manifest is required.");
   await currentInventoryReceipt(admin, identity);
@@ -231,6 +236,8 @@ async function createPlan(request: Request, admin: SupabaseClient, identity: Act
     claimed_width: claim.width,
     claimed_height: claim.height,
     expected_sha256: expectedSha256,
+    requested_label: label,
+    requested_alt: alt,
     idempotency_key: key,
     request_fingerprint: fingerprint(value),
     expires_at: expiresAt,
@@ -290,7 +297,7 @@ async function finalizePlan(request: Request, admin: SupabaseClient, identity: A
     }).eq("site_id", identity.siteId).eq("id", planId);
     return response({ error: { code: "TRUSTED_BYTES_MISMATCH", message: "The uploaded bytes do not match the approved plan." } }, 422);
   }
-  const claimed = await admin.rpc("builder_claim_media_identity", {
+  const claimed = await admin.rpc("builder_claim_media_identity_v2", {
     p_site_id: identity.siteId,
     p_plan_id: planId,
     p_actor_id: identity.userId,
@@ -301,7 +308,7 @@ async function finalizePlan(request: Request, admin: SupabaseClient, identity: A
     p_height: verified.height
   });
   if (claimed.error) throw claimed.error;
-  const result = claimed.data as { status?: string; mediaId?: string };
+  const result = claimed.data as { status?: string; mediaId?: string; revisionId?: string };
   const mediaId = String(result.mediaId ?? "");
   const asset = mediaId ? await activeAsset(admin, identity, mediaId) : null;
   if (!asset) throw new Error("The finalized media asset could not be loaded.");

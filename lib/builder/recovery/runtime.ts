@@ -5,8 +5,9 @@ import type { RecoveryEnvironment } from "./contracts";
 import { readRecoveryHealth } from "./health";
 import { createRecoveryMediaHandler } from "./media-route";
 import { createRecoveryContentReader } from "./reader";
-import { createSupabaseRecoveryWorkerRepository } from "./repository";
+import { createSupabaseMediaReplicaRepository, createSupabaseRecoveryWorkerRepository } from "./repository";
 import { runRecoveryWorkerOnce } from "./worker";
+import { runMediaReplicaWorkerOnce } from "./media-replica-worker";
 
 export function readRecoveryConfiguration(environment = process.env.BUILDER_RECOVERY_ENVIRONMENT) {
   if (environment !== "preview" && environment !== "production") {
@@ -32,18 +33,28 @@ export function createOfficialAssemblyRecoveryRuntime(input: {
     siteKey: site.siteId
   });
   const repository = createSupabaseRecoveryWorkerRepository(client);
+  const mediaRepository = createSupabaseMediaReplicaRepository(client);
   const configuredRoutes = site.pages.map((page) => page.path);
   const workerId = input.workerId ?? crypto.randomUUID();
   return {
     environment: configuration.environment,
     siteKey: site.siteId,
-    runOnce: () => runRecoveryWorkerOnce({
-      environment: configuration.environment,
-      workerId,
-      configuredRoutes,
-      repository,
-      artifacts
-    }),
+    runOnce: async () => {
+      const mediaResult = await runMediaReplicaWorkerOnce({
+        environment: configuration.environment,
+        workerId,
+        repository: mediaRepository,
+        artifacts,
+      });
+      if (mediaResult.status !== "idle") return mediaResult;
+      return runRecoveryWorkerOnce({
+        environment: configuration.environment,
+        workerId,
+        configuredRoutes,
+        repository,
+        artifacts
+      });
+    },
     health: () => readRecoveryHealth({ artifacts, configuredRoutes }),
     readContent: createRecoveryContentReader({
       artifacts,

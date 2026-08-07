@@ -12,7 +12,7 @@ import {
 import { growthCustomersModule } from "@reuben-williams/growth-customers";
 import { GROWTH_DASHBOARD_MODULE } from "@reuben-williams/growth-dashboard";
 import { growthLeadsModule } from "@reuben-williams/growth-leads";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ComponentType } from "react";
 
 import site from "../../../builder.config";
 import { createHttpPostsClient } from "../../../lib/builder/posts-client";
@@ -29,6 +29,45 @@ import {
   LiveLeadsWorkspace,
   LiveSubmissionsWorkspace
 } from "./live-growth-workspaces";
+
+type ManagedMediaChoice = {
+  mediaId: string;
+  revisionId: string;
+  label: string;
+  alt: string;
+  mimeType: string;
+  url: string;
+  replicaStatus?: "pending" | "ready" | "failed";
+};
+
+type ManagedPostsWorkspaceProps = ComponentProps<typeof AttachedPostsWorkspace> & {
+  mediaAssets?: readonly ManagedMediaChoice[];
+  mediaUploading?: boolean;
+  mediaError?: string;
+  onOpenMedia?: () => void;
+  onUploadMedia?: (file: File, metadata: { label: string; alt: string }) => void;
+};
+
+const ManagedPostsWorkspace = AttachedPostsWorkspace as ComponentType<ManagedPostsWorkspaceProps>;
+
+function managedMediaChoice(asset: unknown): ManagedMediaChoice | null {
+  if (!asset || typeof asset !== "object" || Array.isArray(asset)) return null;
+  const value = asset as Record<string, unknown>;
+  if (![value.id, value.revisionId, value.label, value.alt, value.mimeType, value.url]
+    .every((field) => typeof field === "string" && field.length > 0)) return null;
+  const replicaStatus = value.replicaStatus;
+  return {
+    mediaId: value.id as string,
+    revisionId: value.revisionId as string,
+    label: value.label as string,
+    alt: value.alt as string,
+    mimeType: value.mimeType as string,
+    url: value.url as string,
+    ...(["pending", "ready", "failed"].includes(String(replicaStatus))
+      ? { replicaStatus: replicaStatus as ManagedMediaChoice["replicaStatus"] }
+      : {}),
+  };
+}
 
 function csrfCookie() {
   for (const item of document.cookie.split(";")) {
@@ -73,6 +112,9 @@ export function EditorClient({
     () => resolveEditorPagePath(initialPath, site.pages) ?? "/"
   );
   const [linkablePosts, setLinkablePosts] = useState(initialLinkablePosts);
+  const [mediaAssets, setMediaAssets] = useState<ManagedMediaChoice[]>([]);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaError, setMediaError] = useState("");
   useEffect(() => {
     const restorePageFromHistory = () => {
       const url = new URL(window.location.href);
@@ -88,24 +130,35 @@ export function EditorClient({
     window.addEventListener("popstate", restorePageFromHistory);
     return () => window.removeEventListener("popstate", restorePageFromHistory);
   }, []);
+  const mediaUpload = useMemo(() => {
+    const supabase = getSupabaseBrowserClient();
+    return supabase ? createHttpMediaUploadClient({
+      baseUrl: "/api/builder/media",
+      getCsrfToken: csrfCookie,
+      storage: supabase.storage.from("builder-media")
+    }) : null;
+  }, []);
   const client = useMemo(() => {
     const attached = createHttpAttachedSiteEditorClient({
       baseUrl: "/api/builder",
       getCsrfToken: csrfCookie
     });
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) return attached;
-    const media = createHttpMediaUploadClient({
-      baseUrl: "/api/builder/media",
-      getCsrfToken: csrfCookie,
-      storage: supabase.storage.from("builder-media")
-    });
+    if (!mediaUpload) return attached;
     return {
       ...attached,
-      uploadMedia: media.uploadMedia,
-      ...(role === "owner" ? { uploadMediaBatch: media.uploadMediaBatch } : {})
+      uploadMedia: mediaUpload.uploadMedia,
+      ...(role === "owner" ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
     };
-  }, [role]);
+  }, [mediaUpload, role]);
+  const refreshMedia = useCallback(async () => {
+    try {
+      const assets = await client.listMedia();
+      setMediaAssets(assets.map(managedMediaChoice).filter((asset): asset is ManagedMediaChoice => Boolean(asset)));
+      setMediaError("");
+    } catch {
+      setMediaError("The current private media gallery could not be loaded. Try again.");
+    }
+  }, [client]);
   const growth = useMemo(() => createLiveGrowthClient(site.siteId), []);
   const posts = useMemo(() => createHttpPostsClient({
     baseUrl: "/api/builder/posts",
@@ -149,7 +202,22 @@ export function EditorClient({
       initialWorkspace={initialWorkspace}
       linkablePosts={linkablePosts}
       formsWorkspace={<NewsletterOperationsWorkspace role={role} />}
-      postsWorkspace={<AttachedPostsWorkspace client={posts} />}
+      postsWorkspace={<ManagedPostsWorkspace
+        client={posts}
+        mediaAssets={mediaAssets}
+        mediaUploading={mediaUploading}
+        mediaError={mediaError}
+        onOpenMedia={() => { void refreshMedia(); }}
+        onUploadMedia={(file, metadata) => {
+          if (!mediaUpload || mediaUploading) return;
+          setMediaUploading(true);
+          setMediaError("");
+          void mediaUpload.uploadMedia(file, metadata)
+            .then(() => refreshMedia())
+            .catch(() => setMediaError("The image could not be uploaded. Check the file and try again."))
+            .finally(() => setMediaUploading(false));
+        }}
+      />}
       previewBaseUrl={previewBaseUrl}
       registration={registration}
       site={site}
