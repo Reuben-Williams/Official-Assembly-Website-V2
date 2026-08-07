@@ -42,6 +42,30 @@ afterEach(async () => {
 });
 
 describe("editor page navigation", () => {
+  it("returns the main view to the page editor when a page is selected from Posts", async () => {
+    window.history.replaceState({}, "", "/admin/editor?workspace=website.posts");
+
+    await act(async () => root?.render(
+      <EditorClient
+        initialLinkablePosts={[]}
+        initialPath="/"
+        memberId="member-1"
+        previewBaseUrl="https://assembly.example"
+        role="owner"
+      />
+    ));
+
+    const resources = container?.querySelector<HTMLAnchorElement>('a[href="?path=%2Fresources"]');
+    expect(resources).toBeTruthy();
+
+    await act(async () => resources?.click());
+
+    const frame = container?.querySelector<HTMLIFrameElement>("iframe[data-builder-preview-frame]");
+    expect(frame?.src).toContain("https://assembly.example/resources?builderPreview=1");
+    expect(new URL(window.location.href).searchParams.get("workspace")).toBe("website.pages");
+    expect(new URL(window.location.href).searchParams.get("path")).toBe("/resources");
+  });
+
   it("updates the editable preview and durable editor URL when a page is selected", async () => {
     await act(async () => root?.render(
       <EditorClient

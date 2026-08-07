@@ -99,4 +99,45 @@ describe("live posts HTTP client", () => {
     );
     expect(onLinkablePostsChanged).toHaveBeenCalledWith(linkable);
   });
+
+  it("keeps a successful post transition successful when the secondary linkable refresh fails", async () => {
+    const post = {
+      entryId: "11111111-1111-4111-8111-111111111111",
+      draftVersionId: "draft-1",
+      publishedVersionId: "published-1",
+      title: "District update",
+      slug: "district-update",
+      excerpt: "",
+      body: { version: 1, type: "doc", content: [] },
+      featuredImage: null,
+      authorName: "Office staff",
+      authorKey: null,
+      categoryKeys: [],
+      tagKeys: [],
+      displayDate: "2026-08-05T20:00:00.000Z",
+      expiresAt: null,
+      featured: false,
+      pinned: false,
+      seoTitle: "District update",
+      seoDescription: "",
+      canonicalUrl: null,
+      noIndex: false,
+      status: "published"
+    };
+    const fetchMock = vi.fn(async () => fetchMock.mock.calls.length === 1
+      ? new Response(JSON.stringify(post), { status: 200, headers: { "content-type": "application/json" } })
+      : new Response(JSON.stringify({ error: { message: "Linkable posts could not be refreshed." } }), {
+        status: 503,
+        headers: { "content-type": "application/json" }
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpPostsClient({
+      baseUrl: "/api/builder/posts",
+      getCsrfToken: () => "csrf-token",
+      onLinkablePostsChanged: vi.fn()
+    });
+
+    await expect(client.publishPost(post.entryId)).resolves.toEqual(post);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
