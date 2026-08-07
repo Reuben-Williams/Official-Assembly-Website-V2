@@ -25,6 +25,27 @@ select has_function('public', 'builder_recover_newsletter_reconciliation_v1', ar
 select has_function('public', 'builder_record_newsletter_provider_activation_v1', array['jsonb'], 'provider activation evidence RPC exists');
 select has_function('public', 'builder_record_newsletter_inventory_attestation_v1', array['jsonb'], 'inventory attestation RPC exists');
 
+select has_trigger(
+  'public', 'builder_newsletter_subscriptions',
+  'builder_newsletter_subscription_readiness_invalidation',
+  'subscription transitions invalidate readiness'
+);
+select has_trigger(
+  'public', 'builder_consents',
+  'builder_newsletter_consent_readiness_invalidation',
+  'marketing consent transitions invalidate readiness'
+);
+select has_trigger(
+  'public', 'builder_suppressions',
+  'builder_newsletter_suppression_readiness_invalidation',
+  'email suppression transitions invalidate readiness'
+);
+select has_trigger(
+  'public', 'builder_contact_identities',
+  'builder_newsletter_identity_readiness_invalidation',
+  'newsletter email identity transitions invalidate readiness'
+);
+
 select ok(
   not exists (
     select 1
@@ -391,6 +412,33 @@ select is(
   ),
   0,
   'successful finalization compacts per-member evidence'
+);
+
+select lives_ok(
+  $$ select builder_private.invalidate_newsletter_readiness_v1(
+    '39000000-0000-4000-8000-000000000001'::uuid,
+    'test_transition'
+  ) $$,
+  'an observed eligibility transition atomically invalidates readiness'
+);
+select is(
+  (
+    select epoch
+    from public.builder_newsletter_eligibility_epochs
+    where site_id = '39000000-0000-4000-8000-000000000001'
+  ),
+  1::bigint,
+  'eligibility invalidation advances the site epoch'
+);
+select is(
+  (
+    select state
+    from public.builder_newsletter_readiness_revisions
+    where site_id = '39000000-0000-4000-8000-000000000001'
+    order by revision desc limit 1
+  ),
+  'stale',
+  'eligibility invalidation makes the newest readiness revision stale'
 );
 
 select * from finish();

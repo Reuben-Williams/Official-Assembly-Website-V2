@@ -199,6 +199,180 @@ grant select, insert on table
   public.builder_newsletter_provider_inventory_attestations
 to service_role;
 
+create function builder_private.invalidate_newsletter_readiness_v1(
+  p_site_id uuid,
+  p_reason text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_epoch bigint;
+  v_revision integer;
+  v_audience_count integer;
+begin
+  if p_site_id is null or p_reason !~ '^[a-z][a-z0-9_]{0,63}$' then
+    raise exception 'invalid newsletter readiness invalidation' using errcode = '22023';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_site_id::text, 199)
+  );
+  insert into public.builder_newsletter_eligibility_epochs (site_id, epoch, updated_at)
+  values (p_site_id, 1, clock_timestamp())
+  on conflict (site_id) do update
+  set epoch = public.builder_newsletter_eligibility_epochs.epoch + 1,
+      updated_at = clock_timestamp()
+  returning epoch into v_epoch;
+
+  select count(*)::integer into v_audience_count
+  from public.builder_newsletter_subscriptions subscription
+  where subscription.site_id = p_site_id and subscription.status = 'active';
+
+  select coalesce(max(readiness.revision), 0) + 1 into v_revision
+  from public.builder_newsletter_readiness_revisions readiness
+  where readiness.site_id = p_site_id;
+
+  insert into public.builder_newsletter_readiness_revisions (
+    site_id, revision, provider_scope_id, audience_count, eligibility_digest,
+    reconciled_at, expires_at, state
+  ) values (
+    p_site_id, v_revision, 'resend-team-production', v_audience_count,
+    encode(extensions.digest(
+      'stale:' || v_epoch::text || ':' || p_reason,
+      'sha256'
+    ), 'hex'),
+    clock_timestamp(), clock_timestamp() + interval '30 minutes', 'stale'
+  );
+end;
+$$;
+
+create function builder_private.invalidate_newsletter_readiness_trigger_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_site_id uuid;
+  v_contact_id uuid;
+  v_relevant boolean := false;
+  v_reason text;
+begin
+  if tg_op = 'DELETE' then
+    v_site_id := old.site_id;
+  else
+    v_site_id := new.site_id;
+  end if;
+
+  if tg_table_name = 'builder_newsletter_subscriptions' then
+    v_relevant := tg_op <> 'UPDATE' or row(
+      new.status,
+      new.current_consent_id,
+      new.current_generation,
+      new.provider_contact_id,
+      new.provider_segment_id
+    ) is distinct from row(
+      old.status,
+      old.current_consent_id,
+      old.current_generation,
+      old.provider_contact_id,
+      old.provider_segment_id
+    );
+    v_reason := 'subscription_changed';
+  elsif tg_table_name = 'builder_consents' then
+    if tg_op = 'DELETE' then
+      v_contact_id := old.contact_id;
+      v_relevant := old.purpose = 'marketing_email' and old.channel = 'email';
+    elsif tg_op = 'INSERT' then
+      v_contact_id := new.contact_id;
+      v_relevant := new.purpose = 'marketing_email' and new.channel = 'email';
+    else
+      v_contact_id := new.contact_id;
+      v_relevant := (
+        (old.purpose = 'marketing_email' and old.channel = 'email')
+        or (new.purpose = 'marketing_email' and new.channel = 'email')
+      ) and row(new.contact_id, new.state, new.revoked_at)
+        is distinct from row(old.contact_id, old.state, old.revoked_at);
+    end if;
+    v_relevant := v_relevant and exists (
+      select 1 from public.builder_newsletter_subscriptions subscription
+      where subscription.site_id = v_site_id and subscription.contact_id = v_contact_id
+    );
+    v_reason := 'consent_changed';
+  elsif tg_table_name = 'builder_suppressions' then
+    if tg_op = 'DELETE' then
+      v_contact_id := old.contact_id;
+      v_relevant := old.channel = 'email';
+    elsif tg_op = 'INSERT' then
+      v_contact_id := new.contact_id;
+      v_relevant := new.channel = 'email';
+    else
+      v_contact_id := new.contact_id;
+      v_relevant := (old.channel = 'email' or new.channel = 'email')
+        and row(new.contact_id, new.reason, new.active, new.ended_at)
+          is distinct from row(old.contact_id, old.reason, old.active, old.ended_at);
+    end if;
+    v_relevant := v_relevant and exists (
+      select 1 from public.builder_newsletter_subscriptions subscription
+      where subscription.site_id = v_site_id and subscription.contact_id = v_contact_id
+    );
+    v_reason := 'suppression_changed';
+  elsif tg_table_name = 'builder_contact_identities' then
+    if tg_op = 'DELETE' then
+      v_contact_id := old.contact_id;
+      v_relevant := old.kind = 'email';
+    elsif tg_op = 'INSERT' then
+      v_contact_id := new.contact_id;
+      v_relevant := new.kind = 'email';
+    else
+      v_contact_id := new.contact_id;
+      v_relevant := (old.kind = 'email' or new.kind = 'email')
+        and row(new.contact_id, new.normalized_value, new.verification_state)
+          is distinct from row(old.contact_id, old.normalized_value, old.verification_state);
+    end if;
+    v_relevant := v_relevant and exists (
+      select 1 from public.builder_newsletter_subscriptions subscription
+      where subscription.site_id = v_site_id and subscription.contact_id = v_contact_id
+    );
+    v_reason := 'identity_changed';
+  end if;
+
+  if v_relevant then
+    perform builder_private.invalidate_newsletter_readiness_v1(v_site_id, v_reason);
+  end if;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger builder_newsletter_subscription_readiness_invalidation
+after insert or update or delete on public.builder_newsletter_subscriptions
+for each row execute function builder_private.invalidate_newsletter_readiness_trigger_v1();
+
+create trigger builder_newsletter_consent_readiness_invalidation
+after insert or update or delete on public.builder_consents
+for each row execute function builder_private.invalidate_newsletter_readiness_trigger_v1();
+
+create trigger builder_newsletter_suppression_readiness_invalidation
+after insert or update or delete on public.builder_suppressions
+for each row execute function builder_private.invalidate_newsletter_readiness_trigger_v1();
+
+create trigger builder_newsletter_identity_readiness_invalidation
+after insert or update or delete on public.builder_contact_identities
+for each row execute function builder_private.invalidate_newsletter_readiness_trigger_v1();
+
+revoke all on function
+  builder_private.invalidate_newsletter_readiness_v1(uuid, text),
+  builder_private.invalidate_newsletter_readiness_trigger_v1()
+from public, anon, authenticated;
+grant execute on function builder_private.invalidate_newsletter_readiness_v1(uuid, text)
+to service_role;
+
 create function public.builder_schedule_newsletter_reconciliation_v1(p_request jsonb)
 returns jsonb
 language plpgsql
@@ -619,6 +793,7 @@ begin
   from public.builder_newsletter_subscriptions subscription
   where subscription.site_id = v_site_id and subscription.status = 'active';
 
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
   select coalesce(max(readiness.revision), 0) + 1 into v_revision
   from public.builder_newsletter_readiness_revisions readiness
   where readiness.site_id = v_site_id;
@@ -735,6 +910,7 @@ begin
         recovered_at = null, recovery_operator_id = null, recovery_reason = null,
         updated_at = clock_timestamp();
 
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
     select coalesce(max(readiness.revision), 0) + 1 into v_revision
     from public.builder_newsletter_readiness_revisions readiness
     where readiness.site_id = v_site_id;
@@ -1275,6 +1451,7 @@ begin
             recovery_operator_id = null, recovery_reason = null,
             updated_at = clock_timestamp();
 
+        perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_site_id::text, 199));
         select coalesce(max(readiness.revision), 0) + 1 into v_revision
         from public.builder_newsletter_readiness_revisions readiness
         where readiness.site_id = v_site_id;
