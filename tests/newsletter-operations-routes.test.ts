@@ -52,4 +52,20 @@ describe("newsletter staff authorization", () => {
       { mutation: false, authenticate: async () => ({ ...identity, role: "viewer" as const }) }
     )).resolves.toMatchObject({ role: "viewer" });
   });
+
+  it("reserves the provider inventory read for an active site owner", async () => {
+    const inventoryRequest = new Request(
+      `${origin}/api/newsletter/operations/provider-inventory`
+    );
+    await expect(authorizeNewsletterStaffRequest(inventoryRequest, {
+      mutation: false,
+      ownerOnly: true,
+      authenticate: async () => identity
+    })).resolves.toMatchObject({ role: "owner" });
+    await expect(authorizeNewsletterStaffRequest(inventoryRequest, {
+      mutation: false,
+      ownerOnly: true,
+      authenticate: async () => ({ ...identity, role: "editor" as const })
+    })).rejects.toMatchObject({ status: 403, code: "OWNER_REQUIRED" });
+  });
 });

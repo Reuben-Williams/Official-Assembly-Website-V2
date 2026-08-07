@@ -22,6 +22,7 @@ export async function authorizeNewsletterStaffRequest(
   request: Request,
   input: {
     readonly mutation: boolean;
+    readonly ownerOnly?: boolean;
     readonly authenticate: () => Promise<ActiveBuilderIdentity | null>;
   }
 ) {
@@ -30,6 +31,9 @@ export async function authorizeNewsletterStaffRequest(
   if (identity.siteKey !== BUILDER_SITE_KEY) throw new NewsletterStaffAuthorizationError(403, "SITE_DENIED");
   if (identity.sessionGeneration !== identity.tokenGeneration) {
     throw new NewsletterStaffAuthorizationError(401, "SESSION_REVOKED");
+  }
+  if (input.ownerOnly && identity.role !== "owner") {
+    throw new NewsletterStaffAuthorizationError(403, "OWNER_REQUIRED");
   }
   if (input.mutation) {
     if (identity.role !== "owner") throw new NewsletterStaffAuthorizationError(403, "OWNER_REQUIRED");

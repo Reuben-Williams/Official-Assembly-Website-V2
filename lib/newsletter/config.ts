@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 const PRODUCTION_SITE_URL = "https://www.assemblywomanmorales.com";
+const PRODUCTION_SUPABASE_URL = "https://rriebibkxymeqhafssvw.supabase.co";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const KEY_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
@@ -153,7 +154,6 @@ export function readNewsletterConfiguration(
   if (input.NEXT_PUBLIC_SITE_URL !== PRODUCTION_SITE_URL) {
     return unavailable(environment, NEWSLETTER_ERROR_CODES.invalidCanonicalSiteUrl);
   }
-
   const verificationKeyIds = parseKeyring(input.NEWSLETTER_CONFIRMATION_KEYRING);
   if (!verificationKeyIds) {
     return unavailable(environment, NEWSLETTER_ERROR_CODES.invalidConfirmationKeyring);
@@ -248,6 +248,18 @@ export function readNewsletterProviderInventoryConfiguration(
     return inventoryUnavailable(
       environment,
       NEWSLETTER_ERROR_CODES.invalidCanonicalSiteUrl
+    );
+  }
+  if (input.NEXT_PUBLIC_SUPABASE_URL !== PRODUCTION_SUPABASE_URL) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.invalidSupabaseUrl
+    );
+  }
+  if (!hasValue(input.SUPABASE_SERVICE_ROLE_KEY)) {
+    return inventoryUnavailable(
+      environment,
+      NEWSLETTER_ERROR_CODES.missingSupabaseServiceRoleKey
     );
   }
 

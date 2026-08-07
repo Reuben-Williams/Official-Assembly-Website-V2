@@ -10,6 +10,8 @@ export const NEWSLETTER_ERROR_CODES = {
   missingSendKeyId: "missing_send_key_id",
   missingManagementKeyId: "missing_management_key_id",
   missingAuthSmtpKeyId: "missing_auth_smtp_key_id",
+  invalidSupabaseUrl: "invalid_supabase_url",
+  missingSupabaseServiceRoleKey: "missing_supabase_service_role_key",
   invalidSegmentId: "invalid_segment_id",
   invalidTopicId: "invalid_topic_id",
   invalidCanonicalSiteUrl: "invalid_canonical_site_url",

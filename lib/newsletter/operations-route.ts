@@ -1,12 +1,19 @@
 import "server-only";
 
 import { authenticateBuilderRequest } from "../builder/request-auth";
-import { readNewsletterConfiguration } from "./config";
+import {
+  readNewsletterConfiguration
+} from "./config";
 import { authorizeNewsletterStaffRequest, NewsletterStaffAuthorizationError } from "./staff-authorization";
 
-export async function authorizeNewsletterOperation(request: Request, mutation: boolean) {
+export async function authorizeNewsletterOperation(
+  request: Request,
+  mutation: boolean,
+  ownerOnly = false
+) {
   return authorizeNewsletterStaffRequest(request, {
     mutation,
+    ownerOnly,
     authenticate: () => authenticateBuilderRequest(request)
   });
 }

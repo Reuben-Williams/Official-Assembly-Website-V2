@@ -22,8 +22,31 @@ export type NewsletterOperationsStatus = {
   };
 };
 
+export type NewsletterProviderInventoryStatus = {
+  readonly state: "ready" | "blocked";
+  readonly activationReady: boolean;
+  readonly mode: "disabled_setup" | "initial" | "steady";
+  readonly policyVersion: string;
+  readonly categories: readonly {
+    readonly category: string;
+    readonly status: "ready" | "blocked";
+    readonly code: string;
+    readonly count: number;
+  }[];
+  readonly counts: {
+    readonly contacts: number;
+    readonly segmentContacts: number;
+    readonly suppressions: number;
+    readonly broadcasts: number;
+    readonly sentBroadcasts: number;
+    readonly emails: number;
+    readonly localEligible: number;
+  };
+};
+
 export interface NewsletterOperationsClient {
   status(): Promise<NewsletterOperationsStatus>;
+  providerInventory(): Promise<NewsletterProviderInventoryStatus>;
   activationCheck(broadcastId: string): Promise<Record<string, unknown>>;
   openStaffTestWindow(broadcastId: string, commandId: string): Promise<Record<string, unknown>>;
   validate(
@@ -31,6 +54,44 @@ export interface NewsletterOperationsClient {
     commandId: string,
     confirmedTestObservationId: string
   ): Promise<Record<string, unknown>>;
+}
+
+function boundedCount(value: unknown) {
+  return Math.max(0, Math.min(10_000_000, Number(value) || 0));
+}
+
+function boundedInventory(value: unknown): NewsletterProviderInventoryStatus {
+  const source = record(value);
+  const sourceCounts = record(source.counts);
+  const mode = source.mode === "initial" || source.mode === "steady"
+    ? source.mode
+    : "disabled_setup";
+  return {
+    state: source.state === "ready" ? "ready" : "blocked",
+    activationReady: source.activationReady === true,
+    mode,
+    policyVersion: text(source.policyVersion).slice(0, 80),
+    categories: Array.isArray(source.categories)
+      ? source.categories.slice(0, 32).map((value) => {
+          const item = record(value);
+          return {
+            category: text(item.category).slice(0, 80),
+            status: item.status === "ready" ? "ready" as const : "blocked" as const,
+            code: text(item.code).slice(0, 100),
+            count: boundedCount(item.count)
+          };
+        })
+      : [],
+    counts: {
+      contacts: boundedCount(sourceCounts.contacts),
+      segmentContacts: boundedCount(sourceCounts.segmentContacts),
+      suppressions: boundedCount(sourceCounts.suppressions),
+      broadcasts: boundedCount(sourceCounts.broadcasts),
+      sentBroadcasts: boundedCount(sourceCounts.sentBroadcasts),
+      emails: boundedCount(sourceCounts.emails),
+      localEligible: boundedCount(sourceCounts.localEligible)
+    }
+  };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -109,6 +170,16 @@ export function createNewsletterOperationsClient(
         credentials: "same-origin",
         cache: "no-store"
       })));
+    },
+    async providerInventory() {
+      const response = await fetch("/api/newsletter/operations/provider-inventory", {
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+      if (!response.ok && response.status !== 409) {
+        throw new Error("Newsletter provider inventory is unavailable.");
+      }
+      return boundedInventory(await response.json());
     },
     activationCheck: (broadcastId) => commandMutation(
       "activation-check", broadcastId, crypto.randomUUID()

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createNewsletterOperationsClient,
   type NewsletterOperationsClient,
+  type NewsletterProviderInventoryStatus,
   type NewsletterOperationsStatus
 } from "../../../lib/newsletter/operations-client";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
@@ -43,6 +44,7 @@ export function NewsletterOperationsWorkspace({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [broadcastId, setBroadcastId] = useState("");
+  const [inventory, setInventory] = useState<NewsletterProviderInventoryStatus | null>(null);
   const owner = role === "owner";
 
   const refresh = useCallback(async () => {
@@ -89,6 +91,28 @@ export function NewsletterOperationsWorkspace({
     } finally {
       setBusy("");
     }
+  }
+
+  async function runProviderInventory() {
+    setBusy("inventory");
+    setError("");
+    setNotice("");
+    try {
+      const result = await operations.providerInventory();
+      setInventory(result);
+      setNotice(result.state === "ready"
+        ? "The read-only provider inventory satisfies its current policy."
+        : "The read-only provider inventory found setup items that must be resolved before activation.");
+    } catch {
+      setInventory(null);
+      setError("The provider inventory could not be completed. No provider changes were made.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function readableCode(value: string) {
+    return value.replaceAll("_", " ");
   }
 
   const normalizedBroadcastId = broadcastId.trim();
@@ -139,6 +163,43 @@ export function NewsletterOperationsWorkspace({
             <p>{status.validation ? `Expires ${localTime(status.validation.validUntil)} · ${digest(status.validation.digest)}` : "Approvals expire after ten minutes."}</p>
           </article>
         </div>
+      ) : null}
+
+      {owner ? (
+        <section className="newsletter-operations-panel" aria-label="Provider readiness controls">
+          <div className="newsletter-control-copy">
+            <p className="newsletter-operations-eyebrow">Read-only provider readiness</p>
+            <h2>Audit the dedicated Resend team</h2>
+            <p>
+              This checks provider resources and local evidence without sending email or changing
+              Contacts, Segments, Topics, webhooks, keys, or Broadcasts.
+            </p>
+          </div>
+          <div className="newsletter-operation-actions">
+            <button
+              disabled={Boolean(busy)}
+              onClick={() => void runProviderInventory()}
+              type="button"
+            >{busy === "inventory" ? "Auditing provider…" : "Run provider inventory"}</button>
+          </div>
+          {inventory ? (
+            <div className="newsletter-inventory-results" aria-label="Provider inventory results">
+              <p>
+                <strong>{inventory.state === "ready" ? "Policy ready" : "Setup blocked"}</strong>
+                {` · ${readableCode(inventory.mode)} · ${inventory.categories.length} categories`}
+              </p>
+              <ul>
+                {inventory.categories.map((item) => (
+                  <li data-state={item.status} key={item.category}>
+                    <span>{readableCode(item.category)}</span>
+                    <strong>{readableCode(item.code)}</strong>
+                    <small>{item.count} records</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       {owner ? (

@@ -55,6 +55,19 @@ describe("newsletter operations workspace", () => {
   it("shows bounded live status and owner-only operational controls", async () => {
     const client = {
       status: vi.fn(async () => status),
+      providerInventory: vi.fn(async () => ({
+        state: "blocked" as const,
+        activationReady: false,
+        mode: "disabled_setup" as const,
+        policyVersion: "resend-district-newsletter-v1",
+        categories: [{
+          category: "manual_attestation",
+          status: "blocked" as const,
+          code: "manual_attestation_missing",
+          count: 0
+        }],
+        counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 0, localEligible: 0 }
+      })),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(async () => ({ state: "open" as const, windowId: "window_1" })),
       validate: vi.fn()
@@ -74,12 +87,20 @@ describe("newsletter operations workspace", () => {
     expect(Array.from(host.querySelectorAll("button")).map((button) => button.textContent)).toEqual(
       expect.arrayContaining(["Run activation check", "Open staff test window", "Validate newsletter"])
     );
+    const inventoryButton = Array.from(host.querySelectorAll("button"))
+      .find((button) => button.textContent === "Run provider inventory")!;
+    await act(async () => inventoryButton.click());
+    await settle();
+    expect(client.providerInventory).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain("manual attestation missing");
+    expect(host.textContent).not.toContain("resourceIdentityDigest");
   });
 
   it("keeps non-owner roles read-only and exposes loading and error states", async () => {
     let rejectStatus!: (reason: Error) => void;
     const client = {
       status: vi.fn(() => new Promise<typeof status>((_, reject) => { rejectStatus = reject; })),
+      providerInventory: vi.fn(),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(),
       validate: vi.fn()
@@ -91,6 +112,7 @@ describe("newsletter operations workspace", () => {
     expect(host.textContent).toContain("Read-only access");
     expect(host.textContent).not.toContain("Open staff test window");
     expect(host.textContent).not.toContain("Validate newsletter");
+    expect(host.textContent).not.toContain("Run provider inventory");
 
     rejectStatus(new Error("secret provider payload"));
     await settle();

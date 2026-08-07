@@ -158,6 +158,9 @@ The versioned `resend-district-newsletter-v1` resource policy is explicit by cat
 | Provider templates | Must be empty; confirmation content is application-owned and Broadcast content remains a reviewed dashboard draft. |
 | Automations | Must be empty. |
 | OAuth grants/applications | Must be empty. |
+| Contact properties | Must be empty; the newsletter contract does not use provider-defined Contact properties. |
+| Custom events | Must be empty; the newsletter contract does not emit or consume Resend custom events. |
+| Received email history | Must be empty; this dedicated team does not accept inbound email. |
 
 The provider adapter fully paginates every API-listable category above. A category exposed by the current Resend API but omitted from the versioned policy fails with `unclassified_resource`; a required list endpoint that fails or truncates returns `unsupported_inventory`. Account settings not exposed by API, currently team membership, billing ownership, and any non-enumerable OAuth/application view, require a site-owner dashboard review recorded in `builder_newsletter_provider_inventory_attestations`. The attestation names the policy categories, contains no screenshot or secret, expires after thirty days, and is required by both initial and steady preflight. It is evidence for non-API scope only and cannot override a failed automated category.
 

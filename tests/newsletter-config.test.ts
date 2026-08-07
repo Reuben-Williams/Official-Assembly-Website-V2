@@ -11,6 +11,8 @@ import { toSafeNewsletterLog } from "../lib/newsletter/safe-log";
 const productionEnvironment = {
   VERCEL_ENV: "production",
   NEXT_PUBLIC_SITE_URL: "https://www.assemblywomanmorales.com",
+  NEXT_PUBLIC_SUPABASE_URL: "https://rriebibkxymeqhafssvw.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY: "supabase_service_role_secret",
   NEWSLETTER_EMAIL_ENABLED: "true",
   RESEND_SEND_API_KEY: "re_send_secret_value",
   RESEND_MANAGEMENT_API_KEY: "re_management_secret_value",
@@ -195,7 +197,9 @@ describe("readNewsletterProviderInventoryConfiguration", () => {
     "RESEND_NEWSLETTER_TOPIC_ID",
     "RESEND_SEND_API_KEY_ID",
     "RESEND_MANAGEMENT_API_KEY_ID",
-    "RESEND_AUTH_SMTP_KEY_ID"
+    "RESEND_AUTH_SMTP_KEY_ID",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY"
   ])("fails safely when disabled-stage inventory value %s is missing", (name) => {
     const environment = { ...inventoryEnvironment };
     delete environment[name as keyof typeof environment];
