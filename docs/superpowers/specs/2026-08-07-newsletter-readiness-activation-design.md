@@ -125,11 +125,13 @@ When `NEWSLETTER_EMAIL_ENABLED=false`, the Cron route does not schedule or claim
 
 ## Production Provider Preflight
 
-Two gates run before `next build` when the candidate has `NEWSLETTER_EMAIL_ENABLED=true`. A separate protected first-activation operation records the durable transition from initial to steady-state mode; changing an environment variable alone cannot skip it.
+Two gates run before `next build` when the candidate has `NEWSLETTER_EMAIL_ENABLED=true`. A separate protected first-activation operation records the durable transition from initial to steady-state mode; changing an environment variable alone cannot skip it. The same inventory engine is also available through an owner-authorized read-only route while the feature remains disabled.
 
 ### Structural gate
 
 The server-only structural check calls `readNewsletterConfiguration()` and fails on missing or malformed values. It prints only safe codes and never prints identifiers, keys, secrets, or recipient addresses.
+
+Add a separate `readNewsletterProviderInventoryConfiguration()` parser for the disabled setup stage. It validates every provider identifier, key, sender, webhook, and Supabase dependency without consulting `NEWSLETTER_EMAIL_ENABLED` and returns a server-only typed inventory configuration. It never turns the feature on and never exposes values to the browser.
 
 ### Semantic gate and dedicated-team inventory
 
@@ -145,7 +147,7 @@ The versioned `resend-district-newsletter-v1` resource policy is explicit by cat
 | Segments | Exactly the configured `District Newsletter` Segment. |
 | Topics | Exactly the configured public `District Newsletter` Topic with immutable default `opt_out`. |
 | Webhooks | Exactly the enabled Production endpoint and required delivery, Contact, and suppression events. The signing secret must be structurally present; an authentic signed event later proves the secret/register match because Resend does not return the secret. |
-| API-key metadata | Exactly the approved sending-only and full-access management keys. The unused Onboarding key must be revoked. The sending key must fail a management-only probe. |
+| API-key metadata | Exactly three purpose-specific keys: a newsletter sending-only key, a full-access newsletter management key, and a separate sending-only Site Auth SMTP key used only by Supabase Auth. Both restricted keys must fail a management-only probe. The legacy Onboarding key is permitted only during the disabled migration stage and must be revoked after its last consumer is disproved. |
 | Contacts | Every Contact maps to a site-local subscription or approved retained withdrawal/suppression record; no unrelated Contact is allowed. |
 | Suppressions | Every suppression maps to a recorded local complaint, bounce, or global-withdrawal state; no unrelated suppression is allowed. |
 | Broadcast drafts | Each draft must use this site's sender, Segment, and Topic boundary. |
@@ -160,6 +162,14 @@ The versioned `resend-district-newsletter-v1` resource policy is explicit by cat
 The provider adapter fully paginates every API-listable category above. A category exposed by the current Resend API but omitted from the versioned policy fails with `unclassified_resource`; a required list endpoint that fails or truncates returns `unsupported_inventory`. Account settings not exposed by API, currently team membership, billing ownership, and any non-enumerable OAuth/application view, require a site-owner dashboard review recorded in `builder_newsletter_provider_inventory_attestations`. The attestation names the policy categories, contains no screenshot or secret, expires after thirty days, and is required by both initial and steady preflight. It is evidence for non-API scope only and cannot override a failed automated category.
 
 The preflight makes no send, Contact, Topic, Segment, webhook, domain, key, or Broadcast mutation.
+
+### Disabled setup inventory and Auth SMTP migration
+
+Add an authenticated owner-only `/api/newsletter/operations/provider-inventory` route and Staff Portal control. The route uses `readNewsletterProviderInventoryConfiguration()` plus a read-only provider interface that contains no send, create, update, remove, schedule, or delete methods. It can run with `NEWSLETTER_EMAIL_ENABLED=false`, executes the same complete automated inventory implementation later used by the enabled candidate, and returns only safe per-category status and aggregate counts. It records no automated provider response; the owner may separately record only the required non-API inventory attestation through a service-role RPC.
+
+Before revoking the legacy Onboarding key, create the purpose-limited Site Auth SMTP key, enter it as the Supabase Auth SMTP password, and record its provider key ID/permission metadata in the canonical resource-identity digest without storing or logging the secret. From a signed-out browser, request a Staff Portal magic link, open it, and verify the resulting provider message against the authorized site user and Supabase Auth audit event. Only after that fresh login succeeds with the replacement configured may the legacy Onboarding key be revoked. A second signed-out login after revocation proves there is no hidden dependency. Newsletter enablement fails closed if the Auth SMTP key identity is absent, the legacy key remains, or either login/audit proof is missing.
+
+The enabled skip-domain candidate reruns the inventory from live provider state; it never trusts the disabled-stage automated result or the environment flag. The non-API owner attestation remains separately freshness-checked.
 
 Every list operation follows cursors until exhaustion, with a bounded maximum page count that fails closed rather than accepting a truncated result. Valid-looking but wrong IDs or credentials cannot pass. Only safe aggregate counts and status codes may enter build logs.
 
@@ -249,16 +259,19 @@ Implementation follows red-green-refactor.
 
 ### Provider preflight and route tests
 
-- disabled mode performs no provider preflight;
+- a disabled build performs no automatic provider preflight, while the authenticated disabled-stage inventory route succeeds with valid hidden configuration;
+- malformed disabled-stage provider configuration fails with safe codes, browser roles cannot invoke its service RPCs directly, and its read-only provider type cannot compile or dispatch a mutation;
 - valid-looking wrong credentials, Segment IDs, Topic IDs, sender domains, and webhook registrations fail safely;
 - send-key management access fails the separation requirement;
 - every Segment, Broadcast, and resource page is inspected;
 - unexpected Segment members, local eligible subscribers, or scheduled/queued/sent Broadcasts fail first-activation preflight;
 - the complete versioned policies for domains, Contacts, suppressions, Segments, Topics, webhooks, API keys, Broadcasts, transactional history, imports, templates, automations, and OAuth/applications reject unrelated, unmapped, unclassified, or unsupported resources;
-- the unused Onboarding key, any import/template/automation/OAuth application, or an expired non-API owner attestation fails preflight;
+- the final inventory requires the three purpose-specific key records and rejects the legacy Onboarding key, any import/template/automation/OAuth application, or an expired non-API owner attestation;
+- Supabase Auth migration records the replacement key identity without its secret, proves a signed-out magic-link login before legacy revocation, and proves a second login after revocation;
 - steady-state preflight permits authentic subscribers and previously sent Broadcasts only when they match site-local and validation/audit evidence;
 - steady-state preflight permits the authentic confirmation message only when its provider message ID maps to local delivery evidence;
 - approved Staff Portal magic-link history passes only when it maps to an authorized site user and Supabase Auth audit event without logging the recipient;
+- the enabled candidate reruns the same inventory implementation and cannot reuse the disabled-stage automated result;
 - first activation creates a durable resource-digest revision only after the runtime recheck; an environment flag alone cannot create or spoof it;
 - post-signup redeployment, disabled containment, and steady-state re-enablement do not reimpose the zero-audience first-activation premise;
 - a provider/resource identity change invalidates activation evidence and fails closed for reviewed migration;
@@ -291,7 +304,7 @@ Implementation follows red-green-refactor.
 3. Run migration dry-run, database tests, advisor review, lint, full tests, and local Production build.
 4. Apply the additive migration and publish the immutable newsletter form revision; verify its projection and history.
 5. Deploy and promote the infrastructure/UI release with `NEWSLETTER_EMAIL_ENABLED=false`; verify that it performs no provider mutation and keeps the public fallback.
-6. In the protected Staff Portal, record the owner review for non-API account categories and verify the automated inventories, Supabase active eligibility, complete Resend Segment, and historical sends satisfy the first-activation boundary without creating records. Revoke the unused Onboarding key before continuing.
+6. In the protected Staff Portal, record the owner review for non-API account categories and run the disabled-stage automated inventory. Create the Site Auth SMTP key, migrate Supabase Auth SMTP to it, prove a fresh signed-out magic-link login, revoke the legacy Onboarding key only after that success, and prove a second signed-out login. Then rerun inventory and verify Supabase eligibility, the complete Resend Segment, and historical sends satisfy the first-activation boundary without creating newsletter records.
 7. Set `NEWSLETTER_EMAIL_ENABLED=true` for Production only.
 8. Create a fresh `--prod --skip-domain` candidate. Its structural and initial semantic gates must pass using actual hidden Production values.
 9. Verify candidate routes and security boundaries without submitting the public form.
