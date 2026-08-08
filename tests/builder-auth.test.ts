@@ -1,3 +1,4 @@
+import { canBuilderRole } from "@reuben-williams/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -24,6 +25,10 @@ describe("builder authorization", () => {
     expect(roleCanPerformBuilderOperation("contributor", "content.publish")).toBe(false);
     expect(roleCanPerformBuilderOperation("editor", "content.publish")).toBe(true);
     expect(roleCanPerformBuilderOperation("owner", "history.rollback")).toBe(true);
+    expect(canBuilderRole("viewer", "alerts.read")).toBe(true);
+    expect(canBuilderRole("contributor", "alerts.create")).toBe(true);
+    expect(canBuilderRole("contributor", "alerts.publish")).toBe(false);
+    expect(canBuilderRole("editor", "alerts.reorder")).toBe(true);
   });
 
   it("allows public published reads without creating an editor identity", async () => {

@@ -1,4 +1,5 @@
 export * from "./blob-store";
+export * from "./alert-store";
 export * from "./bootstrap";
 export * from "./contracts";
 export * from "./cron-handler";
