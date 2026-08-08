@@ -18,6 +18,17 @@ const publishedQuery = {
   orderDirection: "desc" as const
 };
 
+export const HOMEPAGE_PUBLISHED_QUERY = Object.freeze({
+  categoryKeys: [],
+  tagKeys: [],
+  entryIds: [],
+  featuredOnly: false,
+  pinnedFirst: false,
+  limit: 3,
+  orderBy: "displayDate" as const,
+  orderDirection: "desc" as const,
+});
+
 export function publicPostHref(slug: string) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new TypeError("A valid post slug is required.");
   return `/news/${slug}`;
@@ -37,6 +48,13 @@ export function toLinkablePosts(
 
 export async function listPublishedPosts(client: SupabaseClient): Promise<PublishedPost[]> {
   return createSupabaseContentRepository(client).listPublishedPosts(BUILDER_SITE_KEY, publishedQuery);
+}
+
+export async function listHomepagePublishedPosts(client: SupabaseClient): Promise<PublishedPost[]> {
+  return createSupabaseContentRepository(client).listPublishedPosts(
+    BUILDER_SITE_KEY,
+    HOMEPAGE_PUBLISHED_QUERY,
+  );
 }
 
 export async function getPublishedPostBySlug(client: SupabaseClient, slug: string): Promise<PublishedPost | null> {

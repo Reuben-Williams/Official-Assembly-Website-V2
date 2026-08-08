@@ -3,9 +3,26 @@ import { describe, expect, it } from "vitest";
 
 import { PostBody } from "../app/ui/PostBody";
 import { PublishedPostList } from "../app/ui/PublishedPosts";
-import { publicPostHref, toLinkablePosts } from "../lib/builder/published-posts";
+import {
+  HOMEPAGE_PUBLISHED_QUERY,
+  publicPostHref,
+  toLinkablePosts,
+} from "../lib/builder/published-posts";
 
 describe("live published posts", () => {
+  it("uses the bounded chronological homepage collection without pinning", () => {
+    expect(HOMEPAGE_PUBLISHED_QUERY).toEqual({
+      categoryKeys: [],
+      tagKeys: [],
+      entryIds: [],
+      featuredOnly: false,
+      pinnedFirst: false,
+      limit: 3,
+      orderBy: "displayDate",
+      orderDirection: "desc",
+    });
+  });
+
   it("maps only database-approved published rows to canonical editor targets", () => {
     expect(toLinkablePosts([{
       entryId: "11111111-1111-4111-8111-111111111111",
