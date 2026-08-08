@@ -19,7 +19,21 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/script", () => ({ default: () => null }));
 vi.mock("@reuben-williams/next/forms", () => ({
-  BuilderForm: ({ endpoint }: { endpoint: string }) => <form action={endpoint}><button>Request updates</button></form>,
+  BuilderForm: ({ endpoint, projection }: {
+    endpoint: string;
+    projection: {
+      displayName: string;
+      fields: Array<{ key: string; label: string; required: boolean }>;
+    };
+  }) => (
+    <form action={endpoint}>
+      <fieldset>
+        <legend>{projection.displayName}</legend>
+        {projection.fields.map((field) => <label key={field.key}>{field.label}{field.required ? " *" : ""}</label>)}
+      </fieldset>
+      <button>Request updates</button>
+    </form>
+  ),
   UnavailableFormFallback: ({ phone }: { phone: string }) => <p>Call {phone}</p>
 }));
 vi.mock("../lib/newsletter/config", () => ({ readNewsletterConfiguration: mocks.configuration }));
@@ -35,10 +49,33 @@ vi.mock("../lib/supabase/admin", () => ({
 vi.mock("../lib/builder/forms", () => ({
   getManagedFormDefinition: (type: string) => type === "survey" ? null : { formKey: type },
   createSupabasePublishedFormRepository: () => ({}),
-  loadManagedFormProjection: async () => ({
-    status: "ready" as const,
-    projection: { formKey: "newsletter-signup" }
-  })
+  loadManagedFormProjection: async (type: "contact" | "newsletter") => {
+    const newsletter = type === "newsletter";
+    return {
+      status: "ready" as const,
+      projection: {
+        formKey: newsletter ? "newsletter-signup" : "contact",
+        revisionId: "30000000-0000-4000-8000-000000000001",
+        displayName: newsletter ? "District Newsletter" : "Contact",
+        fields: newsletter ? [
+          { key: "email", label: "Email address", helpText: "", placeholder: "", kind: "email", required: true },
+          { key: "firstName", label: "First name", helpText: "", placeholder: "", kind: "text", required: false },
+          { key: "marketingConsent", label: "Marketing consent", helpText: "", placeholder: "", kind: "consent", required: true }
+        ] : [
+          { key: "firstName", label: "First name", helpText: "", placeholder: "", kind: "text", required: true },
+          { key: "email", label: "Email", helpText: "", placeholder: "", kind: "email", required: false },
+          { key: "operationalConsent", label: "Contact consent", helpText: "", placeholder: "", kind: "consent", required: true }
+        ],
+        consent: {
+          fieldKey: newsletter ? "marketingConsent" : "operationalConsent",
+          policyVersion: newsletter ? "marketing-v1" : "operational-v1",
+          renderedText: "Approved consent"
+        },
+        completion: { mode: "inline_success" },
+        turnstile: { siteKey: "turnstile-site-key", action: newsletter ? "newsletter" : "contact" }
+      }
+    };
+  }
 }));
 
 import PrivacyPage from "../app/privacy/page";
@@ -77,12 +114,25 @@ describe("public newsletter and privacy experience", () => {
   it("states the pending confirmation boundary and links privacy before active signup", async () => {
     const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter" }));
 
+    expect(html).toContain('data-public-form-type="newsletter"');
+    expect(html).toContain("Join the District Newsletter");
+    expect(html).toContain("Fields marked * are required. All other fields are optional.");
     expect(html).toContain("You are not subscribed until you confirm");
     expect(html).toContain("Verification runs automatically");
     expect(html).toContain('href="/privacy"');
     expect(html).toContain('action="/api/forms/newsletter-signup"');
     expect(html).not.toContain("You are now subscribed");
     expect(html).not.toContain("newsletter delivery is active");
+  });
+
+  it("presents Contact as a civic service card without changing its endpoint", async () => {
+    const html = renderToStaticMarkup(await ResidentForm({ type: "contact" }));
+
+    expect(html).toContain('data-public-form-type="contact"');
+    expect(html).toContain("District office service");
+    expect(html).toContain("Send a message to the District Office");
+    expect(html).toContain("Fields marked * are required. All other fields are optional.");
+    expect(html).toContain('action="/api/forms/contact"');
   });
 
   it("fails closed to district contact and exposes no form endpoint when unready", async () => {
@@ -93,6 +143,8 @@ describe("public newsletter and privacy experience", () => {
     });
     const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter" }));
 
+    expect(html).toContain('data-public-form-type="newsletter"');
+    expect(html).toContain("Join the District Newsletter");
     expect(html).toContain("Call");
     expect(html).not.toContain("/api/forms/newsletter-signup");
     expect(html).not.toContain("Request updates");

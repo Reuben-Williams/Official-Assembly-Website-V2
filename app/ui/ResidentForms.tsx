@@ -1,5 +1,6 @@
 import Script from "next/script";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { UnavailableFormFallback } from "@reuben-williams/next/forms";
 
 import { siteConfig } from "../data/site";
@@ -17,14 +18,55 @@ type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
 };
 
-function Unavailable() {
+type ActiveResidentFormType = Exclude<ResidentFormsProps["type"], "survey">;
+
+const PUBLIC_FORM_CARD_COPY = Object.freeze({
+  contact: Object.freeze({
+    eyebrow: "District office service",
+    heading: "Send a message to the District Office"
+  }),
+  newsletter: Object.freeze({
+    eyebrow: "Email updates",
+    heading: "Join the District Newsletter"
+  })
+});
+
+function PublicFormCard({
+  type,
+  unavailable = false,
+  children
+}: {
+  type: ActiveResidentFormType;
+  unavailable?: boolean;
+  children: ReactNode;
+}) {
+  const copy = PUBLIC_FORM_CARD_COPY[type];
   return (
-    <div className="form-panel" data-builder-form-unavailable="true">
+    <div
+      className={`form-panel public-form-card public-form-card-${type}`}
+      data-builder-form-unavailable={unavailable ? "true" : undefined}
+      data-public-form-type={type}
+    >
+      <header className="public-form-card-header">
+        <p className="public-form-card-eyebrow">{copy.eyebrow}</p>
+        <h3>{copy.heading}</h3>
+        <p className="public-form-card-requirements">
+          Fields marked * are required. All other fields are optional.
+        </p>
+      </header>
+      <div className="public-form-card-body">{children}</div>
+    </div>
+  );
+}
+
+function Unavailable({ type }: { type: ActiveResidentFormType }) {
+  return (
+    <PublicFormCard type={type} unavailable>
       <UnavailableFormFallback
         businessName="the District 34 office"
         phone={siteConfig.phoneE164}
       />
-    </div>
+    </PublicFormCard>
   );
 }
 
@@ -45,15 +87,15 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
 
   const client = getBuilderAdminClient();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  if (!client || !turnstileSiteKey) return <Unavailable />;
+  if (!client || !turnstileSiteKey) return <Unavailable type={type} />;
 
   const siteId = await resolveBuilderSiteId(client);
-  if (!siteId) return <Unavailable />;
+  if (!siteId) return <Unavailable type={type} />;
   if (type === "newsletter") {
     const configuration = readNewsletterConfiguration();
-    if (configuration.status !== "ready") return <Unavailable />;
+    if (configuration.status !== "ready") return <Unavailable type={type} />;
     const readiness = await readNewsletterPublicReadiness(client, siteId, configuration);
-    if (readiness.status !== "ready") return <Unavailable />;
+    if (readiness.status !== "ready") return <Unavailable type={type} />;
   }
 
   const repository = createSupabasePublishedFormRepository({
@@ -63,10 +105,10 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
     turnstileSiteKey
   });
   const result = await loadManagedFormProjection(type, { repository, siteId });
-  if (result.status !== "ready") return <Unavailable />;
+  if (result.status !== "ready") return <Unavailable type={type} />;
 
   return (
-    <div className="form-panel">
+    <PublicFormCard type={type}>
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
@@ -88,7 +130,8 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
         className="builder-public-form"
         endpoint={`/api/forms/${result.projection.formKey}`}
         projection={result.projection}
+        variant={type}
       />
-    </div>
+    </PublicFormCard>
   );
 }

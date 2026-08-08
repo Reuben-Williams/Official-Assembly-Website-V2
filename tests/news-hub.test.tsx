@@ -40,7 +40,23 @@ vi.mock("../lib/builder/forms", () => ({
   createSupabasePublishedFormRepository: () => ({}),
   loadManagedFormProjection: async () => ({
     status: "ready" as const,
-    projection: { formKey: "newsletter-signup" }
+    projection: {
+      formKey: "newsletter-signup",
+      revisionId: "30000000-0000-4000-8000-000000000001",
+      displayName: "District Newsletter",
+      fields: [
+        { key: "email", label: "Email address", helpText: "", placeholder: "", kind: "email", required: true },
+        { key: "firstName", label: "First name", helpText: "", placeholder: "", kind: "text", required: false },
+        { key: "marketingConsent", label: "Marketing consent", helpText: "", placeholder: "", kind: "consent", required: true }
+      ],
+      consent: {
+        fieldKey: "marketingConsent",
+        policyVersion: "marketing-v1",
+        renderedText: "Approved marketing consent"
+      },
+      completion: { mode: "inline_success" },
+      turnstile: { siteKey: "turnstile-site-key", action: "newsletter" }
+    }
   })
 }));
 
