@@ -525,6 +525,21 @@ export default {
           "label": "Portal cards"
         },
         {
+          "id": "home.official.eyebrow",
+          "kind": "text",
+          "label": "Official profile eyebrow"
+        },
+        {
+          "id": "home.official.title",
+          "kind": "text",
+          "label": "Official profile title"
+        },
+        {
+          "id": "home.official.body",
+          "kind": "text",
+          "label": "Official profile introduction"
+        },
+        {
           "id": "home.workflow.eyebrow",
           "kind": "text",
           "label": "Workflow eyebrow"
