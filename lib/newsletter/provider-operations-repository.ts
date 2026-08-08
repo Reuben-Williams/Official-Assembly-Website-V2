@@ -187,8 +187,8 @@ export function createNewsletterProviderOperationsRepository(
       readonly safeEvidenceDigest: string;
       readonly entries: readonly NewsletterHistoryReconciliationEntry[];
     }) {
-      return rpc("builder_record_newsletter_history_reconciliation_v1", {
-        version: 1,
+      return rpc("builder_record_newsletter_history_reconciliation_v2", {
+        version: 2,
         commandId: input.commandId,
         siteId,
         operatorId: input.operatorId,

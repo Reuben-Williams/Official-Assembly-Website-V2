@@ -105,11 +105,12 @@ describe("newsletter provider operations repository", () => {
       }) }
     );
     expect(rpc).toHaveBeenNthCalledWith(4,
-      "builder_record_newsletter_history_reconciliation_v1",
+      "builder_record_newsletter_history_reconciliation_v2",
       { p_request: expect.objectContaining({
         siteId,
         operatorId,
-        policyVersion: "resend-initial-history-v1",
+        version: 2,
+        policyVersion: "resend-initial-history-v2",
         safeEvidenceDigest: "d".repeat(64),
         entries: [expect.objectContaining({
           providerMessageId: "history-message-1",

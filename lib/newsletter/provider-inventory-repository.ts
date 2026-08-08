@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NewsletterProviderInventoryEvidence } from "./provider-inventory";
+import { NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION } from "./history-reconciliation";
 
 const PAGE_SIZE = 1_000;
 const REQUIRED_MANUAL_CATEGORIES = [
@@ -146,7 +147,7 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .from("builder_newsletter_provider_history_reconciliations")
         .select("provider_message_id")
         .eq("site_id", siteId)
-        .eq("policy_version", "resend-initial-history-v1")
+        .eq("policy_version", NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION)
         .order("created_at", { ascending: true })
         .range(from, to));
 

@@ -139,12 +139,12 @@ export function NewsletterOperationsWorkspace({
   const hasIncident = (status?.openIncidents ?? 0) > 0;
   const circuitOpen = status?.reconciliationCircuit.state === "open";
   const canValidate = Boolean(status?.confirmedTest) && !hasIncident && normalizedBroadcastId.length >= 3;
-  const canReconcileHistory = inventory?.counts.emails === 10
+  const canReconcileHistory = inventory?.counts.emails === 11
     && inventory.categories.some((item) =>
       item.category === "transactional_emails"
       && item.status === "blocked"
       && item.code === "unmapped_email_history"
-      && item.count === 10
+      && item.count === 11
     );
 
   return (

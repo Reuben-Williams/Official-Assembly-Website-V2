@@ -75,10 +75,10 @@ describe("newsletter operations workspace", () => {
             category: "transactional_emails",
             status: "blocked" as const,
             code: "unmapped_email_history",
-            count: 10
+            count: 11
           }
         ],
-        counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 10, localEligible: 0 }
+        counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 11, localEligible: 0 }
       })),
       recordProviderAttestation: vi.fn(async () => ({ state: "recorded" as const })),
       recordAuthSmtpProof: vi.fn(async () => ({ state: "recorded" as const })),

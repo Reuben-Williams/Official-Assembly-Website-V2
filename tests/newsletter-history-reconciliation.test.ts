@@ -67,12 +67,12 @@ function input(overrides: {
 }
 
 describe("newsletter provider history reconciliation", () => {
-  it("creates an exact eight-entry plan while preserving the two existing Auth proofs", () => {
+  it("creates an exact nine-entry plan while preserving the two existing Auth proofs", () => {
     const result = planNewsletterHistoryReconciliation(input());
 
     expect(result).toMatchObject({
       state: "ready",
-      providerHistoryCount: 10,
+      providerHistoryCount: 11,
       existingAuthProofCount: 2,
       entries: expect.arrayContaining([
         expect.objectContaining({
@@ -82,12 +82,12 @@ describe("newsletter provider history reconciliation", () => {
         })
       ])
     });
-    expect(result.entries).toHaveLength(8);
+    expect(result.entries).toHaveLength(9);
     expect(result.entries.filter((entry) => entry.classification === "auth_smtp_magic_link"))
-      .toHaveLength(7);
+      .toHaveLength(8);
   });
 
-  it("fails closed on any provider message outside the approved ten-record history", () => {
+  it("fails closed on any provider message outside the approved eleven-record history", () => {
     const baseline = input();
     expect(() => planNewsletterHistoryReconciliation({
       ...baseline,

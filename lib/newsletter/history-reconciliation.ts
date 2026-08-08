@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { NewsletterProviderInventorySnapshot } from "./provider-inventory";
 
 export const NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION =
-  "resend-initial-history-v1" as const;
+  "resend-initial-history-v2" as const;
 
 export const APPROVED_NEWSLETTER_HISTORY_AUTH_MESSAGE_IDS = [
   "811ea57a-349d-40c5-a0e6-880b2c79eff4",
@@ -12,7 +12,8 @@ export const APPROVED_NEWSLETTER_HISTORY_AUTH_MESSAGE_IDS = [
   "a9f2632a-63f3-403d-9cc3-b727173df3df",
   "1c9faeab-9011-40df-a011-fe7203dd3f29",
   "21b1a46d-625b-4338-bdd7-dbb4bdca953d",
-  "8f77edd1-1342-48a7-99a5-4d0ce8eebbff"
+  "8f77edd1-1342-48a7-99a5-4d0ce8eebbff",
+  "294b5df4-7128-40a6-ab5b-ea719a74c953"
 ] as const;
 
 const APPROVED_NEWSLETTER_HISTORY_PROOF_MESSAGE_IDS = [
@@ -155,7 +156,7 @@ export function createNewsletterHistoryReconciliationDigest(input: {
   readonly entries: readonly NewsletterHistoryReconciliationEntry[];
 }) {
   return createHash("sha256").update(JSON.stringify({
-    version: 1,
+    version: 2,
     policyVersion: NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION,
     siteId: input.siteId,
     operatorId: input.operatorId,
