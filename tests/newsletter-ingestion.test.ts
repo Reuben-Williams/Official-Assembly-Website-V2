@@ -46,7 +46,7 @@ const command = {
       kind: "identity",
       bucketKeyHmac: "4".repeat(64),
       windowStartedAt: "2026-08-06T17:00:00.000Z",
-      windowEndsAt: "2026-08-06T18:00:00.000Z",
+      windowEndsAt: "2026-08-06T17:15:00.000Z",
       limit: 5
     }
   ]

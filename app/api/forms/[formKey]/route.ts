@@ -90,7 +90,7 @@ export async function POST(
     }),
     rateLimits: {
       network: { limit: 10, windowMs: 3_600_000 },
-      identity: { limit: 5, windowMs: 3_600_000 }
+      identity: { limit: 5, windowMs: 900_000 }
     },
     now: () => new Date(),
     uuid: () => crypto.randomUUID()
