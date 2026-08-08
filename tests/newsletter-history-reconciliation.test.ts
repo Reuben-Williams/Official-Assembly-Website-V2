@@ -30,7 +30,7 @@ function input(overrides: {
       id,
       status: "delivered",
       createdAt: `2026-08-07T${String(17 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}:00.000Z`,
-      from: "Office of Assemblywoman Carmen Morales <auth@updates.assemblywomanmorales.com>",
+      from: "Office of Assemblywoman Carmen Morales <no-reply@updates.assemblywomanmorales.com>",
       to: ["OWNER@example.com"],
       subject: "Your sign-in link"
     })),
@@ -120,6 +120,15 @@ describe("newsletter provider history reconciliation", () => {
       ...baseline,
       emails: baseline.emails.map((email) => email.id === target
         ? { ...email, subject: "District update" }
+        : email)
+    })).toThrowError(expect.objectContaining<Partial<NewsletterHistoryReconciliationError>>({
+      code: "unverified_auth_history"
+    }));
+
+    expect(() => planNewsletterHistoryReconciliation({
+      ...baseline,
+      emails: baseline.emails.map((email) => email.id === target
+        ? { ...email, from: "Office of Assemblywoman Carmen Morales <auth@updates.assemblywomanmorales.com>" }
         : email)
     })).toThrowError(expect.objectContaining<Partial<NewsletterHistoryReconciliationError>>({
       code: "unverified_auth_history"

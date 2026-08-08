@@ -104,7 +104,7 @@ export function planNewsletterHistoryReconciliation(input: {
     if (!email
       || email.status !== "delivered"
       || email.subject !== "Your sign-in link"
-      || mailbox(email.from) !== "auth@updates.assemblywomanmorales.com"
+      || mailbox(email.from) !== "no-reply@updates.assemblywomanmorales.com"
       || !email.to.some((recipient) => recipient.trim().toLowerCase() === ownerEmail)
       || !Number.isFinite(Date.parse(email.createdAt))
       || !verifiedReceipts) {
