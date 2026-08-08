@@ -42,6 +42,35 @@ afterEach(async () => {
 });
 
 describe("editor page navigation", () => {
+  it("opens Alerts directly and returns control to a selected editable page", async () => {
+    window.history.replaceState({}, "", "/admin/editor?workspace=website.alerts");
+
+    await act(async () => root?.render(
+      <EditorClient
+        initialAlertCollection={null}
+        initialLinkablePosts={[]}
+        initialPath="/"
+        memberId="member-1"
+        previewBaseUrl="https://assembly.example"
+        role="owner"
+      />
+    ));
+
+    expect(container?.querySelector('[data-builder-content-workspace="alerts"]')).not.toBeNull();
+    const alertsButton = [...(container?.querySelectorAll<HTMLButtonElement>("button") ?? [])]
+      .find((button) => button.textContent?.trim() === "Alerts");
+    expect(alertsButton?.getAttribute("aria-current")).toBe("page");
+
+    const resources = container?.querySelector<HTMLAnchorElement>('a[href="?path=%2Fresources"]');
+    expect(resources).toBeTruthy();
+    await act(async () => resources?.click());
+
+    expect(container?.querySelector('[data-builder-content-workspace="alerts"]')).toBeNull();
+    expect(container?.querySelector('[data-builder-preview-visible="true"]')).not.toBeNull();
+    expect(new URL(window.location.href).searchParams.get("workspace")).toBe("website.pages");
+    expect(new URL(window.location.href).searchParams.get("path")).toBe("/resources");
+  });
+
   it("returns the main view to the page editor when a page is selected from Posts", async () => {
     window.history.replaceState({}, "", "/admin/editor?workspace=website.posts");
 

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createSupabaseAlertServerRepository } from "@reuben-williams/next/alerts/server";
 
 import { authenticateBuilderRequest } from "../../../lib/builder/request-auth";
 import { listPublishedPosts, toLinkablePosts } from "../../../lib/builder/published-posts";
@@ -24,6 +25,7 @@ const EDITOR_WORKSPACES = new Set([
   "website.history",
   "website.submissions",
   "website.forms",
+  "website.alerts",
   "growth.dashboard",
   "growth.leads",
   "growth.customers"
@@ -62,8 +64,24 @@ export default async function AdminEditorPage({ searchParams }: AdminEditorPageP
   }
   const client = getBuilderAdminClient();
   const linkablePosts = client ? toLinkablePosts(await listPublishedPosts(client)) : [];
+  let initialAlertCollection;
+  if (client) {
+    try {
+      initialAlertCollection = await createSupabaseAlertServerRepository(client).readCollection({
+        siteId: identity.siteId,
+        siteKey: identity.siteKey,
+        userId: identity.userId,
+        email: null,
+        role: identity.role,
+        previewGeneration: identity.sessionGeneration,
+      });
+    } catch {
+      // The client retries this bounded read when the editor opens Alerts.
+    }
+  }
   return (
     <EditorClient
+      initialAlertCollection={initialAlertCollection}
       initialLinkablePosts={linkablePosts}
       initialPath={initialPath}
       memberId={identity.userId}

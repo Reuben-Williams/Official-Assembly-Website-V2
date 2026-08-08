@@ -45,6 +45,20 @@ describe("server-owned editor path", () => {
     );
   });
 
+  it("preserves a direct Alerts workspace return path", async () => {
+    const page = await AdminEditorPage({
+      searchParams: Promise.resolve({ workspace: "website.alerts" })
+    });
+    expect(page.props.initialPath).toBe("/");
+
+    vi.mocked(authenticateBuilderRequest).mockResolvedValueOnce(null);
+    await expect(AdminEditorPage({
+      searchParams: Promise.resolve({ workspace: "website.alerts" })
+    })).rejects.toThrow(
+      "REDIRECT:/admin/login?returnTo=%2Fadmin%2Feditor%3Fworkspace%3Dwebsite.alerts"
+    );
+  });
+
   it("preserves a validated bookmarked page through staff sign-in", async () => {
     vi.mocked(authenticateBuilderRequest).mockResolvedValueOnce(null);
 

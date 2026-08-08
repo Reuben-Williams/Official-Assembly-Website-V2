@@ -3,7 +3,10 @@
 import {
   AttachedPostsWorkspace,
   AttachedSiteEditor,
+  AlertsWorkspace,
+  BuilderApiClient,
   createHttpAttachedSiteEditorClient,
+  type AlertManagementCollectionV1,
   type BuilderShellRegistration,
   type BuilderWorkspaceId,
   type LinkablePost,
@@ -97,12 +100,14 @@ export function editorPageNavigation(currentPath: string, onPageChange: (path: s
 }
 
 export function EditorClient({
+  initialAlertCollection,
   initialLinkablePosts,
   initialPath,
   memberId,
   previewBaseUrl,
   role
 }: {
+  initialAlertCollection?: AlertManagementCollectionV1 | null;
   initialLinkablePosts: LinkablePost[];
   initialPath: string;
   memberId: string;
@@ -166,6 +171,10 @@ export function EditorClient({
     getCsrfToken: csrfCookie,
     onLinkablePostsChanged: setLinkablePosts
   }), []);
+  const alerts = useMemo(() => new BuilderApiClient({
+    baseUrl: "/api/builder",
+    getCsrfToken: csrfCookie,
+  }), []);
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
     const workspaces: readonly RegisteredWorkspace[] = [
@@ -184,6 +193,16 @@ export function EditorClient({
       {
         id: "website.submissions", label: "Submissions", group: "website", icon: "inbox",
         mobilePriority: 4, status: "active", render: () => <LiveSubmissionsWorkspace {...props} />
+      },
+      {
+        id: "website.alerts", label: "Alerts", group: "website", icon: "megaphone",
+        mobilePriority: 5, status: "active", render: () => (
+          <AlertsWorkspace
+            role={role}
+            client={alerts}
+            initialCollection={initialAlertCollection}
+          />
+        )
       }
     ];
     return {
@@ -191,7 +210,7 @@ export function EditorClient({
       workspaces,
       globalHeader: <EditorOperationalHeader />
     };
-  }, [growth, memberId, role]);
+  }, [alerts, growth, initialAlertCollection, memberId, role]);
   const initialWorkspace = (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;
@@ -201,6 +220,12 @@ export function EditorClient({
       client={client}
       {...editorPageNavigation(currentPath, setCurrentPath)}
       initialWorkspace={initialWorkspace}
+      onWorkspaceChange={(workspace) => {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("workspace") === workspace) return;
+        url.searchParams.set("workspace", workspace);
+        window.history.pushState({}, "", url);
+      }}
       linkablePosts={linkablePosts}
       formsWorkspace={<FormsGuidanceWorkspace
         role={role}
