@@ -78,6 +78,7 @@ describe("public newsletter and privacy experience", () => {
     const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter" }));
 
     expect(html).toContain("You are not subscribed until you confirm");
+    expect(html).toContain("Verification runs automatically");
     expect(html).toContain('href="/privacy"');
     expect(html).toContain('action="/api/forms/newsletter-signup"');
     expect(html).not.toContain("You are now subscribed");

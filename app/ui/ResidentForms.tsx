@@ -1,6 +1,6 @@
 import Script from "next/script";
 import Link from "next/link";
-import { BuilderForm, UnavailableFormFallback } from "@reuben-williams/next/forms";
+import { UnavailableFormFallback } from "@reuben-williams/next/forms";
 
 import { siteConfig } from "../data/site";
 import {
@@ -11,6 +11,7 @@ import {
 import { readNewsletterConfiguration } from "../../lib/newsletter/config";
 import { readNewsletterPublicReadiness } from "../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../lib/supabase/admin";
+import { TurnstileAwareBuilderForm } from "./TurnstileAwareBuilderForm";
 
 type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
@@ -83,7 +84,7 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
           </p>
         </aside>
       ) : null}
-      <BuilderForm
+      <TurnstileAwareBuilderForm
         className="builder-public-form"
         endpoint={`/api/forms/${result.projection.formKey}`}
         projection={result.projection}
