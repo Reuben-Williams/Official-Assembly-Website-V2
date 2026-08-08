@@ -1,6 +1,8 @@
 import { createBuilderServerClient } from "@reuben-williams/next/auth";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { INTERNAL_PATHNAME_HEADER } from "./lib/public-route";
+
 function contentSecurityPolicy(nonce: string) {
   const supabaseOrigin = (() => {
     try {
@@ -32,6 +34,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("content-security-policy", contentSecurityPolicy(nonce));
+  requestHeaders.set(INTERNAL_PATHNAME_HEADER, request.nextUrl.pathname);
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -55,6 +58,10 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("Content-Security-Policy", contentSecurityPolicy(nonce));
+  if (request.nextUrl.pathname === "/newsletter/confirm") {
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+  }
   return response;
 }
 

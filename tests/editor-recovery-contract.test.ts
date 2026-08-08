@@ -17,6 +17,24 @@ describe("editor recovery contracts", () => {
     expect(setCurrentPath).toHaveBeenCalledWith("/news");
   });
 
+  it("rejects page selections that are not registered editor routes", () => {
+    const setCurrentPath = vi.fn();
+    const navigation = editorPageNavigation("/", setCurrentPath);
+
+    navigation.onPageChange("https://malicious.example/redirect");
+
+    expect(setCurrentPath).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a registered page before changing the controlled preview", () => {
+    const setCurrentPath = vi.fn();
+    const navigation = editorPageNavigation("/", setCurrentPath);
+
+    navigation.onPageChange("/about/");
+
+    expect(setCurrentPath).toHaveBeenCalledWith("/about");
+  });
+
   it("maps the provisioned normalized media schema without legacy columns", () => {
     const assets = mapNormalizedMediaAssets(
       [{
@@ -35,7 +53,8 @@ describe("editor recovery contracts", () => {
         height: 800,
         created_at: "2026-08-05T20:01:00.000Z"
       }],
-      new Map([["site-1/media-1/photo.webp", "https://storage.example/signed-photo"]])
+      new Map([["site-1/media-1/photo.webp", "https://storage.example/signed-photo"]]),
+      [{ media_id: "media-1", revision_id: "revision-1", status: "ready" }]
     );
 
     expect(assets).toEqual([expect.objectContaining({
@@ -44,7 +63,9 @@ describe("editor recovery contracts", () => {
       url: "https://storage.example/signed-photo",
       alt: "Community event",
       mimeType: "image/webp",
-      source: "upload"
+      source: "upload",
+      revisionId: "revision-1",
+      replicaStatus: "ready"
     })]);
   });
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
+import { FormsGuidanceWorkspace } from "../app/admin/editor/forms-guidance-workspace";
 import {
   getManagedFormDefinition,
   isManagedPublicFormKey,
@@ -7,6 +10,41 @@ import {
 } from "../lib/builder/forms";
 
 describe("managed public forms", () => {
+  it("documents both live managed forms and their distinct record lifecycles", () => {
+    const html = renderToStaticMarkup(createElement(FormsGuidanceWorkspace, {
+      role: "owner",
+      newsletterOperations: createElement("div", null, "Newsletter controls"),
+    }));
+
+    expect(html.match(/data-managed-form-card=/g)).toHaveLength(2);
+    expect(html).toContain("Contact the District Office");
+    expect(html).toContain("/contact");
+    expect(html).toContain("First name, last name, subject, and message");
+    expect(html).toContain("Operational contact consent");
+    expect(html).toContain("Submission → identity/customer → eligible Lead → Overview");
+    expect(html).toContain("District Newsletter");
+    expect(html).toContain("/newsletter");
+    expect(html).toContain("Email, optional first name, and required marketing email consent");
+    expect(html).toContain("Pending confirmation → confirmed subscription → active subscriber");
+    expect(html).toContain("Newsletter signup does not create a lead");
+    expect(html).toContain("Open public form");
+    expect(html).toContain("Review submissions");
+  });
+
+  it("provides a manual authentic-data checklist with no mutation automation or provider claim", () => {
+    const html = renderToStaticMarkup(createElement(FormsGuidanceWorkspace, {
+      role: "viewer",
+      newsletterOperations: null,
+    }));
+    const checklist = html.slice(html.indexOf('id="authentic-live-form-checklist"'));
+
+    expect(checklist).toContain("Controlled live-data checklist");
+    expect(checklist).toContain("never fills or submits a form, seeds a record, or calls an email, SMS, or AI provider");
+    expect(checklist).not.toContain("<form");
+    expect(checklist).not.toContain("<input");
+    expect(html).toContain("SMS and AI actions remain unavailable");
+  });
+
   it("maps only the two approved form templates", () => {
     expect(getManagedFormDefinition("contact")).toMatchObject({
       formKey: "contact",

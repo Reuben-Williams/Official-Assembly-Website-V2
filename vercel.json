@@ -4,6 +4,14 @@
     {
       "path": "/api/platform/installations/run",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/newsletter/jobs/run",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/builder/recovery/jobs/run",
+      "schedule": "* * * * *"
     }
   ]
 }

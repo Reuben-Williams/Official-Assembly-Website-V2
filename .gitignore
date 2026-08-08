@@ -4,6 +4,8 @@
 out/
 node_modules/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 dev-server.*.log
 asw_carmenmorales/

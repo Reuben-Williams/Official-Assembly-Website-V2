@@ -59,7 +59,9 @@ const fixedUiStrings = [
   "Office Workflow", "Public Information", "Service Requests", "Community Updates",
   "Contact the Office", "Get Updates", "Page Features", "Resident Form", "Site Sections",
   "Full name", "Email address", "Phone number", "Topic", "Message", "Submit Message",
-  "Join Newsletter", "Submit Feedback"
+  "Join Newsletter", "Submit Feedback", "Email Updates", "Get News & Updates by email",
+  "Request the District Newsletter and confirm through the email sent to your inbox before the subscription becomes active.",
+  "Review newsletter signup details"
 ];
 
 const visibleDataStrings = [
@@ -103,7 +105,12 @@ Object.assign(spanishTranslations, {
   "Message": "Mensaje",
   "Submit Message": "Enviar mensaje",
   "Join Newsletter": "Suscribirse al boletín",
-  "Submit Feedback": "Enviar comentarios"
+  "Submit Feedback": "Enviar comentarios",
+  "News & Updates": "Noticias y novedades",
+  "Email Updates": "Actualizaciones por correo electrónico",
+  "Get News & Updates by email": "Reciba noticias y novedades por correo electrónico",
+  "Request the District Newsletter and confirm through the email sent to your inbox before the subscription becomes active.": "Solicite el boletín del distrito y confirme mediante el correo enviado a su bandeja de entrada antes de que se active la suscripción.",
+  "Review newsletter signup details": "Consulte los detalles de suscripción al boletín"
 });
 
 export function translateText(text: string, language: LanguageCode): string {

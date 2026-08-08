@@ -64,4 +64,21 @@ describe("Spanish translator", () => {
     );
     expect(translateText("Contact Office", "en")).toBe("Contact Office");
   });
+
+  it("translates the News hub and embedded signup labels", () => {
+    expect(translateText("News & Updates", "es")).toBe("Noticias y novedades");
+    expect(translateText("Email Updates", "es")).toBe("Actualizaciones por correo electrónico");
+    expect(translateText("Get News & Updates by email", "es")).toBe(
+      "Reciba noticias y novedades por correo electrónico"
+    );
+    expect(translateText(
+      "Request the District Newsletter and confirm through the email sent to your inbox before the subscription becomes active.",
+      "es"
+    )).toBe(
+      "Solicite el boletín del distrito y confirme mediante el correo enviado a su bandeja de entrada antes de que se active la suscripción."
+    );
+    expect(translateText("Review newsletter signup details", "es")).toBe(
+      "Consulte los detalles de suscripción al boletín"
+    );
+  });
 });

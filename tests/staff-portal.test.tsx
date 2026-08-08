@@ -10,6 +10,8 @@ describe("Staff Portal footer entry", () => {
     expect(html).toContain('data-staff-portal="true"');
     expect(html).toContain('href="/admin/login?returnTo=%2Fadmin%2Feditor"');
     expect(html).toContain("Staff Portal");
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain("Privacy");
     expect(html).not.toContain('target="_blank"');
   });
 });

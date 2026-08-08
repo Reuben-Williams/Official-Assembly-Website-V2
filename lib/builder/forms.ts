@@ -10,6 +10,11 @@ import type {
   PublishedFormRepository
 } from "@reuben-williams/next/forms/server";
 
+import {
+  applyApprovedNewsletterConsentProjection,
+  newsletterPackageCompatibleConfiguration
+} from "../newsletter/managed-form-revision";
+
 type ManagedFormType = "contact" | "newsletter" | "survey";
 
 export const managedFormDefinitions = Object.freeze({
@@ -70,11 +75,14 @@ export async function loadManagedFormProjection(
     if (!template || compatibility.status !== "compatible") {
       return { status: "unavailable" as const, reason: "FORM_INCOMPATIBLE" as const };
     }
-    const publicProjection = createPublicFormProjection(
+    const packageProjection = createPublicFormProjection(
       template,
       revision.configuration,
       record.manifest
     );
+    const publicProjection = type === "newsletter"
+      ? applyApprovedNewsletterConsentProjection(packageProjection)
+      : packageProjection;
     const projection: PublicBuilderFormProjection = Object.freeze({
       formKey: record.formKey,
       revisionId: revision.id,
@@ -153,7 +161,9 @@ export function createSupabasePublishedFormRepository(input: {
           formsPackageVersion: "0.2.1",
           schemaVersion: "20260805205128",
           runtimeContractVersion: 1,
-          configuration: row.configuration
+          configuration: row.templateId === "local-business.newsletter-signup"
+            ? newsletterPackageCompatibleConfiguration(row.configuration)
+            : row.configuration
         },
         manifest: {
           businessName: input.businessName,

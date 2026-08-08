@@ -1,14 +1,9 @@
 "use client";
 
-import { BuilderDomContentBridge, BuilderPreviewBridge } from "@reuben-williams/next";
+import { BuilderPreviewBridge } from "@reuben-williams/next";
 
 import { BUILDER_SITE_KEY } from "../lib/builder/authorization";
 
 export function BuilderContentBridge() {
-  return (
-    <>
-      <BuilderDomContentBridge mode="auto" />
-      <BuilderPreviewBridge siteId={BUILDER_SITE_KEY} />
-    </>
-  );
+  return <BuilderPreviewBridge siteId={BUILDER_SITE_KEY} />;
 }

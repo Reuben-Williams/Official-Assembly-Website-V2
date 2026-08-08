@@ -1,6 +1,10 @@
 import Image from "next/image";
 import { Camera } from "lucide-react";
 
+import {
+  builderImage,
+  type BuilderServerContent,
+} from "../../lib/builder/server-content";
 import type { ImageAsset } from "../data/site";
 
 type ImagePanelProps = {
@@ -9,17 +13,22 @@ type ImagePanelProps = {
   instance?: string;
   priority?: boolean;
   variant?: "hero" | "wide";
+  content?: BuilderServerContent;
 };
+
+const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
 export function ImagePanel({
   asset,
   caption,
   instance = "default",
   priority = false,
-  variant = "wide"
+  variant = "wide",
+  content = EMPTY_CONTENT,
 }: ImagePanelProps) {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-  const src = `${basePath}${asset.src}`;
+  const resolved = builderImage(content, asset.regionId, asset);
+  const src = resolved.src.startsWith("/") ? `${basePath}${resolved.src}` : resolved.src;
 
   return (
     <div
@@ -30,7 +39,7 @@ export function ImagePanel({
     >
       <Image
         src={src}
-        alt={asset.alt}
+        alt={resolved.alt}
         fill
         priority={priority}
         sizes={

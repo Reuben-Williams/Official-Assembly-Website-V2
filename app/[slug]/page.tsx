@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getPageBySlug, pages, siteConfig } from "../data/site";
 import { PageTemplate } from "../ui/PageTemplate";
+import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
 
 type PageProps = {
   params: Promise<{
@@ -30,9 +31,15 @@ export async function generateMetadata({
     return {};
   }
 
+  const content = await loadBuilderServerContent(page.href);
+
   return {
-    title: page.navLabel,
-    description: `${page.description} | ${siteConfig.officeName}`
+    title: builderText(content, `metadata.${slug}.title`, page.navLabel),
+    description: builderText(
+      content,
+      `metadata.${slug}.description`,
+      `${page.description} | ${siteConfig.officeName}`,
+    ),
   };
 }
 
@@ -44,5 +51,6 @@ export default async function DynamicPage({ params }: PageProps) {
     notFound();
   }
 
-  return <PageTemplate page={page} />;
+  const content = await loadBuilderServerContent(page.href);
+  return <PageTemplate content={content} page={page} />;
 }

@@ -208,7 +208,9 @@ function mapLeadDetail(value: Record<string, unknown>) {
       relatedType: "lead" as const,
       relatedId: text(lead.id),
       title: text(task.title),
-      status: (text(task.state, "open") === "in_progress" ? "assigned" : text(task.state, "open")) as "open" | "assigned" | "completed" | "cancelled",
+      status: (["open", "in_progress", "completed", "cancelled"].includes(text(task.state))
+        ? text(task.state)
+        : "open") as "open" | "in_progress" | "completed" | "cancelled",
       priority: text(task.priority, "normal") as "low" | "normal" | "high" | "urgent",
       ...(task.assigneeId ? { assigneeId: text(task.assigneeId) } : {}),
       ...(task.dueAt ? { dueAt: text(task.dueAt) } : {}),
