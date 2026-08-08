@@ -27,9 +27,9 @@ const NEWSLETTER_RESOURCE_NAME = "District Newsletter";
 const NEWSLETTER_SENDER =
   "Office of Assemblywoman Carmen Morales <newsletter@updates.assemblywomanmorales.com>";
 export const REQUIRED_NEWSLETTER_API_KEY_NAMES = [
-  "Newsletter Send",
-  "Newsletter Management",
-  "Site Auth SMTP"
+  "Official Assembly Newsletter Send",
+  "Official Assembly Newsletter Management",
+  "Supabase Auth SMTP"
 ] as const;
 
 export type NewsletterInventoryStage = "disabled_setup" | "initial" | "steady";
@@ -268,10 +268,16 @@ export function evaluateNewsletterProviderInventory(input: {
     snapshot.domains.length === 1 &&
     snapshot.domains[0]?.name === NEWSLETTER_DOMAIN &&
     snapshot.domains[0]?.status === "verified";
+  const configuredSegments = snapshot.segments.filter((segment) =>
+    segment.id === configuration.segmentId && segment.name === NEWSLETTER_RESOURCE_NAME
+  );
+  const additionalSegments = snapshot.segments.filter((segment) =>
+    segment.id !== configuration.segmentId || segment.name !== NEWSLETTER_RESOURCE_NAME
+  );
   const segmentReady =
-    snapshot.segments.length === 1 &&
-    snapshot.segments[0]?.id === configuration.segmentId &&
-    snapshot.segments[0]?.name === NEWSLETTER_RESOURCE_NAME;
+    configuredSegments.length === 1 &&
+    additionalSegments.length <= 1 &&
+    additionalSegments.every((segment) => segment.name === "General");
   const topicReady =
     snapshot.topics.length === 1 &&
     snapshot.topics[0]?.id === configuration.topicId &&

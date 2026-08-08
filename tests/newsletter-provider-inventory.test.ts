@@ -45,9 +45,9 @@ function snapshot(
       events: REQUIRED_NEWSLETTER_WEBHOOK_EVENTS
     }],
     apiKeys: [
-      { id: "key_newsletter_send", name: "Newsletter Send" },
-      { id: "key_newsletter_management", name: "Newsletter Management" },
-      { id: "key_site_auth_smtp", name: "Site Auth SMTP" }
+      { id: "key_newsletter_send", name: "Official Assembly Newsletter Send" },
+      { id: "key_newsletter_management", name: "Official Assembly Newsletter Management" },
+      { id: "key_site_auth_smtp", name: "Supabase Auth SMTP" }
     ],
     contacts: [],
     segmentContacts: [],
@@ -200,6 +200,42 @@ describe("newsletter provider inventory policy", () => {
     expect(serialized).not.toContain("key_newsletter_send");
   });
 
+  it("accepts Resend's built-in General segment beside the dedicated newsletter segment", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "initial",
+      configuration,
+      snapshot: snapshot({
+        segments: [
+          { id: "resend-general", name: "General" },
+          { id: configuration.segmentId, name: "District Newsletter" }
+        ]
+      }),
+      evidence: evidence()
+    });
+
+    expect(result.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "segments", status: "ready", count: 2 })
+    ]));
+  });
+
+  it("still rejects any additional non-default segment", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "initial",
+      configuration,
+      snapshot: snapshot({
+        segments: [
+          { id: configuration.segmentId, name: "District Newsletter" },
+          { id: "unexpected-segment", name: "Unreviewed Audience" }
+        ]
+      }),
+      evidence: evidence()
+    });
+
+    expect(result.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "segments", status: "blocked" })
+    ]));
+  });
+
   it("allows only the named legacy key during disabled migration and still marks activation blocked", () => {
     const result = evaluateNewsletterProviderInventory({
       stage: "disabled_setup",
@@ -327,7 +363,7 @@ describe("newsletter provider inventory policy", () => {
       snapshot: snapshot({
         apiKeys: [
           ...snapshot().apiKeys,
-          { id: "duplicate-auth-key", name: "Site Auth SMTP" }
+          { id: "duplicate-auth-key", name: "Supabase Auth SMTP" }
         ]
       }),
       evidence: evidence()
