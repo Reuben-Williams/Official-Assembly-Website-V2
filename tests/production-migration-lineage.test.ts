@@ -7,11 +7,8 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  EXPECTED_PENDING_MIGRATIONS,
-  EXPECTED_PRODUCTION_BASELINE,
-  verifyProductionMigrationLineage,
-} from "../scripts/verify-production-migration-lineage.mjs";
+// @ts-expect-error The executable ESM verifier intentionally has no emitted declaration.
+import { EXPECTED_PENDING_MIGRATIONS, EXPECTED_PRODUCTION_BASELINE, verifyProductionMigrationLineage } from "../scripts/verify-production-migration-lineage.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

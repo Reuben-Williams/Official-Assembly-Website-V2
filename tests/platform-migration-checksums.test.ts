@@ -7,10 +7,8 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  EXPECTED_PLATFORM_MIGRATIONS,
-  verifyPlatformMigrationChecksums,
-} from "../scripts/verify-platform-migration-checksums.mjs";
+// @ts-expect-error The executable ESM verifier intentionally has no emitted declaration.
+import { EXPECTED_PLATFORM_MIGRATIONS, verifyPlatformMigrationChecksums } from "../scripts/verify-platform-migration-checksums.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
