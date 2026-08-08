@@ -405,6 +405,16 @@ export default {
           "label": "home secondary call to action"
         },
         {
+          "id": "home.hero.news-cta",
+          "kind": "link",
+          "label": "home news call to action"
+        },
+        {
+          "id": "home.hero.newsletter-cta",
+          "kind": "link",
+          "label": "home newsletter call to action"
+        },
+        {
           "id": "home.features.eyebrow",
           "kind": "text",
           "label": "home feature eyebrow"
@@ -538,6 +548,51 @@ export default {
           "id": "home.official.body",
           "kind": "text",
           "label": "Official profile introduction"
+        },
+        {
+          "id": "home.connections.eyebrow",
+          "kind": "text",
+          "label": "District connections eyebrow"
+        },
+        {
+          "id": "home.connections.title",
+          "kind": "text",
+          "label": "District connections title"
+        },
+        {
+          "id": "home.connections.body",
+          "kind": "text",
+          "label": "District connections introduction"
+        },
+        {
+          "id": "home.connections.newsletter.eyebrow",
+          "kind": "text",
+          "label": "Homepage newsletter eyebrow"
+        },
+        {
+          "id": "home.connections.newsletter.title",
+          "kind": "text",
+          "label": "Homepage newsletter title"
+        },
+        {
+          "id": "home.connections.newsletter.body",
+          "kind": "text",
+          "label": "Homepage newsletter introduction"
+        },
+        {
+          "id": "home.connections.newsletter.form",
+          "kind": "sections",
+          "label": "Homepage managed newsletter form"
+        },
+        {
+          "id": "home.latest.eyebrow",
+          "kind": "text",
+          "label": "Latest updates eyebrow"
+        },
+        {
+          "id": "home.latest.title",
+          "kind": "text",
+          "label": "Latest updates title"
         },
         {
           "id": "home.workflow.eyebrow",

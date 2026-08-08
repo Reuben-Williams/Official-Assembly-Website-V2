@@ -17,20 +17,21 @@ type NewsletterSignupSectionProps = {
     body: string;
   };
   showDedicatedPageLink: boolean;
+  embedded?: boolean;
 };
 
 export async function NewsletterSignupSection({
   content,
   regions,
   fallback,
-  showDedicatedPageLink
+  showDedicatedPageLink,
+  embedded = false,
 }: NewsletterSignupSectionProps) {
   const residentForm = await ResidentForm({ type: "newsletter" });
 
-  return (
-    <section className="section section-muted" data-builder-item-id="form">
-      <div className="container split">
-        <div>
+  const contents = (
+    <>
+      <div>
           <p
             className="eyebrow"
             data-builder-region={regions.eyebrow}
@@ -53,14 +54,25 @@ export async function NewsletterSignupSection({
               Review newsletter signup details
             </Link>
           ) : null}
-        </div>
-        <div
-          data-builder-region={regions.form}
-          data-builder-kind="sections"
-          data-builder-item-id="managed-form"
-        >
-          {residentForm}
-        </div>
+      </div>
+      <div
+        data-builder-region={regions.form}
+        data-builder-kind="sections"
+        data-builder-item-id="managed-form"
+      >
+        {residentForm}
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="newsletter-signup-embedded">{contents}</div>;
+  }
+
+  return (
+    <section className="section section-muted" data-builder-item-id="form">
+      <div className="container split">
+        {contents}
       </div>
     </section>
   );
