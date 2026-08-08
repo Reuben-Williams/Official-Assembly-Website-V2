@@ -12,5 +12,5 @@ export default async function HomePage() {
     loadBuilderServerContent("/"),
     client ? listHomepagePublishedPosts(client) : Promise.resolve([]),
   ]);
-  return <HomePageView content={content} posts={posts} />;
+  return HomePageView({ content, posts });
 }

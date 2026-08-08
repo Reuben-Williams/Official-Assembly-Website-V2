@@ -91,7 +91,9 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="home.sections"');
     expect(html).toContain('data-builder-item-id="hero"');
     expect(html).toContain('data-builder-region="home.hero.title"');
-    expect(html).toContain('data-builder-region="home.portal.cards"');
+    expect(html).toContain('data-builder-region="home.official.title"');
+    expect(html).toContain('data-builder-region="home.connections.title"');
+    expect(html).toContain('data-builder-region="home.latest.title"');
     expect(html).toContain('data-builder-region="media.hero"');
   });
 
