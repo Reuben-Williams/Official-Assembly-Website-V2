@@ -24,6 +24,10 @@ vi.mock("@reuben-williams/next/forms", () => ({
 }));
 vi.mock("../lib/newsletter/config", () => ({ readNewsletterConfiguration: mocks.configuration }));
 vi.mock("../lib/newsletter/readiness", () => ({ readNewsletterPublicReadiness: mocks.readiness }));
+vi.mock("../lib/builder/server-content", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
+  return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
+});
 vi.mock("../lib/supabase/admin", () => ({
   getBuilderAdminClient: () => ({ rpc: vi.fn() }),
   resolveBuilderSiteId: async () => "34000000-0000-4000-8000-000000000001"
@@ -38,6 +42,8 @@ vi.mock("../lib/builder/forms", () => ({
 }));
 
 import PrivacyPage from "../app/privacy/page";
+import { getPageBySlug } from "../app/data/site";
+import { PageTemplate } from "../app/ui/PageTemplate";
 import { ResidentForm } from "../app/ui/ResidentForms";
 
 beforeEach(() => {
@@ -58,6 +64,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("public newsletter and privacy experience", () => {
+  it("keeps exactly one managed signup on the dedicated Newsletter page", async () => {
+    const newsletter = getPageBySlug("newsletter");
+    expect(newsletter).toBeDefined();
+
+    const html = renderToStaticMarkup(await PageTemplate({ page: newsletter! }));
+    expect(html.match(/action="\/api\/forms\/newsletter-signup"/g)).toHaveLength(1);
+    expect(html).toContain('data-builder-region="global.template.form-title"');
+    expect(html).toContain('data-builder-region="newsletter.form"');
+  });
+
   it("states the pending confirmation boundary and links privacy before active signup", async () => {
     const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter" }));
 

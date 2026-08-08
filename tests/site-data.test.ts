@@ -23,6 +23,11 @@ describe("site data", () => {
     ]);
   });
 
+  it("labels the combined public hub without renaming the dedicated Newsletter route", () => {
+    expect(pages.find((page) => page.slug === "news")?.navLabel).toBe("News & Updates");
+    expect(pages.find((page) => page.slug === "newsletter")?.navLabel).toBe("Newsletter");
+  });
+
   it("uses local project images instead of generated placeholder URLs", () => {
     for (const asset of imageAssets) {
       expect(asset.src).toMatch(/^\/images\//);

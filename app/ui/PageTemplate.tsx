@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { getImage, siteConfig, type PageContent } from "../data/site";
 import { Cards } from "./Cards";
+import { NewsletterSignupSection } from "./NewsletterSignupSection";
 import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
 import {
@@ -23,7 +24,26 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
   const formType =
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
   const supportingImage = slug === "community" ? "graduation" : "coverage";
-  const residentForm = formType ? await ResidentForm({ type: formType }) : null;
+  const residentForm = formType && formType !== "newsletter"
+    ? await ResidentForm({ type: formType })
+    : null;
+  const newsletterSignup = formType === "newsletter"
+    ? await NewsletterSignupSection({
+        content,
+        regions: {
+          eyebrow: "global.template.form-eyebrow",
+          title: "global.template.form-title",
+          body: "global.template.form-body",
+          form: "newsletter.form"
+        },
+        fallback: {
+          eyebrow: "Email Updates",
+          title: "Request District Newsletter emails",
+          body: "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
+        },
+        showDedicatedPageLink: false
+      })
+    : null;
   const primaryCta = builderLink(content, `${slug}.hero.primary-cta`, {
     href: "/contact",
     label: "Contact the Office",
@@ -134,7 +154,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
         </div>
       </section>
 
-      {formType ? (
+      {newsletterSignup ?? (formType ? (
         <section className="section section-muted" data-builder-item-id="form">
           <div className="container split">
             <div>
@@ -146,7 +166,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 {builderText(
                   content,
                   "global.template.form-eyebrow",
-                  formType === "newsletter" ? "Email Updates" : "Resident Form",
+                  "Resident Form",
                 )}
               </p>
               <h2
@@ -156,7 +176,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 {builderText(
                   content,
                   "global.template.form-title",
-                  formType === "newsletter" ? "Request District Newsletter emails" : "District office intake",
+                  "District office intake",
                 )}
               </h2>
               <p
@@ -167,9 +187,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 {builderText(
                   content,
                   "global.template.form-body",
-                  formType === "newsletter"
-                    ? "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
-                    : "Online submission is shown only when an approved form revision and verification service are available.",
+                  "Online submission is shown only when an approved form revision and verification service are available.",
                 )}
               </p>
             </div>
@@ -182,7 +200,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
             </div>
           </div>
         </section>
-      ) : null}
+      ) : null)}
 
       <section className="section section-muted" data-builder-item-id="supporting">
         <div className="container split">

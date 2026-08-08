@@ -790,7 +790,7 @@ export default {
     },
     {
       "path": "/news",
-      "label": "News",
+      "label": "News & Updates",
       "regions": [
         {
           "id": "news.sections",
@@ -886,6 +886,26 @@ export default {
           "id": "news.cards.district-events.link",
           "kind": "link",
           "label": "district-events link"
+        },
+        {
+          "id": "news.newsletter.eyebrow",
+          "kind": "text",
+          "label": "newsletter signup eyebrow"
+        },
+        {
+          "id": "news.newsletter.title",
+          "kind": "text",
+          "label": "newsletter signup title"
+        },
+        {
+          "id": "news.newsletter.body",
+          "kind": "text",
+          "label": "newsletter signup introduction"
+        },
+        {
+          "id": "news.newsletter.form",
+          "kind": "sections",
+          "label": "newsletter managed form"
         }
       ]
     },
@@ -1199,7 +1219,7 @@ export default {
     },
     {
       "path": "/newsletter",
-      "label": "Newsletter",
+      "label": "Newsletter signup",
       "regions": [
         {
           "id": "newsletter.sections",

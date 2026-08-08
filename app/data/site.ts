@@ -261,7 +261,7 @@ export const pages: PageContent[] = [
   {
     href: "/news",
     slug: "news",
-    navLabel: "News",
+    navLabel: "News & Updates",
     title: "Legislative and District Updates",
     eyebrow: "Official Sources",
     description:

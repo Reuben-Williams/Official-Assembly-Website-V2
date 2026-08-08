@@ -40,6 +40,20 @@ describe("approved builder mapping", () => {
     expect(configured).not.toContain("survey.form");
   });
 
+  it("distinguishes the News hub and Newsletter signup in the editor", () => {
+    const news = site.pages.find((page) => page.path === "/news");
+    const newsletter = site.pages.find((page) => page.path === "/newsletter");
+
+    expect(news?.label).toBe("News & Updates");
+    expect(news?.regions).toEqual(expect.arrayContaining([
+      { id: "news.newsletter.eyebrow", kind: "text", label: "newsletter signup eyebrow" },
+      { id: "news.newsletter.title", kind: "text", label: "newsletter signup title" },
+      { id: "news.newsletter.body", kind: "text", label: "newsletter signup introduction" },
+      { id: "news.newsletter.form", kind: "sections", label: "newsletter managed form" }
+    ]));
+    expect(newsletter?.label).toBe("Newsletter signup");
+  });
+
   it("registers the canonical 404 page with its editable regions", () => {
     const notFoundPage = site.pages.find((page) => page.path === "/404");
 
@@ -90,5 +104,14 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="contact.form"');
     expect(html).toContain('data-builder-item-id="send-message"');
     expect(html).toContain('data-builder-form-unavailable="true"');
+  });
+
+  it("keeps the survey unavailable and outside managed form regions", async () => {
+    const survey = pages.find((page) => page.slug === "survey");
+    expect(survey).toBeDefined();
+
+    const html = renderToStaticMarkup(await PageTemplate({ page: survey! }));
+    expect(html).toContain("This survey is not accepting online responses.");
+    expect(html).not.toContain('data-builder-region="survey.form"');
   });
 });

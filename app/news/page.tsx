@@ -4,6 +4,7 @@ import { listPublishedPosts } from "../../lib/builder/published-posts";
 import { getBuilderAdminClient } from "../../lib/supabase/admin";
 import { getPageBySlug, siteConfig } from "../data/site";
 import { PageTemplate } from "../ui/PageTemplate";
+import { NewsletterSignupSection } from "../ui/NewsletterSignupSection";
 import { PublishedPostList } from "../ui/PublishedPosts";
 import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
 
@@ -13,7 +14,7 @@ export const revalidate = 0;
 export async function generateMetadata(): Promise<Metadata> {
   const content = await loadBuilderServerContent("/news");
   return {
-    title: builderText(content, "metadata.news.title", "News"),
+    title: builderText(content, "metadata.news.title", "News & Updates"),
     description: builderText(
       content,
       "metadata.news.description",
@@ -28,6 +29,21 @@ export default async function NewsPage() {
   const client = getBuilderAdminClient();
   const posts = client ? await listPublishedPosts(client) : [];
   const content = await loadBuilderServerContent("/news");
+  const newsletterSignup = await NewsletterSignupSection({
+    content,
+    regions: {
+      eyebrow: "news.newsletter.eyebrow",
+      title: "news.newsletter.title",
+      body: "news.newsletter.body",
+      form: "news.newsletter.form"
+    },
+    fallback: {
+      eyebrow: "Email Updates",
+      title: "Get News & Updates by email",
+      body: "Request the District Newsletter and confirm through the email sent to your inbox before the subscription becomes active."
+    },
+    showDedicatedPageLink: true
+  });
 
   return (
     <>
@@ -44,6 +60,7 @@ export default async function NewsPage() {
           <PublishedPostList posts={posts} />
         </div>
       </section>
+      {newsletterSignup}
     </>
   );
 }
