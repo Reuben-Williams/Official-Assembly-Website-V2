@@ -6,9 +6,15 @@ import { Suspense } from "react";
 import "./globals.css";
 import { AppFooter } from "./ui/AppFooter";
 import { AppHeader } from "./ui/AppHeader";
+import { PublicAlertController } from "./ui/PublicAlertController";
 import { siteConfig } from "./data/site";
 import { BuilderContentBridge } from "./builder-content-bridge";
 import { builderText, loadBuilderGlobalContent } from "../lib/builder/server-content";
+import {
+  loadOfficialAssemblyPublicAlerts,
+  resolveLayoutAlertBoundary,
+} from "../lib/builder/alerts";
+import { INTERNAL_PATHNAME_HEADER } from "../lib/public-route";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -36,8 +42,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await headers();
-  const content = await loadBuilderGlobalContent();
+  const incoming = await headers();
+  const [content, alerts] = await Promise.all([
+    loadBuilderGlobalContent(),
+    resolveLayoutAlertBoundary({
+      pathnameHeader: incoming.get(INTERNAL_PATHNAME_HEADER),
+      load: () => loadOfficialAssemblyPublicAlerts(),
+    }),
+  ]);
   return (
     <html lang="en">
       <body className={publicSans.className}>
@@ -51,6 +63,7 @@ export default async function RootLayout({
           {builderText(content, "global.accessibility.skip", "Skip to content")}
         </a>
         <AppHeader content={content} />
+        {alerts.eligible ? <PublicAlertController initialProjection={alerts.projection} /> : null}
         <main id="main">{children}</main>
         <AppFooter content={content} />
         <Suspense fallback={null}>

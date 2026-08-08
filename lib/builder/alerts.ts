@@ -1,9 +1,11 @@
 import "server-only";
 
+import type { PublicAlertProjectionV1 } from "@reuben-williams/content";
 import {
   createAlertManagementRouteHandlers,
   createPublicAlertsRouteHandler,
   createSupabaseAlertServerRepository,
+  loadPublishedAlertsWithRecovery,
   runAlertRecoveryWorkerBatch,
   type AlertRecoveryDigest,
   type AlertRecoveryStore,
@@ -20,6 +22,7 @@ import {
 } from "./authorization";
 import { authenticateBuilderRequest } from "./request-auth";
 import { getBuilderAdminClient } from "../supabase/admin";
+import { isPublicAlertPathname } from "../public-route";
 import {
   alertRecoveryDigest,
   createAlertRecoveryStore,
@@ -28,6 +31,20 @@ import {
 } from "./recovery";
 
 type AuthenticateAlertRequest = (request: Request) => Promise<ActiveBuilderIdentity | null>;
+
+export async function resolveLayoutAlertBoundary(input: {
+  pathnameHeader: string | null | undefined;
+  load: () => Promise<PublicAlertProjectionV1 | null>;
+}) {
+  if (!isPublicAlertPathname(input.pathnameHeader)) {
+    return Object.freeze({ eligible: false as const, projection: null });
+  }
+  try {
+    return Object.freeze({ eligible: true as const, projection: await input.load() });
+  } catch {
+    return Object.freeze({ eligible: true as const, projection: null });
+  }
+}
 
 function secured(response: Response) {
   const headers = new Headers(response.headers);
@@ -123,6 +140,30 @@ export function createOfficialAssemblyAlertHandlers(input: {
 export function createOfficialAssemblyAlertRepository(): AlertServerRepository | null {
   const client = getBuilderAdminClient();
   return client ? createSupabaseAlertServerRepository(client) : null;
+}
+
+export async function loadOfficialAssemblyPublicAlerts(
+  evaluatedAt = new Date(),
+): Promise<PublicAlertProjectionV1 | null> {
+  const repository = createOfficialAssemblyAlertRepository();
+  if (!repository) return null;
+  let recovery: ReturnType<typeof createOfficialAssemblyAlertRecoveryRuntime> | null = null;
+  try {
+    recovery = createOfficialAssemblyAlertRecoveryRuntime();
+  } catch {
+    // Recovery is optional while the authoritative server projection is healthy.
+  }
+  const result = await loadPublishedAlertsWithRecovery({
+    siteKey: BUILDER_SITE_KEY,
+    environment: recovery?.environment ?? "production",
+    evaluatedAt,
+    readAuthoritative: () => repository.readPublishedAlerts(
+      BUILDER_SITE_KEY,
+      evaluatedAt.toISOString(),
+    ),
+    recovery: recovery?.recovery,
+  });
+  return result.projection;
 }
 
 export function createOfficialAssemblyAlertRecoveryRuntime(input: {
