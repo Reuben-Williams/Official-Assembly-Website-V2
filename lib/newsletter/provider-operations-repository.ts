@@ -5,6 +5,13 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { NEWSLETTER_INVENTORY_POLICY_VERSION } from "./provider-inventory";
+import {
+  NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION,
+  createNewsletterHistoryReconciliationDigest,
+  type NewsletterHistoryReconciliationEntry
+} from "./history-reconciliation";
+
+export { createNewsletterHistoryReconciliationDigest };
 
 export const NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES = [
   "billing_ownership",
@@ -171,6 +178,23 @@ export function createNewsletterProviderOperationsRepository(
         providerCreatedAt: input.providerCreatedAt,
         authLastSignInAt: input.authLastSignInAt,
         safeEvidenceDigest: input.safeEvidenceDigest
+      });
+    },
+
+    recordHistoryReconciliation(input: {
+      readonly commandId: string;
+      readonly operatorId: string;
+      readonly safeEvidenceDigest: string;
+      readonly entries: readonly NewsletterHistoryReconciliationEntry[];
+    }) {
+      return rpc("builder_record_newsletter_history_reconciliation_v1", {
+        version: 1,
+        commandId: input.commandId,
+        siteId,
+        operatorId: input.operatorId,
+        policyVersion: NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION,
+        safeEvidenceDigest: input.safeEvidenceDigest,
+        entries: input.entries
       });
     },
 

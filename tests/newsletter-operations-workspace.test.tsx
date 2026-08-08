@@ -64,18 +64,27 @@ describe("newsletter operations workspace", () => {
         activationReady: false,
         mode: "disabled_setup" as const,
         policyVersion: "resend-district-newsletter-v1",
-        categories: [{
-          category: "manual_attestation",
-          status: "blocked" as const,
-          code: "manual_attestation_missing",
-          count: 0
-        }],
-        counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 0, localEligible: 0 }
+        categories: [
+          {
+            category: "manual_attestation",
+            status: "blocked" as const,
+            code: "manual_attestation_missing",
+            count: 0
+          },
+          {
+            category: "transactional_emails",
+            status: "blocked" as const,
+            code: "unmapped_email_history",
+            count: 10
+          }
+        ],
+        counts: { contacts: 0, segmentContacts: 0, suppressions: 0, broadcasts: 0, sentBroadcasts: 0, emails: 10, localEligible: 0 }
       })),
       recordProviderAttestation: vi.fn(async () => ({ state: "recorded" as const })),
       recordAuthSmtpProof: vi.fn(async () => ({ state: "recorded" as const })),
       activateProvider: vi.fn(async () => ({ state: "active" as const })),
       recoverReconciliation: vi.fn(async () => ({ state: "queued" as const })),
+      reconcileProviderHistory: vi.fn(async () => ({ state: "reconciled" as const })),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(async () => ({ state: "open" as const, windowId: "window_1" })),
       validate: vi.fn()
@@ -110,6 +119,15 @@ describe("newsletter operations workspace", () => {
     expect(host.textContent).toContain("manual attestation missing");
     expect(host.textContent).not.toContain("resourceIdentityDigest");
 
+    const reconciliationButton = Array.from(host.querySelectorAll("button"))
+      .find((button) => button.textContent === "Reconcile verified history")!;
+    expect(reconciliationButton.disabled).toBe(false);
+    await act(async () => reconciliationButton.click());
+    await settle();
+    expect(client.reconcileProviderHistory).toHaveBeenCalledWith(
+      expect.stringMatching(/^[0-9a-f-]{36}$/)
+    );
+
     const attestationButton = Array.from(host.querySelectorAll("button"))
       .find((button) => button.textContent === "Confirm dashboard review")!;
     await act(async () => attestationButton.click());
@@ -135,6 +153,7 @@ describe("newsletter operations workspace", () => {
       recordAuthSmtpProof: vi.fn(),
       activateProvider: vi.fn(),
       recoverReconciliation: vi.fn(),
+      reconcileProviderHistory: vi.fn(),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(),
       validate: vi.fn()

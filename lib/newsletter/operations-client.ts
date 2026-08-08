@@ -69,6 +69,7 @@ export interface NewsletterOperationsClient {
     phase: "replacement_login" | "post_revocation_login"
   ): Promise<Record<string, unknown>>;
   activateProvider(commandId: string): Promise<Record<string, unknown>>;
+  reconcileProviderHistory(commandId: string): Promise<Record<string, unknown>>;
   recoverReconciliation(commandId: string, reason: string): Promise<Record<string, unknown>>;
   activationCheck(broadcastId: string): Promise<Record<string, unknown>>;
   openStaffTestWindow(broadcastId: string, commandId: string): Promise<Record<string, unknown>>;
@@ -231,6 +232,10 @@ export function createNewsletterOperationsClient(
       "auth-smtp-proof", { commandId, phase }
     ),
     activateProvider: (commandId) => mutation("provider-activation", { commandId }),
+    async reconcileProviderHistory(commandId) {
+      await mutation("history-reconciliation", { commandId, mode: "dry_run" });
+      return mutation("history-reconciliation", { commandId, mode: "apply" });
+    },
     recoverReconciliation: (commandId, reason) => mutation(
       "recovery", { commandId, reason }
     ),

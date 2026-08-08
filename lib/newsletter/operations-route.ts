@@ -4,6 +4,7 @@ import { authenticateBuilderRequest } from "../builder/request-auth";
 import {
   readNewsletterConfiguration
 } from "./config";
+import { NewsletterHistoryReconciliationError } from "./history-reconciliation";
 import { authorizeNewsletterStaffRequest, NewsletterStaffAuthorizationError } from "./staff-authorization";
 
 export async function authorizeNewsletterOperation(
@@ -59,6 +60,12 @@ export function newsletterOperationError(error: unknown) {
   if (error instanceof NewsletterStaffAuthorizationError) {
     return Response.json({ error: { code: error.code } }, {
       status: error.status,
+      headers: { "cache-control": "no-store" }
+    });
+  }
+  if (error instanceof NewsletterHistoryReconciliationError) {
+    return Response.json({ error: { code: error.code } }, {
+      status: 409,
       headers: { "cache-control": "no-store" }
     });
   }

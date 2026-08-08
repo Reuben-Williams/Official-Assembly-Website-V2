@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createNewsletterAuthSmtpProofDigest,
+  createNewsletterHistoryReconciliationDigest,
   createNewsletterProviderAttestationDigest,
   createNewsletterProviderOperationsRepository,
   NEWSLETTER_PROVIDER_ATTESTATION_CATEGORIES
@@ -64,6 +65,17 @@ describe("newsletter provider operations repository", () => {
       authLastSignInAt: "2026-08-07T18:01:00.000Z",
       safeEvidenceDigest: "c".repeat(64)
     });
+    await repository.recordHistoryReconciliation({
+      commandId: "34000000-0000-4000-8000-000000000014",
+      operatorId,
+      safeEvidenceDigest: "d".repeat(64),
+      entries: [{
+        providerMessageId: "history-message-1",
+        classification: "auth_smtp_magic_link",
+        providerStatus: "delivered",
+        providerCreatedAt: "2026-08-07T17:00:00.000Z"
+      }]
+    });
 
     expect(rpc).toHaveBeenNthCalledWith(1,
       "builder_record_newsletter_inventory_attestation_v1",
@@ -92,6 +104,19 @@ describe("newsletter provider operations repository", () => {
         providerMessageId: "auth-message-1"
       }) }
     );
+    expect(rpc).toHaveBeenNthCalledWith(4,
+      "builder_record_newsletter_history_reconciliation_v1",
+      { p_request: expect.objectContaining({
+        siteId,
+        operatorId,
+        policyVersion: "resend-initial-history-v1",
+        safeEvidenceDigest: "d".repeat(64),
+        entries: [expect.objectContaining({
+          providerMessageId: "history-message-1",
+          classification: "auth_smtp_magic_link"
+        })]
+      }) }
+    );
   });
 
   it("derives secret-safe Auth SMTP evidence without an address or message body", () => {
@@ -106,6 +131,21 @@ describe("newsletter provider operations repository", () => {
     const first = createNewsletterAuthSmtpProofDigest(input);
     const second = createNewsletterAuthSmtpProofDigest(input);
     expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(first).not.toContain("example.com");
+  });
+
+  it("derives immutable history evidence from metadata only", () => {
+    const first = createNewsletterHistoryReconciliationDigest({
+      siteId,
+      operatorId,
+      entries: [{
+        providerMessageId: "history-message-1",
+        classification: "unattributed_failed_setup_test",
+        providerStatus: "failed",
+        providerCreatedAt: "2026-08-06T14:00:00.000Z"
+      }]
+    });
     expect(first).toMatch(/^[a-f0-9]{64}$/);
     expect(first).not.toContain("example.com");
   });

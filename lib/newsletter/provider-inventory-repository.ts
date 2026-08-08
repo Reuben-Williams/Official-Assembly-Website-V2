@@ -39,6 +39,25 @@ function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+export function collectAllowedNewsletterProviderMessageIds(input: {
+  readonly confirmationJobs: readonly Record<string, unknown>[];
+  readonly staffTests: readonly Record<string, unknown>[];
+  readonly authSmtpProofs: readonly Record<string, unknown>[];
+  readonly historyReconciliations: readonly Record<string, unknown>[];
+  readonly receipts: readonly Record<string, unknown>[];
+  readonly allowedSentBroadcastIds: ReadonlySet<string>;
+}) {
+  return new Set([
+    ...input.confirmationJobs.map((row) => text(row.provider_message_id)),
+    ...input.staffTests.map((row) => text(row.provider_message_id)),
+    ...input.authSmtpProofs.map((row) => text(row.provider_message_id)),
+    ...input.historyReconciliations.map((row) => text(row.provider_message_id)),
+    ...input.receipts
+      .filter((row) => input.allowedSentBroadcastIds.has(text(row.provider_broadcast_id)))
+      .map((row) => text(row.provider_message_id))
+  ].filter(Boolean));
+}
+
 export function createNewsletterProviderInventoryEvidenceRepository(
   client: SupabaseClient,
   siteId: string
@@ -123,6 +142,13 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .eq("site_id", siteId)
         .order("created_at", { ascending: true })
         .range(from, to));
+      const historyReconciliations = await allRows((from, to) => client
+        .from("builder_newsletter_provider_history_reconciliations")
+        .select("provider_message_id")
+        .eq("site_id", siteId)
+        .eq("policy_version", "resend-initial-history-v1")
+        .order("created_at", { ascending: true })
+        .range(from, to));
 
       const attestation = await client
         .from("builder_newsletter_provider_inventory_attestations")
@@ -166,14 +192,14 @@ export function createNewsletterProviderInventoryEvidenceRepository(
           .map((row) => text(row.provider_broadcast_id))
           .filter((id) => id && !unresolvedIncidentBroadcastIds.has(id))
       );
-      const allowedProviderMessageIds = new Set([
-        ...confirmationJobs.map((row) => text(row.provider_message_id)),
-        ...staffTests.map((row) => text(row.provider_message_id)),
-        ...authSmtpProofs.map((row) => text(row.provider_message_id)),
-        ...receipts
-          .filter((row) => allowedSentBroadcastIds.has(text(row.provider_broadcast_id)))
-          .map((row) => text(row.provider_message_id))
-      ].filter(Boolean));
+      const allowedProviderMessageIds = collectAllowedNewsletterProviderMessageIds({
+        confirmationJobs,
+        staffTests,
+        authSmtpProofs,
+        historyReconciliations,
+        receipts,
+        allowedSentBroadcastIds
+      });
 
       const categories = new Set(
         Array.isArray(attestation.data?.categories)

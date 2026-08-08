@@ -112,6 +112,25 @@ export function NewsletterOperationsWorkspace({
     }
   }
 
+  async function runProviderHistoryReconciliation() {
+    setBusy("history-reconciliation");
+    setError("");
+    setNotice("");
+    try {
+      await operations.reconcileProviderHistory(crypto.randomUUID());
+      const nextInventory = await operations.providerInventory();
+      setInventory(nextInventory);
+      setNotice(nextInventory.state === "ready"
+        ? "The approved provider history was reconciled and the inventory is ready. No email was sent."
+        : "The approved provider history was reconciled. Other readiness items still require review. No email was sent.");
+      await refresh();
+    } catch {
+      setError("The approved provider history could not be reconciled. No records were changed and no email was sent.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   function readableCode(value: string) {
     return value.replaceAll("_", " ");
   }
@@ -120,6 +139,13 @@ export function NewsletterOperationsWorkspace({
   const hasIncident = (status?.openIncidents ?? 0) > 0;
   const circuitOpen = status?.reconciliationCircuit.state === "open";
   const canValidate = Boolean(status?.confirmedTest) && !hasIncident && normalizedBroadcastId.length >= 3;
+  const canReconcileHistory = inventory?.counts.emails === 10
+    && inventory.categories.some((item) =>
+      item.category === "transactional_emails"
+      && item.status === "blocked"
+      && item.code === "unmapped_email_history"
+      && item.count === 10
+    );
 
   return (
     <section className="newsletter-operations" data-newsletter-operations-workspace>
@@ -222,6 +248,13 @@ export function NewsletterOperationsWorkspace({
               )}
               type="button"
             >{busy === "provider-activation" ? "Activating boundary…" : "Activate provider boundary"}</button>
+            <button
+              disabled={Boolean(busy) || !canReconcileHistory}
+              onClick={() => void runProviderHistoryReconciliation()}
+              type="button"
+            >{busy === "history-reconciliation"
+              ? "Reconciling verified history…"
+              : "Reconcile verified history"}</button>
           </div>
           {inventory ? (
             <div className="newsletter-inventory-results" aria-label="Provider inventory results">
