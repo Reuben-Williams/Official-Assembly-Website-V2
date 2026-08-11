@@ -50,4 +50,13 @@ describe("root layout alert boundary", () => {
     expect(main).toBeGreaterThan(alerts);
     expect(layout).toContain("alerts.eligible ? <PublicAlertController");
   });
+
+  it("defines contained single-line ticker styles with a reduced-motion fail-safe", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/ui/public-alert-controller.module.css"), "utf8")
+      .replace(/\s+/g, " ");
+
+    expect(css).toMatch(/\.scrollTrack\s*{[^}]*width:\s*max-content;[^}]*white-space:\s*nowrap/);
+    expect(css).toMatch(/@keyframes\s+alert-scroll/);
+    expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none/);
+  });
 });

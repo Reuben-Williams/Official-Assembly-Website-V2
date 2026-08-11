@@ -43,16 +43,16 @@ describe("vendored platform migration history", () => {
     );
 
     expect(stderr).toBe("");
-    expect(stdout).toBe("Verified 29 approved platform migrations.\n");
+    expect(stdout).toBe("Verified 30 approved platform migrations.\n");
   });
 
   it("adopts the exact alert migration and rejects any byte difference", async () => {
     const directory = await platformFixture();
-    const relativePath = "migrations/20260808092616_versioned_site_alerts.sql";
+    const relativePath = "migrations/20260811222019_alert_scroll_mode.sql";
     const migrationPath = path.join(directory, "supabase", relativePath);
 
     await expect(verifyPlatformMigrationChecksums(directory)).resolves.toMatchObject({
-      checked: 29,
+      checked: 30,
       valid: true,
     });
 

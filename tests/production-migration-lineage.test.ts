@@ -47,12 +47,12 @@ describe("production migration lineage", () => {
 
     expect(stderr).toBe("");
     expect(stdout).toBe(
-      "Verified 20 production migrations and 12 approved pending migrations.\n"
+      "Verified 20 production migrations and 13 approved pending migrations.\n"
     );
   });
 
   it("fails closed when the canonical alert migration is missing or changed", async () => {
-    const alertFilename = "20260808092616_versioned_site_alerts.sql";
+    const alertFilename = "20260811222019_alert_scroll_mode.sql";
     const missingDirectory = await productionFixture();
     await unlink(path.join(missingDirectory, "supabase", "migrations", alertFilename));
     await expect(verifyProductionMigrationLineage(missingDirectory)).rejects.toThrow(
