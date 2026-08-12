@@ -39,6 +39,7 @@ describe("newsletter owner-login reconciliation handler", () => {
       siteId: "a3f57b25-df25-4d98-9ff6-a4a3f3a00a68",
       provider: provider(),
       data: {
+        hasEvidence: vi.fn(async () => false),
         ownerEmail: vi.fn(async () => "owner@example.com"),
         excludedProviderMessageIds: vi.fn(async () => new Set<string>()),
         recordEvidence
@@ -66,6 +67,7 @@ describe("newsletter owner-login reconciliation handler", () => {
       siteId: "a3f57b25-df25-4d98-9ff6-a4a3f3a00a68",
       provider: provider({ to: ["other@example.com"] }),
       data: {
+        hasEvidence: vi.fn(async () => false),
         ownerEmail: vi.fn(async () => "owner@example.com"),
         excludedProviderMessageIds: vi.fn(async () => new Set<string>()),
         recordEvidence
@@ -80,14 +82,17 @@ describe("newsletter owner-login reconciliation handler", () => {
     expect(recordEvidence).not.toHaveBeenCalled();
   });
 
-  it("completes an idempotent database replay without another mutation", async () => {
+  it("completes a previously evidenced occurrence without another provider read", async () => {
+    const emailProvider = provider();
+    const recordEvidence = vi.fn();
     const handler = createNewsletterOwnerLoginReconciliationHandler({
       siteId: "a3f57b25-df25-4d98-9ff6-a4a3f3a00a68",
-      provider: provider(),
+      provider: emailProvider,
       data: {
+        hasEvidence: vi.fn(async () => true),
         ownerEmail: vi.fn(async () => "owner@example.com"),
         excludedProviderMessageIds: vi.fn(async () => new Set<string>()),
-        recordEvidence: vi.fn(async () => ({ status: "already_recorded" as const }))
+        recordEvidence
       }
     });
 
@@ -95,5 +100,7 @@ describe("newsletter owner-login reconciliation handler", () => {
       code: "owner_login_evidence_recorded",
       alreadyCompleted: false
     });
+    expect(emailProvider.listEmails).not.toHaveBeenCalled();
+    expect(recordEvidence).not.toHaveBeenCalled();
   });
 });

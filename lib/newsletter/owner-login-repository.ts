@@ -41,6 +41,14 @@ export function createSupabaseNewsletterOwnerLoginData(
   }): Promise<{ readonly status: "queued"; readonly queuedCount: number }>;
 } {
   return {
+    async hasEvidence(occurrenceId) {
+      const result = await client.from("builder_newsletter_auth_login_evidence")
+        .select("id").eq("site_id", siteId).eq("occurrence_id", occurrenceId)
+        .limit(1).maybeSingle();
+      if (result.error) throw new Error("owner login evidence unavailable");
+      return Boolean(result.data?.id);
+    },
+
     async ownerEmail(operatorId) {
       const result = await client.auth.admin.getUserById(operatorId);
       const email = result.data.user?.email?.trim().toLowerCase();

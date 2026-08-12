@@ -11,6 +11,7 @@ import type { NewsletterClaimedJob } from "./worker";
 import { NewsletterJobFailure } from "./worker";
 
 export interface NewsletterOwnerLoginReconciliationData {
+  hasEvidence(occurrenceId: string): Promise<boolean>;
   ownerEmail(operatorId: string): Promise<string>;
   excludedProviderMessageIds(): Promise<ReadonlySet<string>>;
   recordEvidence(input: {
@@ -41,6 +42,9 @@ export function createNewsletterOwnerLoginReconciliationHandler(input: {
     }
 
     try {
+      if (await input.data.hasEvidence(job.occurrenceId)) {
+        return { code: "owner_login_evidence_recorded", alreadyCompleted: false };
+      }
       const [ownerEmail, excludedProviderMessageIds, emails] = await Promise.all([
         input.data.ownerEmail(job.operatorId),
         input.data.excludedProviderMessageIds(),
