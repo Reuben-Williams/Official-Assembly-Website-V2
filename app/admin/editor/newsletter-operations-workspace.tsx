@@ -300,7 +300,7 @@ export function NewsletterOperationsWorkspace({
               )}
               type="button"
             >{busy === "auth-smtp-replacement"
-              ? "Verifying replacement loginâ€¦"
+              ? "Verifying replacement login\u2026"
               : "Record replacement login proof"}</button>
             <button
               disabled={Boolean(busy) || !status.authSmtpProofs.replacementLogin || status.authSmtpProofs.postRevocationLogin}
@@ -314,7 +314,7 @@ export function NewsletterOperationsWorkspace({
               )}
               type="button"
             >{busy === "auth-smtp-post-revocation"
-              ? "Verifying post-revocation loginâ€¦"
+              ? "Verifying post-revocation login\u2026"
               : "Record post-revocation login proof"}</button>
             <button
               disabled={Boolean(busy)}

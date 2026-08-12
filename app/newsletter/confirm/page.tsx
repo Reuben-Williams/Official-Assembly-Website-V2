@@ -15,8 +15,8 @@ export default async function NewsletterConfirmationPage() {
   return (
     <section className="page-shell section-block" aria-labelledby="newsletter-confirmation-title">
       <div className="content-card">
-        <p className="eyebrow">{locale === "es" ? "BoletÃ­n del distrito" : "District Newsletter"}</p>
-        <h1 id="newsletter-confirmation-title">{locale === "es" ? "Confirme su suscripciÃ³n" : "Confirm your subscription"}</h1>
+        <p className="eyebrow">{locale === "es" ? "Bolet\u00edn del distrito" : "District Newsletter"}</p>
+        <h1 id="newsletter-confirmation-title">{locale === "es" ? "Confirme su suscripci\u00f3n" : "Confirm your subscription"}</h1>
         <NewsletterConfirmationClient locale={locale} />
       </div>
     </section>

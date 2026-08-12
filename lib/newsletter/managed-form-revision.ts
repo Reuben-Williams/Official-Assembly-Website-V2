@@ -15,10 +15,10 @@ export const APPROVED_NEWSLETTER_SUCCESS_COPY =
   "Check your inbox to continue. Your request is pending, and you are not subscribed unless you complete the confirmation step.";
 
 export const APPROVED_NEWSLETTER_CONSENT_LABEL_ES =
-  "Acepto recibir correos del BoletÃ­n del distrito de la Oficina de la AsambleÃ­sta Carmen Morales. Entiendo que enviar este formulario crea una solicitud de confirmaciÃ³n, que no estarÃ© suscrito hasta confirmar por correo electrÃ³nico y que puedo cancelar la suscripciÃ³n en cualquier momento.";
+  "Acepto recibir correos del Bolet\u00edn del distrito de la Oficina de la Asamble\u00edsta Carmen Morales. Entiendo que enviar este formulario crea una solicitud de confirmaci\u00f3n, que no estar\u00e9 suscrito hasta confirmar por correo electr\u00f3nico y que puedo cancelar la suscripci\u00f3n en cualquier momento.";
 
 export const APPROVED_NEWSLETTER_SUCCESS_COPY_ES =
-  "Revise su bandeja de entrada para continuar. Su solicitud estÃ¡ pendiente y no estarÃ¡ suscrito a menos que complete el paso de confirmaciÃ³n.";
+  "Revise su bandeja de entrada para continuar. Su solicitud est\u00e1 pendiente y no estar\u00e1 suscrito a menos que complete el paso de confirmaci\u00f3n.";
 
 export function approvedNewsletterConsentLabel(locale: PublicLocale) {
   return locale === "es" ? APPROVED_NEWSLETTER_CONSENT_LABEL_ES : APPROVED_NEWSLETTER_CONSENT_LABEL;
