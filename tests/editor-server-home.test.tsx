@@ -13,6 +13,7 @@ vi.mock("../lib/builder/server-content", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
   return { ...actual, loadBuilderServerContent: vi.fn(async () => published) };
 });
+vi.mock("../app/i18n/server", () => ({ readPublicLocale: vi.fn(async () => "en") }));
 
 import HomePage from "../app/page";
 import { pages } from "../app/data/site";
