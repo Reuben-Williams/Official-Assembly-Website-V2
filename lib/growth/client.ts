@@ -54,6 +54,22 @@ type OperationEnvelope = {
   code?: string;
 };
 
+export class GrowthClientError extends Error {
+  constructor(
+    readonly code: string,
+    readonly status: number,
+    message: string
+  ) {
+    super(message);
+    this.name = "GrowthClientError";
+  }
+}
+
+type LiveGrowthClientOptions = {
+  getCsrfToken?: () => string | null;
+  onAuthenticationRequired?: () => void;
+};
+
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -72,24 +88,36 @@ function bool(value: unknown): boolean {
   return value === true;
 }
 
-async function post<T>(path: string, body: Record<string, unknown>, idempotencyKey?: string): Promise<T> {
+async function post<T>(
+  path: string,
+  body: Record<string, unknown>,
+  options: LiveGrowthClientOptions,
+  idempotencyKey?: string
+): Promise<T> {
+  const csrfToken = idempotencyKey ? options.getCsrfToken?.() : null;
   const response = await fetch(`/api/growth/${path}`, {
     method: "POST",
     credentials: "same-origin",
     cache: "no-store",
     headers: {
       "content-type": "application/json",
-      ...(idempotencyKey ? { "x-idempotency-key": idempotencyKey } : {})
+      ...(idempotencyKey ? { "x-idempotency-key": idempotencyKey } : {}),
+      ...(csrfToken ? { "x-builder-csrf": csrfToken } : {})
     },
     body: JSON.stringify(body)
   });
   const payload = await response.json().catch(() => null) as unknown;
-  if (!response.ok) throw new Error(text(object(object(payload).error).code, "GROWTH_UNAVAILABLE"));
+  if (!response.ok) {
+    const failure = object(object(payload).error);
+    const code = text(failure.code, "GROWTH_UNAVAILABLE");
+    if (response.status === 401) options.onAuthenticationRequired?.();
+    throw new GrowthClientError(code, response.status, text(failure.message, code));
+  }
   return payload as T;
 }
 
-async function query<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const projection = await post<Projection<T>>(path, body);
+async function query<T>(path: string, body: Record<string, unknown>, options: LiveGrowthClientOptions): Promise<T> {
+  const projection = await post<Projection<T>>(path, body, options);
   if (projection.status === "restricted" || projection.status === "not_found") {
     throw new Error("GROWTH_ACCESS_RESTRICTED");
   }
@@ -208,7 +236,9 @@ function mapLeadDetail(value: Record<string, unknown>) {
       relatedType: "lead" as const,
       relatedId: text(lead.id),
       title: text(task.title),
-      status: (text(task.state, "open") === "in_progress" ? "assigned" : text(task.state, "open")) as "open" | "assigned" | "completed" | "cancelled",
+      status: (["open", "in_progress", "completed", "cancelled"].includes(text(task.state))
+        ? text(task.state)
+        : "open") as "open" | "in_progress" | "completed" | "cancelled",
       priority: text(task.priority, "normal") as "low" | "normal" | "high" | "urgent",
       ...(task.assigneeId ? { assigneeId: text(task.assigneeId) } : {}),
       ...(task.dueAt ? { dueAt: text(task.dueAt) } : {}),
@@ -394,7 +424,16 @@ function mapSubmissionDetail(value: Record<string, unknown>): BaseSubmissionDeta
   };
 }
 
-export function createLiveGrowthClient(siteId: string) {
+export function createLiveGrowthClient(siteId: string, input: LiveGrowthClientOptions = {}) {
+  let authenticationRequired = false;
+  const options: LiveGrowthClientOptions = {
+    ...input,
+    onAuthenticationRequired: () => {
+      if (authenticationRequired) return;
+      authenticationRequired = true;
+      input.onAuthenticationRequired?.();
+    }
+  };
   const leadsApi: LeadWorkspaceApi = {
     externalEffects: false,
     list: async (input) => mapLeadPage(await query<LeadReadPage>("queries/leads", {
@@ -404,30 +443,30 @@ export function createLiveGrowthClient(siteId: string) {
       ...(input.direction ? { direction: input.direction } : {}),
       limit: input.limit,
       ...(input.cursor ? { cursor: input.cursor } : {})
-    })),
+    }, options)),
     get: async (leadId) => {
-      try { return mapLeadDetail(await query<Record<string, unknown>>(`queries/leads/${leadId}`, {})); }
+      try { return mapLeadDetail(await query<Record<string, unknown>>(`queries/leads/${leadId}`, {}, options)); }
       catch { return null; }
     },
     createManual: async (input) => {
       const key = idempotencyKey();
-      return leadMutation(await post<OperationEnvelope>("operations/leads/manual", { idempotencyKey: key, ...input }, key));
+      return leadMutation(await post<OperationEnvelope>("operations/leads/manual", { idempotencyKey: key, ...input }, options, key));
     },
     changeStatus: async ({ leadId, ...input }) => {
       const key = idempotencyKey();
-      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/status`, { idempotencyKey: key, ...input }, key));
+      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/status`, { idempotencyKey: key, ...input }, options, key));
     },
     setPriority: async ({ leadId, ...input }) => {
       const key = idempotencyKey();
-      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/priority`, { idempotencyKey: key, ...input }, key));
+      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/priority`, { idempotencyKey: key, ...input }, options, key));
     },
     assign: async ({ leadId, ...input }) => {
       const key = idempotencyKey();
-      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/assignment`, { idempotencyKey: key, ...input }, key));
+      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/assignment`, { idempotencyKey: key, ...input }, options, key));
     },
     addNote: async ({ leadId, ...input }) => {
       const key = idempotencyKey();
-      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/note`, { idempotencyKey: key, ...input }, key));
+      return leadMutation(await post<OperationEnvelope>(`operations/leads/${leadId}/note`, { idempotencyKey: key, ...input }, options, key));
     },
     bulkStatus: async ({ records }) => ({ requestedCount: records.length, results: records.map((record) => ({ leadId: record.leadId, status: "denied" as const, reason: "not_authorized" as const })) }),
     bulkAssign: async ({ records }) => ({ requestedCount: records.length, results: records.map((record) => ({ leadId: record.leadId, status: "denied" as const, reason: "not_authorized" as const })) }),
@@ -444,14 +483,14 @@ export function createLiveGrowthClient(siteId: string) {
       direction: "desc",
       limit: 50,
       ...(input.cursor ? { cursor: input.cursor } : {})
-    })),
+    }, options)),
     get: async (customerId) => {
-      try { return mapCustomerDetail(await query<Record<string, unknown>>(`queries/customers/${customerId}`, {})); }
+      try { return mapCustomerDetail(await query<Record<string, unknown>>(`queries/customers/${customerId}`, {}, options)); }
       catch { return null; }
     },
     updateProfile: async ({ customerId, ...input }) => {
       const key = idempotencyKey();
-      return customerCommand(await post<OperationEnvelope>(`operations/customers/${customerId}/profile`, { idempotencyKey: key, ...input }, key));
+      return customerCommand(await post<OperationEnvelope>(`operations/customers/${customerId}/profile`, { idempotencyKey: key, ...input }, options, key));
     },
     reviewMerge: async () => ({ status: "denied", message: "Merge review is not available in this release." }),
     executeMerge: async () => ({ status: "denied", message: "Merge execution is not available in this release." }),
@@ -475,7 +514,7 @@ export function createLiveGrowthClient(siteId: string) {
         ...(resultCodes ? { resultCodes } : {}),
         limit: input.limit ?? 25,
         ...(input.cursor ? { cursor: input.cursor } : {})
-      });
+      }, options);
       const items = page.items.map(mapSubmissionSummary);
       return {
         items,
@@ -483,15 +522,15 @@ export function createLiveGrowthClient(siteId: string) {
         ...(page.nextCursor ? { nextCursor: page.nextCursor } : {})
       };
     },
-    detail: async (submissionId) => mapSubmissionDetail(await query<Record<string, unknown>>(`queries/submissions/${submissionId}`, {})),
+    detail: async (submissionId) => mapSubmissionDetail(await query<Record<string, unknown>>(`queries/submissions/${submissionId}`, {}, options)),
     markSpam: async ({ submissionId, expectedVersion }) => {
       const key = idempotencyKey();
-      const result = await post<OperationEnvelope>(`operations/submissions/${submissionId}/spam`, { idempotencyKey: key, expectedVersion, reason: "staff_review" }, key);
+      const result = await post<OperationEnvelope>(`operations/submissions/${submissionId}/spam`, { idempotencyKey: key, expectedVersion, reason: "staff_review" }, options, key);
       return result.result === "applied" ? { status: "applied", version: result.version ?? expectedVersion + 1 } : { status: "denied", reason: "not_authorized" };
     },
     restore: async ({ submissionId, expectedVersion }) => {
       const key = idempotencyKey();
-      const result = await post<OperationEnvelope>(`operations/submissions/${submissionId}/restore`, { idempotencyKey: key, expectedVersion }, key);
+      const result = await post<OperationEnvelope>(`operations/submissions/${submissionId}/restore`, { idempotencyKey: key, expectedVersion }, options, key);
       return result.result === "applied" ? { status: "applied", version: result.version ?? expectedVersion + 1 } : { status: "denied", reason: "not_authorized" };
     },
     requestExport: async () => ({ status: "denied", reason: "Recent identity verification is required." })
@@ -502,7 +541,7 @@ export function createLiveGrowthClient(siteId: string) {
     leadsApi,
     customersApi,
     submissionsApi,
-    dashboard: async () => mapDashboard(await query<DashboardReadProjection>("queries/dashboard", {}), siteId)
+    dashboard: async () => mapDashboard(await query<DashboardReadProjection>("queries/dashboard", {}, options), siteId)
   };
 }
 

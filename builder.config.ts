@@ -89,21 +89,6 @@ export default {
       "label": "Template feature introduction"
     },
     {
-      "id": "global.template.form-eyebrow",
-      "kind": "text",
-      "label": "Form eyebrow"
-    },
-    {
-      "id": "global.template.form-title",
-      "kind": "text",
-      "label": "Form title"
-    },
-    {
-      "id": "global.template.form-body",
-      "kind": "text",
-      "label": "Form introduction"
-    },
-    {
       "id": "global.template.supporting-caption",
       "kind": "text",
       "label": "Supporting media caption"
@@ -405,6 +390,16 @@ export default {
           "label": "home secondary call to action"
         },
         {
+          "id": "home.hero.news-cta",
+          "kind": "link",
+          "label": "home news call to action"
+        },
+        {
+          "id": "home.hero.newsletter-cta",
+          "kind": "link",
+          "label": "home newsletter call to action"
+        },
+        {
           "id": "home.features.eyebrow",
           "kind": "text",
           "label": "home feature eyebrow"
@@ -523,6 +518,66 @@ export default {
           "id": "home.portal.cards",
           "kind": "sections",
           "label": "Portal cards"
+        },
+        {
+          "id": "home.official.eyebrow",
+          "kind": "text",
+          "label": "Official profile eyebrow"
+        },
+        {
+          "id": "home.official.title",
+          "kind": "text",
+          "label": "Official profile title"
+        },
+        {
+          "id": "home.official.body",
+          "kind": "text",
+          "label": "Official profile introduction"
+        },
+        {
+          "id": "home.connections.eyebrow",
+          "kind": "text",
+          "label": "District connections eyebrow"
+        },
+        {
+          "id": "home.connections.title",
+          "kind": "text",
+          "label": "District connections title"
+        },
+        {
+          "id": "home.connections.body",
+          "kind": "text",
+          "label": "District connections introduction"
+        },
+        {
+          "id": "home.connections.newsletter.eyebrow",
+          "kind": "text",
+          "label": "Homepage newsletter eyebrow"
+        },
+        {
+          "id": "home.connections.newsletter.title",
+          "kind": "text",
+          "label": "Homepage newsletter title"
+        },
+        {
+          "id": "home.connections.newsletter.body",
+          "kind": "text",
+          "label": "Homepage newsletter introduction"
+        },
+        {
+          "id": "home.connections.newsletter.form",
+          "kind": "sections",
+          "label": "Homepage managed newsletter form"
+        },
+        {
+          "id": "home.latest.eyebrow",
+          "kind": "text",
+          "label": "Latest updates eyebrow"
+        },
+        {
+          "id": "home.latest.title",
+          "kind": "text",
+          "label": "Latest updates title"
         },
         {
           "id": "home.workflow.eyebrow",
@@ -790,7 +845,7 @@ export default {
     },
     {
       "path": "/news",
-      "label": "News",
+      "label": "News & Updates",
       "regions": [
         {
           "id": "news.sections",
@@ -886,6 +941,26 @@ export default {
           "id": "news.cards.district-events.link",
           "kind": "link",
           "label": "district-events link"
+        },
+        {
+          "id": "news.newsletter.eyebrow",
+          "kind": "text",
+          "label": "newsletter signup eyebrow"
+        },
+        {
+          "id": "news.newsletter.title",
+          "kind": "text",
+          "label": "newsletter signup title"
+        },
+        {
+          "id": "news.newsletter.body",
+          "kind": "text",
+          "label": "newsletter signup introduction"
+        },
+        {
+          "id": "news.newsletter.form",
+          "kind": "sections",
+          "label": "newsletter managed form"
         }
       ]
     },
@@ -1191,6 +1266,21 @@ export default {
           "label": "community-requests link"
         },
         {
+          "id": "contact.form.eyebrow",
+          "kind": "text",
+          "label": "contact form eyebrow"
+        },
+        {
+          "id": "contact.form.title",
+          "kind": "text",
+          "label": "contact form title"
+        },
+        {
+          "id": "contact.form.body",
+          "kind": "text",
+          "label": "contact form introduction"
+        },
+        {
           "id": "contact.form",
           "kind": "sections",
           "label": "contact managed form"
@@ -1199,7 +1289,7 @@ export default {
     },
     {
       "path": "/newsletter",
-      "label": "Newsletter",
+      "label": "Newsletter signup",
       "regions": [
         {
           "id": "newsletter.sections",
@@ -1280,6 +1370,21 @@ export default {
           "id": "newsletter.cards.subscriber-preferences.link",
           "kind": "link",
           "label": "subscriber-preferences link"
+        },
+        {
+          "id": "newsletter.form.eyebrow",
+          "kind": "text",
+          "label": "newsletter form eyebrow"
+        },
+        {
+          "id": "newsletter.form.title",
+          "kind": "text",
+          "label": "newsletter form title"
+        },
+        {
+          "id": "newsletter.form.body",
+          "kind": "text",
+          "label": "newsletter form introduction"
         },
         {
           "id": "newsletter.form",
@@ -1371,6 +1476,21 @@ export default {
           "id": "survey.cards.neighborhood-context.link",
           "kind": "link",
           "label": "neighborhood-context link"
+        },
+        {
+          "id": "survey.form.eyebrow",
+          "kind": "text",
+          "label": "survey form eyebrow"
+        },
+        {
+          "id": "survey.form.title",
+          "kind": "text",
+          "label": "survey form title"
+        },
+        {
+          "id": "survey.form.body",
+          "kind": "text",
+          "label": "survey form introduction"
         }
       ]
     },
@@ -1457,6 +1577,42 @@ export default {
           "id": "social.cards.local-photos.link",
           "kind": "link",
           "label": "local-photos link"
+        }
+      ]
+    },
+    {
+      "path": "/404",
+      "label": "404 - Page not found",
+      "regions": [
+        {
+          "id": "404.hero.eyebrow",
+          "kind": "text",
+          "label": "404 eyebrow"
+        },
+        {
+          "id": "404.hero.title",
+          "kind": "text",
+          "label": "404 title"
+        },
+        {
+          "id": "404.hero.body",
+          "kind": "text",
+          "label": "404 description"
+        },
+        {
+          "id": "404.hero.image",
+          "kind": "image",
+          "label": "404 image"
+        },
+        {
+          "id": "404.hero.primary-cta",
+          "kind": "link",
+          "label": "404 primary link"
+        },
+        {
+          "id": "404.hero.secondary-cta",
+          "kind": "link",
+          "label": "404 secondary link"
         }
       ]
     }

@@ -23,6 +23,11 @@ describe("site data", () => {
     ]);
   });
 
+  it("labels the combined public hub without renaming the dedicated Newsletter route", () => {
+    expect(pages.find((page) => page.slug === "news")?.navLabel).toBe("News & Updates");
+    expect(pages.find((page) => page.slug === "newsletter")?.navLabel).toBe("Newsletter");
+  });
+
   it("uses local project images instead of generated placeholder URLs", () => {
     for (const asset of imageAssets) {
       expect(asset.src).toMatch(/^\/images\//);
@@ -37,5 +42,13 @@ describe("site data", () => {
     for (const blockedTerm of ["github", "vercel", "supabase", "demo"]) {
       expect(publicCopy).not.toContain(blockedTerm);
     }
+  });
+
+  it("describes newsletter double opt-in without claiming a submission is subscribed", () => {
+    const newsletter = pages.find((page) => page.slug === "newsletter");
+    const copy = JSON.stringify(newsletter);
+    expect(copy).toContain("confirmation request");
+    expect(copy).toContain("not an active subscription");
+    expect(copy).not.toContain("will be available after");
   });
 });

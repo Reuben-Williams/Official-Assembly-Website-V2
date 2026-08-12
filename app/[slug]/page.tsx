@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 
 import { getPageBySlug, pages, siteConfig } from "../data/site";
 import { PageTemplate } from "../ui/PageTemplate";
+import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import { readPublicLocale } from "../i18n/server";
 
 type PageProps = {
   params: Promise<{
@@ -30,9 +33,13 @@ export async function generateMetadata({
     return {};
   }
 
+  const [content, locale] = await Promise.all([loadBuilderServerContent(page.href), readPublicLocale()]);
+
   return {
-    title: page.navLabel,
-    description: `${page.description} | ${siteConfig.officeName}`
+    title: localizedBuilderText(locale, `metadata.${slug}.title`, builderText(content, `metadata.${slug}.title`, page.navLabel)),
+    description: localizedBuilderText(locale, `metadata.${slug}.description`, builderText(
+      content, `metadata.${slug}.description`, `${page.description} | ${siteConfig.officeName}`,
+    )),
   };
 }
 
@@ -44,5 +51,6 @@ export default async function DynamicPage({ params }: PageProps) {
     notFound();
   }
 
-  return <PageTemplate page={page} />;
+  const [content, locale] = await Promise.all([loadBuilderServerContent(page.href), readPublicLocale()]);
+  return <PageTemplate content={content} locale={locale} page={page} />;
 }

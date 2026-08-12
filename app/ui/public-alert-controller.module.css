@@ -1,0 +1,223 @@
+.bar {
+  --alert-accent: #f4c95d;
+  position: relative;
+  z-index: 35;
+  width: 100%;
+  overflow: clip;
+  border-block: 1px solid rgb(255 255 255 / 16%);
+  background: #052b58;
+  color: #fff;
+  box-shadow: 0 8px 24px rgb(4 31 63 / 14%);
+}
+
+.bar[data-category="urgent"] {
+  --alert-accent: #ff8b80;
+  background: #7f1d1d;
+}
+
+.bar[data-category="office"] {
+  --alert-accent: #8bd5ca;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  width: min(100% - 2rem, 75rem);
+  min-height: 3.25rem;
+  margin-inline: auto;
+  padding-block: 0.35rem;
+}
+
+.previousButton {
+  grid-column: 1;
+}
+
+.current {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-width: 0;
+  animation: alert-enter 240ms ease-out both;
+}
+
+.messageFrame {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.94rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+.stationaryMessage,
+.gapMessage {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.gapMessage {
+  visibility: hidden;
+}
+
+.measureTrack,
+.scrollTrack {
+  display: block;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.measureTrack {
+  margin-inline: auto;
+}
+
+.scrollTrack {
+  will-change: transform;
+  animation: alert-scroll var(--alert-scroll-duration) linear 1 both;
+}
+
+.messageFrame:hover {
+  text-decoration: underline;
+}
+
+.category {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--alert-accent);
+  color: #082746;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.count {
+  flex: 0 0 auto;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.iconButton,
+.pauseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+  cursor: pointer;
+}
+
+.iconButton:hover,
+.pauseButton:hover {
+  background: rgb(255 255 255 / 16%);
+}
+
+.iconButton:focus-visible,
+.pauseButton:focus-visible,
+.messageFrame:focus-visible {
+  outline: 3px solid var(--alert-accent);
+  outline-offset: 2px;
+}
+
+.iconButton svg,
+.pauseButton svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.pauseButton {
+  gap: 0.35rem;
+  padding-inline: 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes alert-enter {
+  from { opacity: 0; transform: translate3d(1rem, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes alert-scroll {
+  from { transform: translate3d(var(--alert-scroll-start), 0, 0); }
+  to { transform: translate3d(var(--alert-scroll-end), 0, 0); }
+}
+
+@media (max-width: 42rem) {
+  .inner {
+    width: min(100% - 0.75rem, 75rem);
+    gap: 0.25rem;
+    min-height: 4rem;
+  }
+
+  .current {
+    gap: 0.4rem;
+  }
+
+  .category,
+  .count,
+  .pauseButton span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .messageFrame {
+    font-size: 0.84rem;
+  }
+
+  .stationaryMessage {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .current,
+  .scrollTrack {
+    animation: none;
+  }
+}

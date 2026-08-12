@@ -8,11 +8,14 @@ import {
 } from "../../../../../lib/builder/authorization";
 import { authenticateBuilderRequest } from "../../../../../lib/builder/request-auth";
 import {
+  applyPostDefaults,
   editablePostToSnapshot,
   parseEditablePostDraft,
-  postRecordToEditableDraft
+  postRecordToEditableDraft,
+  validateEditablePostForStage
 } from "../../../../../lib/builder/posts";
 import { createRequestSupabaseClient } from "../../../../../lib/supabase/server";
+import { siteConfig } from "../../../../data/site";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -84,6 +87,28 @@ async function requestClient(): Promise<SupabaseClient> {
   const client = await createRequestSupabaseClient();
   if (!client) throw new Error("Supabase is unavailable.");
   return client;
+}
+
+async function postAuthorName(client: SupabaseClient) {
+  try {
+    const result = await client.auth.getUser();
+    const metadata = result.data.user?.user_metadata as Record<string, unknown> | undefined;
+    for (const key of ["full_name", "display_name", "name"] as const) {
+      const candidate = metadata?.[key];
+      if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    }
+  } catch {
+    // The authenticated membership remains the actor; the reviewed office name is the public fallback.
+  }
+  return siteConfig.officeName;
+}
+
+async function postWithServerDefaults(client: SupabaseClient, draft: ReturnType<typeof parseEditablePostDraft>) {
+  return applyPostDefaults(draft, {
+    authorName: await postAuthorName(client),
+    now: new Date().toISOString(),
+    timeZone: siteConfig.timeZone
+  });
 }
 
 async function entry(client: SupabaseClient, identity: ActiveBuilderIdentity, entryId: string): Promise<EntryRow> {
@@ -199,6 +224,22 @@ async function handleGet(request: Request, segments: string[]) {
   if (segments.length === 1) return response(await editablePost(client, identity, segments[0]));
   if (segments.length !== 0) return response({ error: { code: "ROUTE_NOT_FOUND", message: "Post route not found." } }, 404);
 
+  if (new URL(request.url).searchParams.get("scope") === "linkable") {
+    const publishedResult = await client
+      .from("builder_public_posts")
+      .select("entry_id, title, slug, expires_at")
+      .eq("site_id", identity.siteId)
+      .order("display_date", { ascending: false });
+    if (publishedResult.error) throw publishedResult.error;
+    return response((publishedResult.data ?? []).map((post) => ({
+      id: String(post.entry_id),
+      title: String(post.title),
+      href: `/news/${String(post.slug)}`,
+      status: "published",
+      expiresAt: post.expires_at ? String(post.expires_at) : null
+    })));
+  }
+
   const entriesResult = await client
     .from("builder_entries")
     .select("id, status, active_draft_version_id, active_published_version_id, updated_at")
@@ -238,7 +279,7 @@ async function handlePost(request: Request, segments: string[]) {
   const key = idempotencyKey(request);
 
   if (segments.length === 0) {
-    const draft = parseEditablePostDraft(await readBody(request));
+    const draft = await postWithServerDefaults(client, parseEditablePostDraft(await readBody(request)));
     if (draft.entryId) throw new TypeError("A new post cannot include an entry ID.");
     const taxonomies = await ensureTaxonomies(client, identity, draft.categoryKeys, draft.tagKeys);
     const snapshot = editablePostToSnapshot(draft, taxonomies);
@@ -259,7 +300,7 @@ async function handlePost(request: Request, segments: string[]) {
   const entryId = segments[0];
   const selectedEntry = await entry(client, identity, entryId);
   if (action === "draft") {
-    const draft = parseEditablePostDraft(await readBody(request));
+    const draft = await postWithServerDefaults(client, parseEditablePostDraft(await readBody(request)));
     if (draft.entryId !== entryId) throw new TypeError("The post entry ID does not match the route.");
     if (draft.draftVersionId !== selectedEntry.active_draft_version_id ||
         draft.publishedVersionId !== selectedEntry.active_published_version_id) {
@@ -269,6 +310,10 @@ async function handlePost(request: Request, segments: string[]) {
     await transition(client, identity, "save_draft", selectedEntry, key, editablePostToSnapshot(draft, taxonomies));
   } else {
     const operation = action === "restore-draft" ? "restore_draft" : action as "publish" | "archive";
+    if (operation === "publish") {
+      const validation = validateEditablePostForStage(await editablePost(client, identity, entryId), "publish");
+      if (validation[0]) throw new TypeError(validation[0].message);
+    }
     await transition(client, identity, operation, selectedEntry, key);
   }
   return response(await editablePost(client, identity, entryId));

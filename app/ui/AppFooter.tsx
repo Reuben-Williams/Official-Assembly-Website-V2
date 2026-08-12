@@ -2,37 +2,71 @@ import { LockKeyhole } from "lucide-react";
 import Link from "next/link";
 
 import { pages, siteConfig } from "../data/site";
+import {
+  builderLink,
+  builderSectionIds,
+  builderText,
+  type BuilderServerContent,
+} from "../../lib/builder/server-content";
+import { localizedNavigationLabel, publicCopy } from "../i18n/catalog.public";
+import type { PublicLocale } from "../i18n/locale";
 
-export function AppFooter() {
+const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
+
+export function AppFooter({
+  content = EMPTY_CONTENT,
+  locale = "en",
+}: {
+  content?: BuilderServerContent;
+  locale?: PublicLocale;
+}) {
+  const pagesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
+  const footerPages = builderSectionIds(
+    content,
+    "global.navigation",
+    pages.slice(0, 5).map((page) => page.slug ?? "home"),
+  ).slice(0, 5).flatMap((slug) => pagesBySlug.get(slug) ?? []);
   return (
-    <footer className="footer">
+    <footer className="footer" lang={locale}>
       <div className="container footer-grid">
         <div>
           <h2 data-builder-region="global.office.name" data-builder-kind="text">
-            {siteConfig.officeName}
+            {builderText(content, "global.office.name", siteConfig.officeName)}
           </h2>
           <p data-builder-region="global.office.tagline" data-builder-kind="text">
-            {siteConfig.tagline}
+            {publicCopy(
+              locale,
+              "global.office.tagline",
+              builderText(content, "global.office.tagline", siteConfig.tagline),
+            )}
           </p>
         </div>
         <div>
           <h3 data-builder-region="global.footer.sections-title" data-builder-kind="text">
-            Site Sections
+            {publicCopy(
+              locale,
+              "global.footer.sections-title",
+              builderText(content, "global.footer.sections-title", "Site Sections"),
+            )}
           </h3>
           <div
             data-builder-instance="footer"
             data-builder-kind="sections"
             data-builder-region="global.navigation"
           >
-            {pages.slice(0, 5).map((page) => {
+            {footerPages.map((page) => {
               const slug = page.slug ?? "home";
+              const link = builderLink(content, `global.navigation.${slug}.link`, {
+                href: page.href,
+                label: page.navLabel,
+              });
               return (
                 <p data-builder-item-id={slug} key={page.href}>
                   <Link
                     data-builder-instance="footer"
                     data-builder-kind="link"
                     data-builder-region={`global.navigation.${slug}.link`}
-                    href={page.href}
+                    href={link.href}
                   >
                     <span
                       data-builder-instance="footer"
@@ -40,7 +74,11 @@ export function AppFooter() {
                       data-builder-link-label
                       data-builder-region={`global.navigation.${slug}.label`}
                     >
-                      {page.navLabel}
+                      {localizedNavigationLabel(
+                        locale,
+                        slug,
+                        builderText(content, `global.navigation.${slug}.label`, link.label),
+                      )}
                     </span>
                   </Link>
                 </p>
@@ -50,13 +88,29 @@ export function AppFooter() {
         </div>
         <div>
           <h3 data-builder-region="global.footer.access-title" data-builder-kind="text">
-            Office Access
+            {publicCopy(
+              locale,
+              "global.footer.access-title",
+              builderText(content, "global.footer.access-title", "Office Access"),
+            )}
           </h3>
           <p data-builder-region="global.footer.access-body" data-builder-kind="text">
-            {siteConfig.officeAddress}
+            {builderText(content, "global.footer.access-body", siteConfig.officeAddress)}
           </p>
           <p data-builder-region="global.footer.communication-body" data-builder-kind="text">
-            Call {siteConfig.phoneDisplay} for district office assistance.
+            {publicCopy(
+              locale,
+              "global.footer.communication-body",
+              builderText(
+                content,
+                "global.footer.communication-body",
+                `Call ${siteConfig.phoneDisplay} for district office assistance.`,
+              ),
+              { phone: siteConfig.phoneDisplay },
+            )}
+          </p>
+          <p className="footer-policy-link">
+            <Link href="/privacy">{publicCopy(locale, "global.footer.privacy", "Privacy")}</Link>
           </p>
           <Link
             className="staff-portal-link"
@@ -64,7 +118,7 @@ export function AppFooter() {
             href="/admin/login?returnTo=%2Fadmin%2Feditor"
           >
             <LockKeyhole aria-hidden="true" size={16} />
-            <span>Staff Portal</span>
+            <span>{publicCopy(locale, "global.footer.staff-portal", "Staff Portal")}</span>
           </Link>
         </div>
       </div>

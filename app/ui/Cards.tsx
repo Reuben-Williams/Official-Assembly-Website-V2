@@ -1,7 +1,15 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+import {
+  builderLink,
+  builderSectionIds,
+  builderText,
+  type BuilderServerContent,
+} from "../../lib/builder/server-content";
 import type { Card } from "../data/site";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 type CardsProps = {
   cards: Card[];
@@ -10,7 +18,11 @@ type CardsProps = {
   instance?: string;
   featuredFirst?: boolean;
   columns?: "two" | "three";
+  content?: BuilderServerContent;
+  locale?: PublicLocale;
 };
+
+const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
 export function Cards({
   cards,
@@ -18,8 +30,13 @@ export function Cards({
   itemRegionPrefix = regionId,
   instance = "primary",
   featuredFirst = false,
-  columns = "three"
+  columns = "three",
+  content = EMPTY_CONTENT,
+  locale = "en",
 }: CardsProps) {
+  const cardsById = new Map(cards.map((card) => [card.id, card]));
+  const orderedCards = builderSectionIds(content, regionId, cards.map((card) => card.id))
+    .flatMap((id) => cardsById.get(id) ?? []);
   return (
     <div
       className={`card-grid ${columns === "two" ? "two" : ""}`}
@@ -27,30 +44,47 @@ export function Cards({
       data-builder-region={regionId}
       data-builder-kind="sections"
     >
-      {cards.map((card, index) => {
+      {orderedCards.map((card, index) => {
         const Icon = card.icon;
         const className = featuredFirst && index === 0 ? "info-card featured" : "info-card";
         const prefix = `${itemRegionPrefix}.${card.id}`;
+        const hasLink = Boolean(card.href) || content.regions[`${prefix}.link`]?.type === "link";
+        const link = hasLink ? builderLink(content, `${prefix}.link`, {
+          href: card.href ?? "#",
+          label: "Open",
+        }) : null;
         return (
           <article className={className} data-builder-item-id={card.id} key={card.id}>
             <div className="icon-box">
               <Icon size={24} aria-hidden="true" />
             </div>
-            {card.tag ? <span className="tag">{card.tag}</span> : null}
+            {card.tag ? <span className="tag">
+              {localizedBuilderText(locale, `${prefix}.tag`, card.tag)}
+            </span> : null}
             <h3 data-builder-region={`${prefix}.title`} data-builder-kind="text">
-              {card.title}
+              {localizedBuilderText(
+                locale,
+                `${prefix}.title`,
+                builderText(content, `${prefix}.title`, card.title),
+              )}
             </h3>
             <p data-builder-region={`${prefix}.body`} data-builder-kind="text">
-              {card.text}
+              {localizedBuilderText(
+                locale,
+                `${prefix}.body`,
+                builderText(content, `${prefix}.body`, card.text),
+              )}
             </p>
-            {card.href ? (
+            {link ? (
               <Link
                 className="card-link"
                 data-builder-region={`${prefix}.link`}
                 data-builder-kind="link"
-                href={card.href}
+                href={link.href}
               >
-                <span data-builder-link-label>Open</span>
+                <span data-builder-link-label>
+                  {localizedBuilderText(locale, `${prefix}.link.label`, link.label)}
+                </span>
                 <ArrowRight size={17} aria-hidden="true" />
               </Link>
             ) : null}

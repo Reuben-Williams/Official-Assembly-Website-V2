@@ -23,4 +23,13 @@ describe("production security headers", () => {
       else process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
     }
   });
+
+  it("prevents confirmation pages from being cached or leaking a referrer", async () => {
+    const response = await proxy(
+      new NextRequest("https://www.assemblywomanmorales.com/newsletter/confirm")
+    );
+
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  });
 });

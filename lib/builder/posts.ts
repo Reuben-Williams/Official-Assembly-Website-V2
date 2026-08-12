@@ -2,6 +2,7 @@ import type { EditablePostDraft } from "@reuben-williams/editor";
 
 type PostSnapshot = {
   slug: string;
+  displayTimeZone: string;
   data: {
     title: string;
     excerpt: string;
@@ -35,6 +36,79 @@ type PostEntryRow = {
 };
 
 type PostVersionRow = { snapshot: unknown };
+
+export type PostValidationStage = "draft" | "publish";
+export type PostValidationField = "title" | "body" | "featuredImageAlt";
+export type PostValidationError = { field: PostValidationField; message: string };
+export type DefaultedPostDraft = EditablePostDraft & { displayTimeZone: string };
+
+export const DEFAULT_POST_TIME_ZONE = "America/New_York";
+
+function richTextValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(richTextValue).join(" ");
+  if (!value || typeof value !== "object") return "";
+  const node = value as Record<string, unknown>;
+  return [node.text, node.content].map(richTextValue).join(" ");
+}
+
+function filenameOnly(value: string) {
+  return /^[^/\\]+\.(?:avif|gif|jpe?g|png|svg|webp)$/i.test(value.trim());
+}
+
+export function validateEditablePostForStage(
+  draft: EditablePostDraft,
+  stage: PostValidationStage
+): PostValidationError[] {
+  const errors: PostValidationError[] = [];
+  if (!draft.title.trim()) {
+    errors.push({ field: "title", message: "Enter a post title before saving the draft." });
+  }
+  if (stage === "publish" && !richTextValue(draft.body).trim()) {
+    errors.push({ field: "body", message: "Add post body text before publishing." });
+  }
+  if (stage === "publish" && draft.featuredImage) {
+    const alt = draft.featuredImage.alt.trim();
+    if (!alt) {
+      errors.push({ field: "featuredImageAlt", message: "Add descriptive image alt text before publishing." });
+    } else if (filenameOnly(alt)) {
+      errors.push({ field: "featuredImageAlt", message: "Describe the image instead of using its filename." });
+    }
+  }
+  return errors;
+}
+
+export function postSlugFromTitle(title: string) {
+  const slug = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "post";
+}
+
+export function applyPostDefaults(
+  draft: EditablePostDraft,
+  defaults: { authorName: string; now: string; timeZone?: string }
+): DefaultedPostDraft {
+  const errors = validateEditablePostForStage(draft, "draft");
+  if (errors[0]) throw new TypeError(errors[0].message);
+  const title = draft.title.trim();
+  const slug = draft.slug.trim() || postSlugFromTitle(title);
+  const authorName = draft.authorName.trim() || defaults.authorName.trim();
+  const displayDate = draft.displayDate.trim() || defaults.now;
+  if (!authorName) throw new TypeError("A post author could not be determined.");
+  if (!Number.isFinite(Date.parse(displayDate))) throw new TypeError("The display date is invalid.");
+  return {
+    ...draft,
+    title,
+    slug,
+    authorName,
+    displayDate: new Date(displayDate).toISOString(),
+    displayTimeZone: defaults.timeZone ?? DEFAULT_POST_TIME_ZONE
+  };
+}
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} is invalid.`);
@@ -105,13 +179,14 @@ function mediaReference(value: EditablePostDraft["featuredImage"]): PostSnapshot
 }
 
 export function editablePostToSnapshot(
-  draft: EditablePostDraft,
+  draft: EditablePostDraft & { displayTimeZone?: string },
   taxonomySnapshot: PostSnapshot["taxonomySnapshot"] = {}
 ): PostSnapshot {
+  const validation = validateEditablePostForStage(draft, "draft");
+  if (validation[0]) throw new TypeError(validation[0].message);
   const title = draft.title.trim();
   const slug = draft.slug.trim();
   const authorName = draft.authorName.trim();
-  if (!title) throw new TypeError("A post title is required.");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     throw new TypeError("The post slug must use lowercase letters, numbers, and hyphens.");
   }
@@ -122,6 +197,7 @@ export function editablePostToSnapshot(
 
   return {
     slug,
+    displayTimeZone: draft.displayTimeZone ?? DEFAULT_POST_TIME_ZONE,
     data: {
       title,
       excerpt: draft.excerpt,

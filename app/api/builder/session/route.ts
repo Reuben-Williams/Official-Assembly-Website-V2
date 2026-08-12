@@ -8,6 +8,10 @@ import {
   lookupBuilderMembership
 } from "../../../../lib/builder/authorization";
 import { builderSessionCookies } from "../../../../lib/builder/session-cookies";
+import {
+  consumeEditorLoginCompletion,
+  editorLoginCompletionCookie
+} from "../../../../lib/builder/login-completion";
 import { getBuilderAdminClient } from "../../../../lib/supabase/admin";
 import { createRequestSupabaseClient } from "../../../../lib/supabase/server";
 
@@ -18,6 +22,21 @@ const noStore = { "cache-control": "no-store" };
 
 function error(status: number, code: string, message: string) {
   return NextResponse.json({ error: { code, message } }, { status, headers: noStore });
+}
+
+function requestCookie(request: Request, name: string): string | null {
+  const header = request.headers.get("cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [candidate, ...rest] = part.trim().split("=");
+    if (candidate !== name) continue;
+    try {
+      return decodeURIComponent(rest.join("="));
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 async function membershipForRequest() {
@@ -49,6 +68,27 @@ export async function POST(request: Request) {
   }
   const resolved = await membershipForRequest();
   if (!resolved) return error(401, "AUTH_REQUIRED", "A verified editor account is required.");
+  const proof = requestCookie(request, editorLoginCompletionCookie);
+  const completed = proof
+    ? await consumeEditorLoginCompletion({
+      client: resolved.admin,
+      token: proof,
+      userId: resolved.membership.userId,
+      sessionGeneration: resolved.membership.previewGeneration
+    })
+    : false;
+  if (!completed) {
+    const response = error(
+      401,
+      "LOGIN_COMPLETION_REQUIRED",
+      "Complete a fresh staff sign-in before opening the editor."
+    );
+    response.cookies.set(editorLoginCompletionCookie, "", {
+      expires: new Date(0),
+      path: "/api/builder/session"
+    });
+    return response;
+  }
 
   const csrfToken = crypto.randomUUID().replaceAll("-", "");
   const token = await issuePreviewSession({
@@ -72,6 +112,10 @@ export async function POST(request: Request) {
   };
   response.cookies.set(builderSessionCookies.editor, token, { ...cookieOptions, httpOnly: true });
   response.cookies.set(builderSessionCookies.csrf, csrfToken, { ...cookieOptions, httpOnly: false });
+  response.cookies.set(editorLoginCompletionCookie, "", {
+    expires: new Date(0),
+    path: "/api/builder/session"
+  });
   return response;
 }
 
@@ -84,9 +128,8 @@ export async function DELETE(request: Request) {
   }
   const resolved = await membershipForRequest();
   if (!resolved) return error(401, "AUTH_REQUIRED", "A verified editor account is required.");
-  const { error: revokeError } = await resolved.admin.rpc("builder_revoke_preview_sessions", {
-    p_site_id: resolved.membership.siteId,
-    p_user_id: resolved.membership.userId
+  const { error: revokeError } = await resolved.client.rpc("builder_revoke_preview_sessions", {
+    p_site_key: BUILDER_SITE_KEY
   });
   if (revokeError) return error(503, "REVOCATION_UNAVAILABLE", "The editor session could not be revoked.");
   await resolved.client.auth.signOut();

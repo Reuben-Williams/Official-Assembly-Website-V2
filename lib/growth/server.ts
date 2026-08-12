@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { GrowthCapability } from "@reuben-williams/core";
+import { verifyPreviewCsrf } from "@reuben-williams/next/auth";
 import {
   OperationalAuthorizationError,
   createSupabaseOperationalPersistence,
@@ -21,6 +22,28 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { authenticateBuilderRequest } from "../builder/request-auth";
+import type { ActiveBuilderIdentity } from "../builder/authorization";
+
+export class GrowthMutationCsrfError extends Error {
+  readonly code = "CSRF_REJECTED";
+  readonly status = 403;
+
+  constructor() {
+    super("The growth operation could not be verified.");
+    this.name = "GrowthMutationCsrfError";
+  }
+}
+
+export function verifyGrowthMutationCsrf(
+  identity: ActiveBuilderIdentity,
+  suppliedToken: string | null
+): void {
+  try {
+    verifyPreviewCsrf(identity.csrfToken ?? "", suppliedToken);
+  } catch {
+    throw new GrowthMutationCsrfError();
+  }
+}
 
 const CAPABILITY_MODULE: Partial<Record<GrowthCapability, "growth.dashboard" | "growth.leads" | "growth.customers">> = {
   "dashboard.read": "growth.dashboard",
@@ -102,6 +125,28 @@ async function identityForRequirement(client: SupabaseClient, request: Request, 
   if (!scope) return { error: "OPERATION_DENIED" as const };
   const current = await entitlementIsCurrent(client, identity.siteId, requirement.capability);
   return { identity, scope, current };
+}
+
+export async function authorizeGrowthMutationRequest(request: Request): Promise<Response | null> {
+  const identity = await authenticateBuilderRequest(request);
+  if (!identity) {
+    return Response.json(
+      { error: { code: "AUTH_REQUIRED", message: "A verified member session is required." } },
+      { status: 401, headers: { "cache-control": "no-store" } }
+    );
+  }
+  try {
+    verifyGrowthMutationCsrf(identity, request.headers.get("x-builder-csrf"));
+    return null;
+  } catch (error) {
+    if (error instanceof GrowthMutationCsrfError) {
+      return Response.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.status, headers: { "cache-control": "no-store" } }
+      );
+    }
+    throw error;
+  }
 }
 
 export function createGrowthQueryDependencies(client: SupabaseClient, siteId: string): QueryRouteDependencies {

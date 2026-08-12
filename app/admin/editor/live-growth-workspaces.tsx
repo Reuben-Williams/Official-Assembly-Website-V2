@@ -5,6 +5,7 @@ import { DashboardWorkspace, type DashboardDestination } from "@reuben-williams/
 import { CustomersWorkspace } from "@reuben-williams/growth-customers/ui";
 import { LeadsWorkspace } from "@reuben-williams/growth-leads/ui";
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 
 import type { LiveGrowthClient } from "../../../lib/growth/client";
 
@@ -14,12 +15,20 @@ type LiveWorkspaceProps = {
   role: "owner" | "editor" | "contributor" | "viewer";
 };
 
-function LiveDataLabel({ children }: { children: ReactNode }) {
+type LiveGrowthWorkspaceKind = "overview" | "submissions" | "leads" | "customers";
+
+export function liveGrowthEmptyCopy(kind: LiveGrowthWorkspaceKind) {
+  if (kind === "overview") return "When every total is zero, there is no live form or growth activity in the selected period.";
+  const record = kind === "submissions" ? "submission" : kind === "leads" ? "lead" : "customer";
+  return `When this workspace is empty, there are no live ${record} records to review.`;
+}
+
+function LiveDataLabel({ children, kind }: { children: ReactNode; kind: LiveGrowthWorkspaceKind }) {
   return (
     <div data-growth-live-workspace>
       <p className="editor-live-data-label">
-        <strong>Live production data</strong>
-        <span>No demo or placeholder records are loaded.</span>
+        <span><strong>Live production data</strong>No demo or placeholder records are loaded.</span>
+        <span>{liveGrowthEmptyCopy(kind)} <Link href="/admin/editor?workspace=website.forms#authentic-live-form-checklist">Open the controlled checklist</Link>.</span>
       </p>
       {children}
     </div>
@@ -53,7 +62,7 @@ export function LiveDashboardWorkspace({ client, role }: LiveWorkspaceProps) {
   }, [client]);
 
   return (
-    <LiveDataLabel>
+    <LiveDataLabel kind="overview">
       <DashboardWorkspace
         access={{
           dashboard: { effectiveRead: true, hasCapability: true },
@@ -73,7 +82,7 @@ export function LiveDashboardWorkspace({ client, role }: LiveWorkspaceProps) {
 
 export function LiveLeadsWorkspace({ client, memberId }: LiveWorkspaceProps) {
   return (
-    <LiveDataLabel>
+    <LiveDataLabel kind="leads">
       <LeadsWorkspace
         access={{
           memberId,
@@ -113,7 +122,7 @@ export function LiveCustomersWorkspace({ client }: LiveWorkspaceProps) {
   }, [client]);
 
   return (
-    <LiveDataLabel>
+    <LiveDataLabel kind="customers">
       <CustomersWorkspace
         access={{
           scope: "site",
@@ -139,7 +148,7 @@ export function LiveCustomersWorkspace({ client }: LiveWorkspaceProps) {
 
 export function LiveSubmissionsWorkspace({ client, role }: LiveWorkspaceProps) {
   return (
-    <LiveDataLabel>
+    <LiveDataLabel kind="submissions">
       <SubmissionsWorkspace api={client.submissionsApi} initialQuery={{ limit: 25 }} role={role} />
     </LiveDataLabel>
   );

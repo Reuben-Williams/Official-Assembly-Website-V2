@@ -1,6 +1,5 @@
 import {
-  createPublicFormSubmissionRoute,
-  createSupabasePublicFormIngestionService
+  createPublicFormSubmissionRoute
 } from "@reuben-williams/next/forms/server";
 import {
   createCloudflareTurnstileVerifier,
@@ -15,7 +14,13 @@ import {
   isManagedPublicFormKey
 } from "../../../../lib/builder/forms";
 import { allowedBuilderOrigins } from "../../../../lib/builder/authorization";
+import { readNewsletterConfiguration } from "../../../../lib/newsletter/config";
+import { createManagedPublicFormIngestionService } from "../../../../lib/newsletter/ingestion";
+import { createPackageCompatibleNewsletterSubmissionRequest } from "../../../../lib/newsletter/managed-form-revision";
+import { readNewsletterPublicReadiness } from "../../../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
+import { APPROVED_FORM_TEMPLATES } from "@reuben-williams/forms";
+import { LANGUAGE_COOKIE_NAME, normalizePublicLocale } from "../../../i18n/locale";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +30,18 @@ function unavailable(status = 503, code = "FORM_UNAVAILABLE") {
     { error: { code, message: "Online submission is unavailable. Please contact the district office." } },
     { status, headers: { "cache-control": "no-store" } }
   );
+}
+
+function requestLocale(request: Request) {
+  const language = request.headers.get("cookie")
+    ?.split(";")
+    .map((value) => value.trim().split("=", 2))
+    .find(([name]) => name === LANGUAGE_COOKIE_NAME)?.[1];
+  return normalizePublicLocale(language) === "es" ? "es-US" : "en-US";
+}
+
+function requestPublicLocale(request: Request) {
+  return requestLocale(request) === "es-US" ? "es" as const : "en" as const;
 }
 
 export async function POST(
@@ -44,6 +61,16 @@ export async function POST(
 
   const siteId = await resolveBuilderSiteId(admin);
   if (!siteId) return unavailable();
+  const newsletterConfiguration = readNewsletterConfiguration();
+  if (type === "newsletter") {
+    if (newsletterConfiguration.status !== "ready") return unavailable();
+    const readiness = await readNewsletterPublicReadiness(
+      admin,
+      siteId,
+      newsletterConfiguration
+    );
+    if (readiness.status !== "ready") return unavailable();
+  }
   const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? request.url).hostname;
   const repository = createSupabasePublishedFormRepository({
     client: admin,
@@ -53,7 +80,7 @@ export async function POST(
   });
   const route = createPublicFormSubmissionRoute({
     siteId,
-    locale: "en-US",
+    locale: requestLocale(request),
     allowedOrigins: allowedBuilderOrigins(new URL(request.url).origin),
     repository,
     network: createVercelTrustedNetworkAdapter(),
@@ -66,13 +93,37 @@ export async function POST(
       expectedHostname: hostname,
       expectedAction: definition.action
     }),
-    ingestion: createSupabasePublicFormIngestionService(admin, { mode: "strict" }),
+    ingestion: createManagedPublicFormIngestionService({
+      type,
+      client: admin,
+      confirmationKeyId:
+        newsletterConfiguration.status === "ready"
+          ? newsletterConfiguration.activeKeyId
+          : "contact-only"
+    }),
     rateLimits: {
       network: { limit: 10, windowMs: 3_600_000 },
-      identity: { limit: 5, windowMs: 3_600_000 }
+      identity: { limit: 5, windowMs: 900_000 }
     },
     now: () => new Date(),
     uuid: () => crypto.randomUUID()
   });
-  return route.handle(request, { formKey });
+  let submissionRequest = request;
+  if (type === "newsletter") {
+    const template = APPROVED_FORM_TEMPLATES.find((candidate) =>
+      candidate.id === definition.templateId && candidate.version === definition.templateVersion
+    );
+    if (!template) return unavailable();
+    try {
+      submissionRequest = await createPackageCompatibleNewsletterSubmissionRequest({
+        request,
+        template,
+        businessName: siteConfig.officeName,
+        locale: requestPublicLocale(request),
+      });
+    } catch {
+      return unavailable(400, "INVALID_SUBMISSION");
+    }
+  }
+  return route.handle(submissionRequest, { formKey });
 }

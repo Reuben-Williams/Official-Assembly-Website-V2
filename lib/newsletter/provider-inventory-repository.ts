@@ -1,0 +1,271 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { NewsletterProviderInventoryEvidence } from "./provider-inventory";
+import { NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION } from "./history-reconciliation";
+import { OWNER_LOGIN_POLICY_VERSION } from "./owner-login-evidence";
+
+const PAGE_SIZE = 1_000;
+const REQUIRED_MANUAL_CATEGORIES = [
+  "billing_ownership",
+  "oauth_application_view",
+  "team_membership"
+] as const;
+
+type QueryResult = {
+  readonly data: unknown[] | null;
+  readonly error: unknown;
+};
+
+async function allRows(
+  load: (from: number, to: number) => PromiseLike<QueryResult>
+): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const result = await load(from, from + PAGE_SIZE - 1);
+    if (result.error || !Array.isArray(result.data)) {
+      throw new Error("newsletter inventory evidence unavailable");
+    }
+    for (const value of result.data) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("newsletter inventory evidence unavailable");
+      }
+      rows.push(value as Record<string, unknown>);
+    }
+    if (result.data.length < PAGE_SIZE) return rows;
+  }
+}
+
+function text(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+export function validateNewsletterOwnerLoginEvidenceRows(
+  evidenceRows: readonly Record<string, unknown>[],
+  receiptRows: readonly Record<string, unknown>[]
+) {
+  return evidenceRows.every((evidence) => {
+    const providerMessageId = text(evidence.provider_message_id);
+    if (!providerMessageId || evidence.policy_version !== OWNER_LOGIN_POLICY_VERSION) return false;
+    const receipts = receiptRows.filter((receipt) =>
+      text(receipt.provider_message_id) === providerMessageId
+    );
+    const validScope = receipts.every((receipt) =>
+      receipt.disposition === "matched" &&
+      receipt.provider_scope_id === "resend-team-production" &&
+      receipt.provider_broadcast_id === null &&
+      ["email.sent", "email.delivered", "email.opened", "email.clicked"]
+        .includes(text(receipt.event_type))
+    );
+    return validScope &&
+      receipts.filter((receipt) => receipt.event_type === "email.sent").length === 1 &&
+      receipts.filter((receipt) => receipt.event_type === "email.delivered").length === 1;
+  });
+}
+
+export function collectAllowedNewsletterProviderMessageIds(input: {
+  readonly confirmationJobs: readonly Record<string, unknown>[];
+  readonly staffTests: readonly Record<string, unknown>[];
+  readonly authSmtpProofs: readonly Record<string, unknown>[];
+  readonly historyReconciliations: readonly Record<string, unknown>[];
+  readonly receipts: readonly Record<string, unknown>[];
+  readonly allowedSentBroadcastIds: ReadonlySet<string>;
+}) {
+  return new Set([
+    ...input.confirmationJobs.map((row) => text(row.provider_message_id)),
+    ...input.staffTests.map((row) => text(row.provider_message_id)),
+    ...input.authSmtpProofs.map((row) => text(row.provider_message_id)),
+    ...input.historyReconciliations.map((row) => text(row.provider_message_id)),
+    ...input.receipts
+      .filter((row) => input.allowedSentBroadcastIds.has(text(row.provider_broadcast_id)))
+      .map((row) => text(row.provider_message_id))
+  ].filter(Boolean));
+}
+
+export function createNewsletterProviderInventoryEvidenceRepository(
+  client: SupabaseClient,
+  siteId: string
+) {
+  return {
+    async activeActivationDigest(): Promise<string | null> {
+      const result = await client
+        .from("builder_newsletter_provider_activation_revisions")
+        .select("resource_identity_digest")
+        .eq("site_id", siteId)
+        .eq("provider_scope_id", "resend-team-production")
+        .eq("state", "active")
+        .maybeSingle();
+      if (result.error) throw new Error("newsletter inventory evidence unavailable");
+      return result.data?.resource_identity_digest
+        ? String(result.data.resource_identity_digest)
+        : null;
+    },
+
+    async read(): Promise<NewsletterProviderInventoryEvidence> {
+      const subscriptions = await allRows((from, to) => client
+        .from("builder_newsletter_subscriptions")
+        .select("contact_id,status,provider_contact_id")
+        .eq("site_id", siteId)
+        .order("id", { ascending: true })
+        .range(from, to));
+      const identities = await allRows((from, to) => client
+        .from("builder_contact_identities")
+        .select("contact_id,normalized_value")
+        .eq("site_id", siteId)
+        .eq("kind", "email")
+        .neq("verification_state", "invalid")
+        .order("id", { ascending: true })
+        .range(from, to));
+      const suppressions = await allRows((from, to) => client
+        .from("builder_suppressions")
+        .select("contact_id")
+        .eq("site_id", siteId)
+        .eq("channel", "email")
+        .eq("active", true)
+        .order("id", { ascending: true })
+        .range(from, to));
+      const confirmationJobs = await allRows((from, to) => client
+        .from("builder_newsletter_jobs")
+        .select("provider_message_id")
+        .eq("site_id", siteId)
+        .eq("kind", "newsletter.confirmation.send")
+        .not("provider_message_id", "is", null)
+        .order("id", { ascending: true })
+        .range(from, to));
+      const staffTests = await allRows((from, to) => client
+        .from("builder_newsletter_staff_test_observations")
+        .select("provider_message_id")
+        .eq("site_id", siteId)
+        .in("state", ["provisional_test", "confirmed_test"])
+        .order("id", { ascending: true })
+        .range(from, to));
+      const validations = await allRows((from, to) => client
+        .from("builder_newsletter_broadcast_validations")
+        .select("provider_broadcast_id,state")
+        .eq("site_id", siteId)
+        .eq("state", "consumed_matching")
+        .order("id", { ascending: true })
+        .range(from, to));
+      const incidents = await allRows((from, to) => client
+        .from("builder_newsletter_broadcast_incidents")
+        .select("provider_broadcast_id,state")
+        .eq("site_id", siteId)
+        .neq("state", "resolved")
+        .order("id", { ascending: true })
+        .range(from, to));
+      const receipts = await allRows((from, to) => client
+        .from("builder_newsletter_webhook_receipts")
+        .select("provider_message_id,provider_broadcast_id,provider_scope_id,disposition,event_type")
+        .eq("site_id", siteId)
+        .eq("disposition", "matched")
+        .order("id", { ascending: true })
+        .range(from, to));
+      const authSmtpProofs = await allRows((from, to) => client
+        .from("builder_newsletter_auth_smtp_proofs")
+        .select("proof_kind,provider_message_id")
+        .eq("site_id", siteId)
+        .order("created_at", { ascending: true })
+        .range(from, to));
+      const historyReconciliations = await allRows((from, to) => client
+        .from("builder_newsletter_provider_history_reconciliations")
+        .select("provider_message_id")
+        .eq("site_id", siteId)
+        .eq("policy_version", NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION)
+        .order("created_at", { ascending: true })
+        .range(from, to));
+      const ownerLoginEvidence = await allRows((from, to) => client
+        .from("builder_newsletter_auth_login_evidence")
+        .select("provider_message_id,policy_version")
+        .eq("site_id", siteId)
+        .order("created_at", { ascending: true })
+        .range(from, to));
+
+      const attestation = await client
+        .from("builder_newsletter_provider_inventory_attestations")
+        .select("categories,expires_at")
+        .eq("site_id", siteId)
+        .eq("policy_version", "resend-district-newsletter-v1")
+        .gt("expires_at", new Date().toISOString())
+        .order("attested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (attestation.error) {
+        throw new Error("newsletter inventory evidence unavailable");
+      }
+
+      const subscriptionContactIds = new Set(
+        subscriptions.map((row) => text(row.contact_id)).filter(Boolean)
+      );
+      const suppressionContactIds = new Set(
+        suppressions.map((row) => text(row.contact_id)).filter(Boolean)
+      );
+      const providerContactIds = new Set(
+        subscriptions.map((row) => text(row.provider_contact_id)).filter(Boolean)
+      );
+      const retainedContactEmails = new Set(
+        identities
+          .filter((row) => subscriptionContactIds.has(text(row.contact_id)))
+          .map((row) => text(row.normalized_value).trim().toLowerCase())
+          .filter(Boolean)
+      );
+      const suppressionEmails = new Set(
+        identities
+          .filter((row) => suppressionContactIds.has(text(row.contact_id)))
+          .map((row) => text(row.normalized_value).trim().toLowerCase())
+          .filter(Boolean)
+      );
+      const unresolvedIncidentBroadcastIds = new Set(
+        incidents.map((row) => text(row.provider_broadcast_id)).filter(Boolean)
+      );
+      const allowedSentBroadcastIds = new Set(
+        validations
+          .map((row) => text(row.provider_broadcast_id))
+          .filter((id) => id && !unresolvedIncidentBroadcastIds.has(id))
+      );
+      const allowedProviderMessageIds = collectAllowedNewsletterProviderMessageIds({
+        confirmationJobs,
+        staffTests,
+        authSmtpProofs,
+        historyReconciliations,
+        receipts,
+        allowedSentBroadcastIds
+      });
+      const ownerLoginEvidenceValid = validateNewsletterOwnerLoginEvidenceRows(
+        ownerLoginEvidence,
+        receipts
+      );
+      if (ownerLoginEvidenceValid) {
+        for (const row of ownerLoginEvidence) {
+          const providerMessageId = text(row.provider_message_id);
+          if (providerMessageId) allowedProviderMessageIds.add(providerMessageId);
+        }
+      }
+
+      const categories = new Set(
+        Array.isArray(attestation.data?.categories)
+          ? attestation.data.categories.filter((value): value is string => typeof value === "string")
+          : []
+      );
+      const authSmtpProofKinds = new Set(
+        authSmtpProofs.map((row) => text(row.proof_kind)).filter(Boolean)
+      );
+      const replacementLoginProved = authSmtpProofKinds.has("replacement_login");
+      const postRevocationLoginProved = authSmtpProofKinds.has("post_revocation_login");
+
+      return {
+        providerContactIds,
+        retainedContactEmails,
+        suppressionEmails,
+        allowedProviderMessageIds,
+        allowedSentBroadcastIds,
+        localEligibleCount: subscriptions.filter((row) => row.status === "active").length,
+        manualAttestationCurrent: REQUIRED_MANUAL_CATEGORIES.every((name) => categories.has(name)),
+        authSmtpPermissionAttested: replacementLoginProved,
+        authSmtpLoginBeforeRevocationProved: replacementLoginProved,
+        authSmtpLoginAfterRevocationProved: postRevocationLoginProved,
+        ownerLoginEvidenceValid
+      };
+    }
+  };
+}
