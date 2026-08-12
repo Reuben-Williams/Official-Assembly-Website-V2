@@ -258,7 +258,7 @@ Object.assign(spanishTranslations, {
   "Every District Newsletter includes an unsubscribe link.": "Cada Bolet\u00edn del distrito incluye un enlace para cancelar la suscripci\u00f3n.",
   "News & Updates": "Noticias y novedades",
   "Published legislative and district updates from Office of Assemblywoman Carmen Theresa Morales.": "Novedades legislativas y del distrito publicadas por la Oficina de la Asamble\u00edsta Carmen Theresa Morales.",
-  "Email Updates": "Novedades por correo electr\u00f3nico",
+  "Email Updates": "Actualizaciones por correo electr\u00f3nico",
   "Get News & Updates by email": "Reciba noticias y novedades por correo electr\u00f3nico",
   "District Office": "Oficina del distrito",
   "Published updates": "Novedades publicadas",

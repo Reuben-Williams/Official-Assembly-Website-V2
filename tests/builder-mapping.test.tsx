@@ -5,6 +5,7 @@ vi.mock("../lib/builder/server-content", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/builder/server-content")>();
   return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
 });
+vi.mock("../app/i18n/server", () => ({ readPublicLocale: vi.fn(async () => "en") }));
 
 import site from "../builder.config";
 import HomePage from "../app/page";
@@ -35,9 +36,25 @@ describe("approved builder mapping", () => {
       page.regions.map((region) => (typeof region === "string" ? region : region.id))
     );
     expect(configured).toContain("home.hero.title");
+    expect(configured).toContain("contact.form.eyebrow");
+    expect(configured).toContain("contact.form.title");
+    expect(configured).toContain("contact.form.body");
     expect(configured).toContain("contact.form");
+    expect(configured).toContain("newsletter.form.eyebrow");
+    expect(configured).toContain("newsletter.form.title");
+    expect(configured).toContain("newsletter.form.body");
     expect(configured).toContain("newsletter.form");
+    expect(configured).toContain("survey.form.eyebrow");
+    expect(configured).toContain("survey.form.title");
+    expect(configured).toContain("survey.form.body");
     expect(configured).not.toContain("survey.form");
+    expect(site.globalRegions.map((region) => region.id)).not.toEqual(
+      expect.arrayContaining([
+        "global.template.form-eyebrow",
+        "global.template.form-title",
+        "global.template.form-body"
+      ])
+    );
   });
 
   it("distinguishes the News hub and Newsletter signup in the editor", () => {
@@ -103,6 +120,9 @@ describe("approved builder mapping", () => {
 
     const html = renderToStaticMarkup(await PageTemplate({ page: contact! }));
     expect(html).toContain('data-builder-region="contact.sections"');
+    expect(html).toContain('data-builder-region="contact.form.eyebrow"');
+    expect(html).toContain('data-builder-region="contact.form.title"');
+    expect(html).toContain('data-builder-region="contact.form.body"');
     expect(html).toContain('data-builder-region="contact.form"');
     expect(html).toContain('data-builder-item-id="send-message"');
     expect(html).toContain('data-builder-form-unavailable="true"');
@@ -114,6 +134,9 @@ describe("approved builder mapping", () => {
 
     const html = renderToStaticMarkup(await PageTemplate({ page: survey! }));
     expect(html).toContain("This survey is not accepting online responses.");
+    expect(html).toContain('data-builder-region="survey.form.eyebrow"');
+    expect(html).toContain('data-builder-region="survey.form.title"');
+    expect(html).toContain('data-builder-region="survey.form.body"');
     expect(html).not.toContain('data-builder-region="survey.form"');
   });
 });

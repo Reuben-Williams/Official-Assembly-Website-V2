@@ -8,6 +8,7 @@ vi.mock("../lib/builder/server-content", async (importOriginal) => {
 vi.mock("../app/i18n/server", () => ({ readPublicLocale: vi.fn(async () => "en") }));
 
 import HomePage from "../app/page";
+import { publicCatalogValues, publicCopy } from "../app/i18n/catalog.public";
 import {
   spanishTranslationsByKey,
   translateStableText
@@ -35,5 +36,23 @@ describe("stable-key translation bridge", () => {
 
   it("keeps the translation catalog free of mojibake", () => {
     expect(JSON.stringify(spanishTranslationsByKey)).not.toMatch(/Ã|Â|â€™|â€œ|â€/);
+  });
+
+  it("publishes a stripped two-locale catalog and refuses stale Spanish copy", () => {
+    expect(publicCatalogValues["global.navigation.voting"]).toEqual({
+      en: "Voting",
+      es: "Votaci\u00f3n",
+    });
+    expect(publicCopy("es", "global.navigation.voting", "Voting")).toBe("Votaci\u00f3n");
+    expect(publicCopy("es", "global.navigation.voting", "Voting and elections")).toBe(
+      "Voting and elections",
+    );
+    expect(publicCopy(
+      "es",
+      "global.footer.communication-body",
+      "Call (973) 450-0484 for district office assistance.",
+      { phone: "(973) 450-0484" },
+    )).toBe("Llame al (973) 450-0484 para recibir asistencia de la oficina del distrito.");
+    expect(JSON.stringify(publicCatalogValues)).not.toMatch(/approvedBy|reviewer|evidence/);
   });
 });

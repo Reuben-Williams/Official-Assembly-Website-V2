@@ -89,21 +89,6 @@ export default {
       "label": "Template feature introduction"
     },
     {
-      "id": "global.template.form-eyebrow",
-      "kind": "text",
-      "label": "Form eyebrow"
-    },
-    {
-      "id": "global.template.form-title",
-      "kind": "text",
-      "label": "Form title"
-    },
-    {
-      "id": "global.template.form-body",
-      "kind": "text",
-      "label": "Form introduction"
-    },
-    {
       "id": "global.template.supporting-caption",
       "kind": "text",
       "label": "Supporting media caption"
@@ -1281,6 +1266,21 @@ export default {
           "label": "community-requests link"
         },
         {
+          "id": "contact.form.eyebrow",
+          "kind": "text",
+          "label": "contact form eyebrow"
+        },
+        {
+          "id": "contact.form.title",
+          "kind": "text",
+          "label": "contact form title"
+        },
+        {
+          "id": "contact.form.body",
+          "kind": "text",
+          "label": "contact form introduction"
+        },
+        {
           "id": "contact.form",
           "kind": "sections",
           "label": "contact managed form"
@@ -1372,6 +1372,21 @@ export default {
           "label": "subscriber-preferences link"
         },
         {
+          "id": "newsletter.form.eyebrow",
+          "kind": "text",
+          "label": "newsletter form eyebrow"
+        },
+        {
+          "id": "newsletter.form.title",
+          "kind": "text",
+          "label": "newsletter form title"
+        },
+        {
+          "id": "newsletter.form.body",
+          "kind": "text",
+          "label": "newsletter form introduction"
+        },
+        {
           "id": "newsletter.form",
           "kind": "sections",
           "label": "newsletter managed form"
@@ -1461,6 +1476,21 @@ export default {
           "id": "survey.cards.neighborhood-context.link",
           "kind": "link",
           "label": "neighborhood-context link"
+        },
+        {
+          "id": "survey.form.eyebrow",
+          "kind": "text",
+          "label": "survey form eyebrow"
+        },
+        {
+          "id": "survey.form.title",
+          "kind": "text",
+          "label": "survey form title"
+        },
+        {
+          "id": "survey.form.body",
+          "kind": "text",
+          "label": "survey form introduction"
         }
       ]
     },

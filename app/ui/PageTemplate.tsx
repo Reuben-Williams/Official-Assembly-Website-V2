@@ -26,6 +26,13 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
   const slug = page.slug ?? "home";
   const formType =
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
+  const formCopyRegions = formType
+    ? {
+        eyebrow: `${slug}.form.eyebrow`,
+        title: `${slug}.form.title`,
+        body: `${slug}.form.body`,
+      }
+    : null;
   const supportingImage = slug === "community" ? "graduation" : "coverage";
   const residentForm = formType && formType !== "newsletter"
     ? await ResidentForm({ type: formType, locale })
@@ -34,9 +41,9 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
     ? await NewsletterSignupSection({
         content,
         regions: {
-          eyebrow: "global.template.form-eyebrow",
-          title: "global.template.form-title",
-          body: "global.template.form-body",
+          eyebrow: formCopyRegions!.eyebrow,
+          title: formCopyRegions!.title,
+          body: formCopyRegions!.body,
           form: "newsletter.form"
         },
         fallback: {
@@ -166,33 +173,33 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
             <div>
               <p
                 className="eyebrow"
-                data-builder-region="global.template.form-eyebrow"
+                data-builder-region={formCopyRegions!.eyebrow}
                 data-builder-kind="text"
               >
-                {localizedBuilderText(locale, "global.template.form-eyebrow", builderText(
+                {localizedBuilderText(locale, formCopyRegions!.eyebrow, builderText(
                   content,
-                  "global.template.form-eyebrow",
+                  formCopyRegions!.eyebrow,
                   "Resident Form",
                 ))}
               </p>
               <h2
-                data-builder-region="global.template.form-title"
+                data-builder-region={formCopyRegions!.title}
                 data-builder-kind="text"
               >
-                {localizedBuilderText(locale, "global.template.form-title", builderText(
+                {localizedBuilderText(locale, formCopyRegions!.title, builderText(
                   content,
-                  "global.template.form-title",
+                  formCopyRegions!.title,
                   "District office intake",
                 ))}
               </h2>
               <p
                 className="lead"
-                data-builder-region="global.template.form-body"
+                data-builder-region={formCopyRegions!.body}
                 data-builder-kind="text"
               >
-                {localizedBuilderText(locale, "global.template.form-body", builderText(
+                {localizedBuilderText(locale, formCopyRegions!.body, builderText(
                   content,
-                  "global.template.form-body",
+                  formCopyRegions!.body,
                   "Online submission is shown only when an approved form revision and verification service are available.",
                 ))}
               </p>

@@ -108,7 +108,10 @@ describe("public newsletter and privacy experience", () => {
 
     const html = renderToStaticMarkup(await PageTemplate({ page: newsletter! }));
     expect(html.match(/action="\/api\/forms\/newsletter-signup"/g)).toHaveLength(1);
-    expect(html).toContain('data-builder-region="global.template.form-title"');
+    expect(html).toContain('data-builder-region="newsletter.form.eyebrow"');
+    expect(html).toContain('data-builder-region="newsletter.form.title"');
+    expect(html).toContain('data-builder-region="newsletter.form.body"');
+    expect(html).not.toContain('data-builder-region="global.template.form-');
     expect(html).toContain('data-builder-region="newsletter.form"');
   });
 
