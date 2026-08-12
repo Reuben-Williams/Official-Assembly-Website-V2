@@ -24,6 +24,7 @@ import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
+import { BilingualReadinessWorkspace } from "./bilingual-readiness-workspace";
 import { FormsGuidanceWorkspace } from "./forms-guidance-workspace";
 import { NewsletterOperationsWorkspace } from "./newsletter-operations-workspace";
 import { resolveEditorPagePath } from "./editor-path";
@@ -98,6 +99,8 @@ export function editorPageNavigation(currentPath: string, onPageChange: (path: s
     }
   };
 }
+
+const LOCALIZATION_WORKSPACE_ID = "website.localization" as BuilderWorkspaceId;
 
 export function EditorClient({
   initialAlertCollection,
@@ -203,6 +206,17 @@ export function EditorClient({
             initialCollection={initialAlertCollection}
           />
         )
+      },
+      {
+        id: LOCALIZATION_WORKSPACE_ID, label: "Bilingual readiness", group: "website", icon: "languages",
+        mobilePriority: 6, status: "active", render: () => (
+          <BilingualReadinessWorkspace
+            currentPath={currentPath}
+            onOpenPage={editorPageNavigation(currentPath, setCurrentPath).onPageChange}
+            previewBaseUrl={previewBaseUrl}
+            role={role}
+          />
+        )
       }
     ];
     return {
@@ -210,7 +224,7 @@ export function EditorClient({
       workspaces,
       globalHeader: <EditorOperationalHeader />
     };
-  }, [alerts, growth, initialAlertCollection, memberId, role]);
+  }, [alerts, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role]);
   const initialWorkspace = (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;

@@ -63,6 +63,37 @@ describe("official Assembly alert recovery", () => {
     expect(runAlertsOnce).toHaveBeenCalledOnce();
   });
 
+  it("runs complete-composition recovery only after content and alerts are idle", async () => {
+    const runCompositionOnce = vi.fn(async () => ({
+      claimed: 1,
+      completed: 1,
+      retried: 0,
+      deadLettered: 0,
+      staleLeases: 0,
+    }));
+    const runOnce = createCombinedRecoveryRunOnce({
+      runContentOnce: async () => ({ status: "idle" }),
+      runAlertsOnce: async () => ({
+        claimed: 0,
+        completed: 0,
+        retried: 0,
+        deadLettered: 0,
+        staleLeases: 0,
+      }),
+      runCompositionOnce,
+    });
+
+    await expect(runOnce()).resolves.toEqual({
+      status: "composition_processed",
+      claimed: 1,
+      completed: 1,
+      retried: 0,
+      deadLettered: 0,
+      staleLeases: 0,
+    });
+    expect(runCompositionOnce).toHaveBeenCalledOnce();
+  });
+
   it("writes and verifies the site- and environment-bound immutable alert artifact", async () => {
     const memory = memoryObjects();
     const store = createAlertRecoveryStore(memory.objects);

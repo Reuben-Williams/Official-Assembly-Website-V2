@@ -8,6 +8,17 @@ export function normalizePublicLocale(value: unknown): PublicLocale {
   return value === "es" ? "es" : DEFAULT_PUBLIC_LOCALE;
 }
 
+export function resolvePublicLocale(input: {
+  readonly previewLocale?: unknown;
+  readonly cookieLocale?: unknown;
+  readonly builderPreview?: boolean;
+}): PublicLocale {
+  if (input.builderPreview !== false && (input.previewLocale === "en" || input.previewLocale === "es")) {
+    return input.previewLocale;
+  }
+  return normalizePublicLocale(input.cookieLocale);
+}
+
 export function localeCookieOptions(production: boolean) {
   return Object.freeze({
     httpOnly: true,

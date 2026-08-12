@@ -42,6 +42,29 @@ afterEach(async () => {
 });
 
 describe("editor page navigation", () => {
+  it("returns the main view to Pages when a page is selected from bilingual readiness", async () => {
+    window.history.replaceState({}, "", "/admin/editor?workspace=website.localization");
+
+    await act(async () => root?.render(
+      <EditorClient
+        initialLinkablePosts={[]}
+        initialPath="/"
+        memberId="member-1"
+        previewBaseUrl="https://assembly.example"
+        role="owner"
+      />
+    ));
+
+    expect(container?.textContent).toContain("Bilingual publishing readiness");
+    const resources = container?.querySelector<HTMLAnchorElement>('a[href="?path=%2Fresources"]');
+    await act(async () => resources?.click());
+
+    expect(container?.querySelector('[data-builder-bilingual-readiness]')).toBeNull();
+    expect(container?.querySelector('[data-builder-preview-visible="true"]')).not.toBeNull();
+    expect(new URL(window.location.href).searchParams.get("workspace")).toBe("website.pages");
+    expect(new URL(window.location.href).searchParams.get("path")).toBe("/resources");
+  });
+
   it("opens Alerts directly and returns control to a selected editable page", async () => {
     window.history.replaceState({}, "", "/admin/editor?workspace=website.alerts");
 

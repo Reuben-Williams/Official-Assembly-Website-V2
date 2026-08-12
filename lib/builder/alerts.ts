@@ -208,12 +208,22 @@ export function createCombinedRecoveryRunOnce(input: {
     readonly deadLettered: number;
     readonly staleLeases: number;
   }>;
+  runCompositionOnce?: () => Promise<{
+    readonly claimed: number;
+    readonly completed: number;
+    readonly retried: number;
+    readonly deadLettered: number;
+    readonly staleLeases: number;
+  }>;
 }) {
   return async () => {
     const content = await input.runContentOnce();
     if (content.status !== "idle") return content;
     const alerts = await input.runAlertsOnce();
-    if (alerts.claimed === 0) return { status: "idle" as const };
-    return { status: "alerts_processed" as const, ...alerts };
+    if (alerts.claimed > 0) return { status: "alerts_processed" as const, ...alerts };
+    if (!input.runCompositionOnce) return { status: "idle" as const };
+    const composition = await input.runCompositionOnce();
+    if (composition.claimed === 0) return { status: "idle" as const };
+    return { status: "composition_processed" as const, ...composition };
   };
 }

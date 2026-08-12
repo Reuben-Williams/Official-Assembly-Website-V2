@@ -12,7 +12,9 @@ import {
   LANGUAGE_COOKIE_NAME,
   localeCookieOptions,
   normalizePublicLocale,
+  resolvePublicLocale,
 } from "../app/i18n/locale";
+import { previewLocaleRequestHeaders } from "../app/i18n/preview-proxy";
 
 describe("server-owned public locale", () => {
   it("accepts only English and Spanish and uses a bounded same-site cookie", () => {
@@ -27,6 +29,26 @@ describe("server-owned public locale", () => {
       path: "/",
       maxAge: 31_536_000,
     });
+  });
+
+  it("allows a bounded editor preview locale to override the public cookie", () => {
+    expect(resolvePublicLocale({ previewLocale: "es", cookieLocale: "en" })).toBe("es");
+    expect(resolvePublicLocale({ previewLocale: "fr", cookieLocale: "es" })).toBe("es");
+    expect(resolvePublicLocale({ previewLocale: "es", cookieLocale: undefined, builderPreview: false })).toBe("en");
+  });
+
+  it("forwards only a bounded bilingual preview URL to server components", () => {
+    const forwarded = previewLocaleRequestHeaders(
+      new URL("https://example.test/news?builderPreview=1&builderLocale=es"),
+      new Headers({ cookie: "session=value" }),
+    );
+    expect(forwarded.get("x-builder-preview-url")).toBe("/news?builderPreview=1&builderLocale=es");
+
+    const publicRequest = previewLocaleRequestHeaders(
+      new URL("https://example.test/news?builderLocale=es"),
+      new Headers(),
+    );
+    expect(publicRequest.has("x-builder-preview-url")).toBe(false);
   });
 
   it("renders Spanish navigation and footer copy in initial HTML", () => {

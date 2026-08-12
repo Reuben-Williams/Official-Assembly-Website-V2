@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { EditorClient } from "../app/admin/editor/editor-client";
+import { BilingualReadinessWorkspace } from "../app/admin/editor/bilingual-readiness-workspace";
 
 describe("production editor workspace registration", () => {
   it("hosts the live workspaces without demo or setup placeholder data", () => {
@@ -23,6 +24,7 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("Leads");
     expect(html).toContain("Customers");
     expect(html).toContain("Alerts");
+    expect(html).toContain("Bilingual readiness");
     expect(html).toContain("data-growth-live-workspace");
     expect(html).toContain("Live production data");
     expect(html).not.toContain("Production data is not active");
@@ -40,6 +42,21 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("<details");
     expect(html).toContain("Sign out and revoke editor session");
     expect(html).not.toContain("editor-attachment-note");
+  });
+
+  it("renders bilingual composition publishing and recovery evidence surfaces", () => {
+    const html = renderToStaticMarkup(
+      <BilingualReadinessWorkspace
+        currentPath="/"
+        onOpenPage={() => undefined}
+        previewBaseUrl="https://assemblywomanmorales.vercel.app"
+        role="owner"
+      />
+    );
+
+    expect(html).toContain("Complete composition recovery");
+    expect(html).toContain("Composition publishing");
+    expect(html).not.toContain("Activate bilingual publishing");
   });
 
   it("scopes pointer and disabled cursors to client-owned editor controls", () => {
