@@ -32,8 +32,53 @@ create temporary table pg_temp.owner_login_backfill_result (
   policy_version text not null,
   provider_message_id text not null
 );
+create temporary table pg_temp.owner_login_backfill_boundary as
+select
+  count(*) filter (
+    where member.site_id = 'a3f57b25-df25-4d98-9ff6-a4a3f3a00a68'::uuid
+      and member.user_id = '98e9e1e7-1a8a-4f1f-b71c-31e682567dd1'::uuid
+      and member.role = 'owner'
+      and users.last_sign_in_at = '2026-08-11T21:24:29.356981Z'::timestamptz
+  ) as owner_count,
+  (
+    select count(*)
+    from public.builder_newsletter_webhook_receipts receipt
+    where receipt.site_id = 'a3f57b25-df25-4d98-9ff6-a4a3f3a00a68'::uuid
+      and receipt.provider_message_id = 'db73a773-8609-462c-ac57-3545a535e9d5'
+      and receipt.event_type = 'email.sent'
+      and receipt.disposition = 'matched'
+      and receipt.provider_scope_id = 'resend-team-production'
+      and receipt.provider_broadcast_id is null
+  ) as sent_count,
+  (
+    select count(*)
+    from public.builder_newsletter_webhook_receipts receipt
+    where receipt.site_id = 'a3f57b25-df25-4d98-9ff6-a4a3f3a00a68'::uuid
+      and receipt.provider_message_id = 'db73a773-8609-462c-ac57-3545a535e9d5'
+      and receipt.event_type = 'email.delivered'
+      and receipt.disposition = 'matched'
+      and receipt.provider_scope_id = 'resend-team-production'
+      and receipt.provider_broadcast_id is null
+  ) as delivered_count,
+  (
+    select count(*)
+    from public.builder_newsletter_webhook_receipts receipt
+    where receipt.site_id = 'a3f57b25-df25-4d98-9ff6-a4a3f3a00a68'::uuid
+      and receipt.provider_message_id = 'db73a773-8609-462c-ac57-3545a535e9d5'
+      and (
+        receipt.disposition <> 'matched'
+        or receipt.provider_scope_id <> 'resend-team-production'
+        or receipt.provider_broadcast_id is not null
+        or receipt.event_type not in (
+          'email.sent', 'email.delivered', 'email.opened', 'email.clicked'
+        )
+      )
+  ) as disqualifying_count
+from public.builder_site_members member
+join auth.users users on users.id = member.user_id;
 grant execute on function pg_temp.owner_login_deterministic_uuid(text) to service_role;
 grant insert, select on table pg_temp.owner_login_backfill_result to service_role;
+grant select on table pg_temp.owner_login_backfill_boundary to service_role;
 
 set local role service_role;
 
@@ -55,39 +100,10 @@ declare
   v_delivered_count integer;
   v_disqualifying_count integer;
 begin
-  select count(*) into v_owner_count
-  from public.builder_site_members member
-  join auth.users users on users.id = member.user_id
-  where member.site_id = v_site_id
-    and member.user_id = v_operator_id
-    and member.role = 'owner'
-    and users.last_sign_in_at = v_auth_last_sign_in_at;
-
   select
-    count(*) filter (
-      where receipt.event_type = 'email.sent'
-        and receipt.disposition = 'matched'
-        and receipt.provider_scope_id = 'resend-team-production'
-        and receipt.provider_broadcast_id is null
-    ),
-    count(*) filter (
-      where receipt.event_type = 'email.delivered'
-        and receipt.disposition = 'matched'
-        and receipt.provider_scope_id = 'resend-team-production'
-        and receipt.provider_broadcast_id is null
-    ),
-    count(*) filter (
-      where receipt.disposition <> 'matched'
-        or receipt.provider_scope_id <> 'resend-team-production'
-        or receipt.provider_broadcast_id is not null
-        or receipt.event_type not in (
-          'email.sent', 'email.delivered', 'email.opened', 'email.clicked'
-        )
-    )
-  into v_sent_count, v_delivered_count, v_disqualifying_count
-  from public.builder_newsletter_webhook_receipts receipt
-  where receipt.site_id = v_site_id
-    and receipt.provider_message_id = v_provider_message_id;
+    owner_count, sent_count, delivered_count, disqualifying_count
+  into v_owner_count, v_sent_count, v_delivered_count, v_disqualifying_count
+  from pg_temp.owner_login_backfill_boundary;
 
   if v_owner_count <> 1
     or v_sent_count <> 1
