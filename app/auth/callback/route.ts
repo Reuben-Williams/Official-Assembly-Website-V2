@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { isSafeReturnPath } from "../../../lib/builder/authorization";
+import {
+  BUILDER_SITE_KEY,
+  isSafeReturnPath,
+  lookupBuilderMembership
+} from "../../../lib/builder/authorization";
+import {
+  editorLoginCompletionCookie,
+  editorLoginCompletionTtlSeconds,
+  issueEditorLoginCompletion
+} from "../../../lib/builder/login-completion";
 import { recordNewsletterOwnerLoginOccurrence } from "../../../lib/newsletter/owner-login-occurrence";
+import { getBuilderAdminClient } from "../../../lib/supabase/admin";
 import { createRequestSupabaseClient } from "../../../lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -22,6 +32,22 @@ export async function GET(request: Request) {
   if (!result) return NextResponse.redirect(new URL("/admin/login", url.origin));
   const { data, error } = result;
   if (error) return NextResponse.redirect(new URL("/admin/login", url.origin));
+  const userId = data.user?.id ?? "";
+  const admin = getBuilderAdminClient();
+  const membership = admin && userId
+    ? await lookupBuilderMembership(admin, BUILDER_SITE_KEY, userId)
+    : null;
+  if (!admin || !membership) return NextResponse.redirect(new URL("/admin/login", url.origin));
+  let loginCompletion: string;
+  try {
+    loginCompletion = await issueEditorLoginCompletion({
+      client: admin,
+      userId,
+      sessionGeneration: membership.previewGeneration
+    });
+  } catch {
+    return NextResponse.redirect(new URL("/admin/login", url.origin));
+  }
   if (tokenHash && type === "email") {
     const operatorId = data.user?.id ?? "";
     const authLastSignInAt = data.user?.last_sign_in_at ?? "";
@@ -39,5 +65,13 @@ export async function GET(request: Request) {
   const finish = new URL("/admin/login", url.origin);
   finish.searchParams.set("returnTo", next);
   finish.searchParams.set("complete", "1");
-  return NextResponse.redirect(finish);
+  const response = NextResponse.redirect(finish);
+  response.cookies.set(editorLoginCompletionCookie, loginCompletion, {
+    httpOnly: true,
+    maxAge: editorLoginCompletionTtlSeconds,
+    path: "/api/builder/session",
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production"
+  });
+  return response;
 }

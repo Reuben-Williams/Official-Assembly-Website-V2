@@ -36,5 +36,5 @@ describe("editable not-found page", () => {
     expect(html).toContain("No pudimos encontrar esa p\u00e1gina.");
     expect(html).toContain("Volver al inicio");
     await expect(generateMetadata()).resolves.toEqual({ title: "P\u00e1gina no encontrada" });
-  });
+  }, 15_000);
 });

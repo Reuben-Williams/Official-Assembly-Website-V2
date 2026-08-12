@@ -43,6 +43,10 @@ describe("production migration lineage", () => {
       "20260812035711_complete_bilingual_publishing.sql",
       "9c176dfb5fddc8697921494ca4804298e29060b594607a26168a5390077cdae3",
     ]);
+    expect(EXPECTED_PENDING_MIGRATIONS).toContainEqual([
+      "20260812221730_editor_login_completion_proofs.sql",
+      "fabfd42184c9651fcff9dd9efe8e21f74072ebeed085ea1906942dbfb86731f3",
+    ]);
   });
   it("keeps the production baseline exact and only approved release migrations pending", async () => {
     const { stdout, stderr } = await execFileAsync(
@@ -53,7 +57,7 @@ describe("production migration lineage", () => {
 
     expect(stderr).toBe("");
     expect(stdout).toBe(
-      "Verified 20 production migrations and 16 approved pending migrations.\n"
+      "Verified 20 production migrations and 17 approved pending migrations.\n"
     );
   });
 

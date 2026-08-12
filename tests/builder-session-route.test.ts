@@ -4,12 +4,14 @@ const mocks = vi.hoisted(() => ({
   adminRpc: vi.fn(),
   requestRpc: vi.fn(),
   signOut: vi.fn(),
+  issuePreviewSession: vi.fn(),
+  consumeEditorLoginCompletion: vi.fn(),
   requireBuilderMember: vi.fn(),
   assertRequestOrigin: vi.fn()
 }));
 
 vi.mock("@reuben-williams/next/auth", () => ({
-  issuePreviewSession: vi.fn(),
+  issuePreviewSession: mocks.issuePreviewSession,
   requireBuilderMember: mocks.requireBuilderMember
 }));
 
@@ -31,13 +33,21 @@ vi.mock("../lib/supabase/server", () => ({
   })
 }));
 
-import { DELETE } from "../app/api/builder/session/route";
+vi.mock("../lib/builder/login-completion", () => ({
+  consumeEditorLoginCompletion: mocks.consumeEditorLoginCompletion,
+  editorLoginCompletionCookie: "builder_login_completion"
+}));
+
+import { DELETE, POST } from "../app/api/builder/session/route";
 
 describe("builder session route", () => {
   beforeEach(() => {
+    process.env.BUILDER_PREVIEW_SECRET = "x".repeat(32);
     mocks.adminRpc.mockReset();
     mocks.requestRpc.mockReset();
     mocks.signOut.mockReset();
+    mocks.issuePreviewSession.mockReset();
+    mocks.consumeEditorLoginCompletion.mockReset();
     mocks.requireBuilderMember.mockReset();
     mocks.assertRequestOrigin.mockReset();
     mocks.requireBuilderMember.mockResolvedValue({
@@ -48,6 +58,54 @@ describe("builder session route", () => {
     });
     mocks.requestRpc.mockResolvedValue({ data: 3, error: null });
     mocks.signOut.mockResolvedValue({ error: null });
+    mocks.issuePreviewSession.mockResolvedValue("signed-editor-token");
+    mocks.consumeEditorLoginCompletion.mockResolvedValue(false);
+  });
+
+  it("issues editor and CSRF cookies after consuming a fresh login proof", async () => {
+    mocks.consumeEditorLoginCompletion.mockResolvedValueOnce(true);
+    const response = await POST(new Request(
+      "https://www.assemblywomanmorales.com/api/builder/session",
+      {
+        method: "POST",
+        headers: {
+          origin: "https://www.assemblywomanmorales.com",
+          cookie: "builder_login_completion=fresh-proof"
+        }
+      }
+    ));
+
+    expect(mocks.consumeEditorLoginCompletion).toHaveBeenCalledWith(expect.objectContaining({
+      token: "fresh-proof",
+      userId: "34300000-0000-4000-8000-000000000001",
+      sessionGeneration: 2
+    }));
+    expect(mocks.issuePreviewSession).toHaveBeenCalledOnce();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("builder_editor_session=signed-editor-token");
+    expect(response.headers.get("set-cookie")).toContain("builder_csrf=");
+  });
+
+  it("does not issue an editor session from an old Supabase session alone", async () => {
+    const response = await POST(new Request(
+      "https://www.assemblywomanmorales.com/api/builder/session",
+      {
+        method: "POST",
+        headers: {
+          origin: "https://www.assemblywomanmorales.com",
+          cookie: "sb-session=still-valid"
+        }
+      }
+    ));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "LOGIN_COMPLETION_REQUIRED",
+        message: "Complete a fresh staff sign-in before opening the editor."
+      }
+    });
+    expect(mocks.issuePreviewSession).not.toHaveBeenCalled();
   });
 
   it("revokes preview sessions as the signed-in user with the site key", async () => {

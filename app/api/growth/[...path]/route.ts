@@ -19,7 +19,11 @@ import {
   createLeadListQueryRouteHandler
 } from "@reuben-williams/next/queries/server";
 
-import { createGrowthOperationalDependencies, createGrowthQueryDependencies } from "../../../../lib/growth/server";
+import {
+  authorizeGrowthMutationRequest,
+  createGrowthOperationalDependencies,
+  createGrowthQueryDependencies
+} from "../../../../lib/growth/server";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +45,11 @@ export async function POST(request: Request, context: { params: Promise<{ path: 
   const key = path.join("/");
   const query = createGrowthQueryDependencies(admin, siteId);
   const operations = createGrowthOperationalDependencies(admin, siteId);
+
+  if (path[0] === "operations") {
+    const denied = await authorizeGrowthMutationRequest(request);
+    if (denied) return denied;
+  }
 
   if (key === "queries/leads") return createLeadListQueryRouteHandler(query).handle(request);
   if (key === "queries/customers") return createCustomerListQueryRouteHandler(query).handle(request);

@@ -168,7 +168,13 @@ export function EditorClient({
       setMediaError("The current private media gallery could not be loaded. Try again.");
     }
   }, [client]);
-  const growth = useMemo(() => createLiveGrowthClient(site.siteId), []);
+  const growth = useMemo(() => createLiveGrowthClient(site.siteId, {
+    getCsrfToken: csrfCookie,
+    onAuthenticationRequired: () => {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      window.location.replace(`/admin/login?returnTo=${encodeURIComponent(returnTo)}`);
+    }
+  }), []);
   const posts = useMemo(() => createHttpPostsClient({
     baseUrl: "/api/builder/posts",
     getCsrfToken: csrfCookie,

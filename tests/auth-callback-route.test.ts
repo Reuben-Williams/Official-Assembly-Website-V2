@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createRequestSupabaseClient: vi.fn(),
   verifyOtp: vi.fn(),
-  recordOwnerLoginOccurrence: vi.fn()
+  recordOwnerLoginOccurrence: vi.fn(),
+  lookupBuilderMembership: vi.fn(),
+  issueEditorLoginCompletion: vi.fn()
 }));
 
 vi.mock("../lib/supabase/server", () => ({
@@ -12,6 +14,22 @@ vi.mock("../lib/supabase/server", () => ({
 
 vi.mock("../lib/newsletter/owner-login-occurrence", () => ({
   recordNewsletterOwnerLoginOccurrence: mocks.recordOwnerLoginOccurrence
+}));
+
+vi.mock("../lib/builder/authorization", () => ({
+  BUILDER_SITE_KEY: "official-assembly-website-v2",
+  isSafeReturnPath: (value: string) => value.startsWith("/") && !value.startsWith("//"),
+  lookupBuilderMembership: mocks.lookupBuilderMembership
+}));
+
+vi.mock("../lib/builder/login-completion", () => ({
+  editorLoginCompletionCookie: "builder_login_completion",
+  editorLoginCompletionTtlSeconds: 300,
+  issueEditorLoginCompletion: mocks.issueEditorLoginCompletion
+}));
+
+vi.mock("../lib/supabase/admin", () => ({
+  getBuilderAdminClient: () => ({ rpc: vi.fn() })
 }));
 
 import { GET } from "../app/auth/callback/route";
@@ -30,6 +48,15 @@ describe("staff auth callback", () => {
     });
     mocks.recordOwnerLoginOccurrence.mockReset();
     mocks.recordOwnerLoginOccurrence.mockResolvedValue({ state: "queued" });
+    mocks.lookupBuilderMembership.mockReset();
+    mocks.lookupBuilderMembership.mockResolvedValue({
+      siteId: "34000000-0000-4000-8000-000000000001",
+      userId: "98e9e1e7-1a8a-4f1f-b71c-31e682567dd1",
+      role: "owner",
+      previewGeneration: 3
+    });
+    mocks.issueEditorLoginCompletion.mockReset();
+    mocks.issueEditorLoginCompletion.mockResolvedValue("fresh-login-proof");
     mocks.createRequestSupabaseClient.mockReset();
     mocks.createRequestSupabaseClient.mockResolvedValue({
       auth: { verifyOtp: mocks.verifyOtp }
@@ -55,6 +82,9 @@ describe("staff auth callback", () => {
       "https://www.assemblywomanmorales.com/admin/login" +
         "?returnTo=%2Fadmin%2Feditor%3Fworkspace%3Dwebsite.forms&complete=1"
     );
+    expect(response.headers.get("set-cookie")).toContain("builder_login_completion=fresh-login-proof");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("SameSite=strict");
   });
 
   it("does not verify unsupported token types", async () => {
