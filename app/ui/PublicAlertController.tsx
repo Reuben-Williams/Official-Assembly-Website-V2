@@ -20,6 +20,8 @@ import {
 } from "react";
 
 import styles from "./public-alert-controller.module.css";
+import { publicCopy } from "../i18n/catalog.public";
+import type { PublicLocale } from "../i18n/locale";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MOBILE_BREAKPOINT_PX = 42 * 16;
@@ -118,11 +120,13 @@ export function PublicAlertController({
   endpoint = "/api/public/alerts",
   rotationMs = 8_000,
   transitionDelayMs = 75,
+  locale = "en",
 }: {
   initialProjection: PublicAlertProjectionV1 | null;
   endpoint?: string;
   rotationMs?: number;
   transitionDelayMs?: number;
+  locale?: PublicLocale;
 }) {
   const [projection, setProjection] = useState(initialProjection);
   const [clock, setClock] = useState(() => Date.now());
@@ -328,7 +332,7 @@ export function PublicAlertController({
     const next = (currentIndex + offset + alerts.length) % alerts.length;
     setIndex(next);
     setCycle((value) => value + 1);
-    setAnnouncement(`Alert ${next + 1} of ${alerts.length}: ${alerts[next]!.message}`);
+    setAnnouncement(`${locale === "es" ? "Alerta" : "Alert"} ${next + 1} ${locale === "es" ? "de" : "of"} ${alerts.length}: ${alerts[next]!.message}`);
   }
 
   function completeScroll(event: ReactAnimationEvent<HTMLElement>) {
@@ -388,7 +392,7 @@ export function PublicAlertController({
   return (
     <aside
       className={styles.bar}
-      aria-label="Site alerts"
+      aria-label={publicCopy(locale, "alerts.site-label", "Site alerts")}
       data-public-alert-controller
       data-category={current.category}
       data-alert-mode={effectiveMode}
@@ -402,7 +406,7 @@ export function PublicAlertController({
     >
       <div className={styles.inner}>
         {alerts.length > 1 ? (
-          <button type="button" className={`${styles.iconButton} ${styles.previousButton}`} aria-label="Previous alert" onClick={() => navigate(-1)}>
+          <button type="button" className={`${styles.iconButton} ${styles.previousButton}`} aria-label={publicCopy(locale, "alerts.previous", "Previous alert")} onClick={() => navigate(-1)}>
             <ChevronLeft aria-hidden="true" />
           </button>
         ) : null}
@@ -414,7 +418,7 @@ export function PublicAlertController({
         {alerts.length > 1 || showPause ? (
           <div className={styles.controls}>
             {alerts.length > 1 ? (
-              <button type="button" className={styles.iconButton} aria-label="Next alert" onClick={() => navigate(1)}>
+              <button type="button" className={styles.iconButton} aria-label={publicCopy(locale, "alerts.next", "Next alert")} onClick={() => navigate(1)}>
                 <ChevronRight aria-hidden="true" />
               </button>
             ) : null}
@@ -422,19 +426,25 @@ export function PublicAlertController({
               <button
                 type="button"
                 className={styles.pauseButton}
-                aria-label={stickyPaused ? "Resume alerts" : "Pause alerts"}
+                aria-label={stickyPaused
+                  ? `${publicCopy(locale, "alerts.resume", "Resume")} ${locale === "es" ? "alertas" : "alerts"}`
+                  : `${publicCopy(locale, "alerts.pause", "Pause")} ${locale === "es" ? "alertas" : "alerts"}`}
                 aria-pressed={stickyPaused}
                 onClick={() => setStickyPaused((value) => !value)}
               >
                 {stickyPaused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-                <span>{stickyPaused ? "Resume" : "Pause"}</span>
+                <span>{stickyPaused
+                  ? publicCopy(locale, "alerts.resume", "Resume")
+                  : publicCopy(locale, "alerts.pause", "Pause")}</span>
               </button>
             ) : null}
           </div>
         ) : null}
       </div>
       <span className={styles.srOnly} aria-live="polite" aria-atomic="true">{announcement}</span>
-      {refreshFailed ? <span className={styles.srOnly} role="status">Latest alerts could not be refreshed.</span> : null}
+      {refreshFailed ? <span className={styles.srOnly} role="status">
+        {publicCopy(locale, "alerts.latest-unavailable", "Latest alerts could not be refreshed.")}
+      </span> : null}
     </aside>
   );
 }

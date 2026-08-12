@@ -36,6 +36,7 @@ export async function DistrictConnectionsSection({
     },
     showDedicatedPageLink: true,
     embedded: true,
+    locale,
   });
 
   return (

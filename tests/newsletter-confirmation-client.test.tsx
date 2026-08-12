@@ -44,13 +44,13 @@ describe("NewsletterConfirmationClient", () => {
         return Response.json({ status: "activation_pending" }, { status: 202 });
       });
 
-    await act(async () => root.render(<NewsletterConfirmationClient />));
+    await act(async () => root.render(<NewsletterConfirmationClient locale="es" />));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 
     expect(replace).toHaveBeenCalled();
     expect(order).toEqual(["fragment-removed", "session-request"]);
     expect(location.hash).toBe("");
-    expect(host.textContent).toContain("Confirm subscription");
+    expect(host.textContent).toContain("Confirmar suscripci\u00f3n");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -58,6 +58,6 @@ describe("NewsletterConfirmationClient", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain("activation is being completed");
+    expect(host.textContent).toContain("Se est\u00e1 completando");
   });
 });

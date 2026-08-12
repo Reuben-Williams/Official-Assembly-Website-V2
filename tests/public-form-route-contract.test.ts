@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const captures = vi.hoisted(() => ({
   dependencies: null as null | {
+    locale: string;
     rateLimits: {
       network: { limit: number; windowMs: number };
       identity: { limit: number; windowMs: number };
@@ -82,7 +83,7 @@ describe("public form route rate-limit contract", () => {
     const response = await POST(
       new Request("https://www.assemblywomanmorales.com/api/forms/newsletter-signup", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", cookie: "assembly-language=es" },
         body: "{}"
       }),
       { params: Promise.resolve({ formKey: "newsletter-signup" }) }
@@ -93,5 +94,6 @@ describe("public form route rate-limit contract", () => {
       network: { limit: 10, windowMs: 60 * 60_000 },
       identity: { limit: 5, windowMs: 15 * 60_000 }
     });
+    expect(captures.dependencies?.locale).toBe("es-US");
   });
 });

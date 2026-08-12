@@ -20,6 +20,7 @@ import { createPackageCompatibleNewsletterSubmissionRequest } from "../../../../
 import { readNewsletterPublicReadiness } from "../../../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
 import { APPROVED_FORM_TEMPLATES } from "@reuben-williams/forms";
+import { LANGUAGE_COOKIE_NAME, normalizePublicLocale } from "../../../i18n/locale";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,6 +30,18 @@ function unavailable(status = 503, code = "FORM_UNAVAILABLE") {
     { error: { code, message: "Online submission is unavailable. Please contact the district office." } },
     { status, headers: { "cache-control": "no-store" } }
   );
+}
+
+function requestLocale(request: Request) {
+  const language = request.headers.get("cookie")
+    ?.split(";")
+    .map((value) => value.trim().split("=", 2))
+    .find(([name]) => name === LANGUAGE_COOKIE_NAME)?.[1];
+  return normalizePublicLocale(language) === "es" ? "es-US" : "en-US";
+}
+
+function requestPublicLocale(request: Request) {
+  return requestLocale(request) === "es-US" ? "es" as const : "en" as const;
 }
 
 export async function POST(
@@ -67,7 +80,7 @@ export async function POST(
   });
   const route = createPublicFormSubmissionRoute({
     siteId,
-    locale: "en-US",
+    locale: requestLocale(request),
     allowedOrigins: allowedBuilderOrigins(new URL(request.url).origin),
     repository,
     network: createVercelTrustedNetworkAdapter(),
@@ -105,7 +118,8 @@ export async function POST(
       submissionRequest = await createPackageCompatibleNewsletterSubmissionRequest({
         request,
         template,
-        businessName: siteConfig.officeName
+        businessName: siteConfig.officeName,
+        locale: requestPublicLocale(request),
       });
     } catch {
       return unavailable(400, "INVALID_SUBMISSION");

@@ -28,7 +28,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
   const supportingImage = slug === "community" ? "graduation" : "coverage";
   const residentForm = formType && formType !== "newsletter"
-    ? await ResidentForm({ type: formType })
+    ? await ResidentForm({ type: formType, locale })
     : null;
   const newsletterSignup = formType === "newsletter"
     ? await NewsletterSignupSection({
@@ -44,7 +44,8 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
           title: "Request District Newsletter emails",
           body: "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
         },
-        showDedicatedPageLink: false
+        showDedicatedPageLink: false,
+        locale,
       })
     : null;
   const primaryCta = builderLink(content, `${slug}.hero.primary-cta`, {

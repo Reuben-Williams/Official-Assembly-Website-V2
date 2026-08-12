@@ -411,7 +411,7 @@ export function createSupabaseNewsletterSubscriptionJobData(client: SupabaseClie
       if (jobResult.error || !jobResult.data) throw new Error("confirmation job unavailable");
       const subscriptionResult = await client
         .from("builder_newsletter_subscriptions")
-        .select("contact_id,status")
+        .select("contact_id,status,current_consent_id")
         .eq("site_id", siteId).eq("id", jobResult.data.subscription_id).single();
       const generationResult = await client
         .from("builder_newsletter_confirmation_generations")
@@ -421,6 +421,34 @@ export function createSupabaseNewsletterSubscriptionJobData(client: SupabaseClie
         .eq("generation", jobResult.data.confirmation_generation)
         .single();
       if (subscriptionResult.error || generationResult.error || !subscriptionResult.data || !generationResult.data) {
+        throw new Error("confirmation job unavailable");
+      }
+      const consentResult = await client
+        .from("builder_consents")
+        .select("base_consent_id")
+        .eq("site_id", siteId)
+        .eq("id", subscriptionResult.data.current_consent_id)
+        .single();
+      const baseConsentResult = consentResult.data?.base_consent_id
+        ? await client
+          .from("builder_form_submission_consents")
+          .select("submission_id")
+          .eq("site_id", siteId)
+          .eq("id", consentResult.data.base_consent_id)
+          .single()
+        : { data: null, error: new Error("missing consent evidence") };
+      const submissionResult = baseConsentResult.data?.submission_id
+        ? await client
+          .from("builder_form_submissions")
+          .select("locale")
+          .eq("site_id", siteId)
+          .eq("id", baseConsentResult.data.submission_id)
+          .single()
+        : { data: null, error: new Error("missing submission evidence") };
+      if (
+        consentResult.error || baseConsentResult.error || submissionResult.error ||
+        !submissionResult.data || !["en-US", "es-US"].includes(String(submissionResult.data.locale))
+      ) {
         throw new Error("confirmation job unavailable");
       }
       const identityResult = await client
@@ -446,7 +474,8 @@ export function createSupabaseNewsletterSubscriptionJobData(client: SupabaseClie
         keyId: String(generationResult.data.signing_key_id),
         issuedAt: new Date(String(generationResult.data.issued_at)),
         expiresAt: new Date(String(generationResult.data.expires_at)),
-        pending: subscriptionResult.data.status === "pending_confirmation" && !generationResult.data.consumed_at
+        pending: subscriptionResult.data.status === "pending_confirmation" && !generationResult.data.consumed_at,
+        locale: submissionResult.data.locale === "es-US" ? "es" as const : "en" as const,
       };
     },
 

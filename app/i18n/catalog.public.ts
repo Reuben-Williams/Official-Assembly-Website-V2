@@ -27,6 +27,15 @@ const spanish = Object.freeze({
   "global.footer.staff-portal": "Portal del personal",
   "global.office.tagline": "Servicios para residentes, información legislativa, recursos electorales y acceso a la oficina del distrito para el Distrito Legislativo 34 de Nueva Jersey.",
   "metadata.home.description": "Servicios para residentes, información legislativa, recursos electorales y acceso a la oficina del distrito para el Distrito Legislativo 34 de Nueva Jersey.",
+  "alerts.site-label": "Alertas del sitio",
+  "alerts.previous": "Alerta anterior",
+  "alerts.next": "Alerta siguiente",
+  "alerts.pause": "Pausar",
+  "alerts.resume": "Reanudar",
+  "alerts.latest-unavailable": "No se pudieron actualizar las alertas m\u00e1s recientes.",
+  "news.read-update": "Leer novedad",
+  "news.empty-title": "A\u00fan no se han publicado novedades del distrito",
+  "news.empty-body": "Las novedades publicadas por la oficina del distrito aparecer\u00e1n aqu\u00ed.",
 } as const);
 
 export type PublicCatalogKey = keyof typeof spanish;

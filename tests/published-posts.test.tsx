@@ -63,7 +63,7 @@ describe("live published posts", () => {
   });
 
   it("renders real published post links and an honest zero-post state", () => {
-    const html = renderToStaticMarkup(<PublishedPostList posts={[{
+    const html = renderToStaticMarkup(<PublishedPostList locale="es" posts={[{
       entryId: "11111111-1111-4111-8111-111111111111",
       versionId: "22222222-2222-4222-8222-222222222222",
       slug: "district-update",
@@ -79,9 +79,10 @@ describe("live published posts", () => {
     }]} />);
     expect(html).toContain('href="/news/district-update"');
     expect(html).toContain("A live update from the district office.");
+    expect(html).toContain("Leer novedad");
 
-    const empty = renderToStaticMarkup(<PublishedPostList posts={[]} />);
-    expect(empty).toContain("No district posts have been published yet");
+    const empty = renderToStaticMarkup(<PublishedPostList locale="es" posts={[]} />);
+    expect(empty).toContain("A\u00fan no se han publicado novedades del distrito");
     expect(empty).not.toContain("placeholder");
   });
 });

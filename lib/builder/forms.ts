@@ -12,8 +12,11 @@ import type {
 
 import {
   applyApprovedNewsletterConsentProjection,
+  approvedNewsletterConsentLabel,
   newsletterPackageCompatibleConfiguration
 } from "../newsletter/managed-form-revision";
+import type { PublicLocale } from "../../app/i18n/locale";
+import { translateText } from "../../app/i18n/translations";
 
 type ManagedFormType = "contact" | "newsletter" | "survey";
 
@@ -41,6 +44,36 @@ export function getManagedFormDefinition(type: ManagedFormType) {
 
 export function isManagedPublicFormKey(value: string): boolean {
   return Object.values(managedFormDefinitions).some((definition) => definition.formKey === value);
+}
+
+export function localizedManagedFormProjection(
+  type: Exclude<ManagedFormType, "survey">,
+  projection: PublicBuilderFormProjection,
+  locale: PublicLocale,
+): PublicBuilderFormProjection {
+  if (locale === "en") return projection;
+  const consentText = type === "newsletter"
+    ? approvedNewsletterConsentLabel(locale)
+    : translateText(projection.consent.renderedText, locale);
+  return Object.freeze({
+    ...projection,
+    displayName: translateText(projection.displayName, locale),
+    fields: Object.freeze(projection.fields.map((field) => Object.freeze({
+      ...field,
+      label: field.key === projection.consent.fieldKey
+        ? consentText
+        : translateText(field.label, locale),
+      helpText: translateText(field.helpText, locale),
+      placeholder: translateText(field.placeholder, locale),
+      ...(field.options ? {
+        options: Object.freeze(field.options.map((option) => Object.freeze({
+          ...option,
+          label: translateText(option.label, locale),
+        }))),
+      } : {}),
+    }))),
+    consent: Object.freeze({ ...projection.consent, renderedText: consentText }),
+  });
 }
 
 export async function loadManagedFormProjection(

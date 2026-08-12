@@ -11,6 +11,7 @@ import {
   BuilderForm,
   type BuilderFormProps
 } from "@reuben-williams/next/forms";
+import type { PublicLocale } from "../i18n/locale";
 
 const VERIFICATION_GUIDANCE =
   "Verification runs automatically. Wait for it to finish before submitting.";
@@ -37,24 +38,28 @@ type PublicFormState =
 
 type TurnstileAwareBuilderFormProps = BuilderFormProps & {
   readonly variant: PublicFormVariant;
+  readonly locale?: PublicLocale;
 };
 
-function presentationLabel(field: BuilderFormProps["projection"]["fields"][number]) {
-  if (!field.required) return `${field.label} — Optional`;
+function presentationLabel(field: BuilderFormProps["projection"]["fields"][number], locale: PublicLocale) {
+  if (!field.required) return `${field.label} — ${locale === "es" ? "Opcional" : "Optional"}`;
   if (field.kind === "consent") return `${field.label} *`;
   return field.label;
 }
 
 function createPresentationProjection(
   projection: BuilderFormProps["projection"],
-  variant: PublicFormVariant
+  variant: PublicFormVariant,
+  locale: PublicLocale,
 ): BuilderFormProps["projection"] {
   return {
     ...projection,
-    displayName: FORM_HEADINGS[variant],
+    displayName: locale === "es"
+      ? variant === "contact" ? "Env\u00ede un mensaje a la oficina del distrito" : "Suscr\u00edbase al Bolet\u00edn del distrito"
+      : FORM_HEADINGS[variant],
     fields: projection.fields.map((field) => ({
       ...field,
-      label: presentationLabel(field)
+      label: presentationLabel(field, locale)
     }))
   };
 }
@@ -73,7 +78,25 @@ function errorNodeFor(control: HTMLInputElement | HTMLTextAreaElement | HTMLSele
   return errorId ? document.getElementById(errorId) : null;
 }
 
-function invalidMessage(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
+function invalidMessage(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, locale: PublicLocale) {
+  if (locale === "es") {
+    if (control.validity.typeMismatch && control instanceof HTMLInputElement && control.type === "email") {
+      return "Ingrese una direcci\u00f3n de correo electr\u00f3nico v\u00e1lida.";
+    }
+    if (control.validity.valueMissing) {
+      const requiredMessages: Record<string, string> = {
+        email: "Ingrese su direcci\u00f3n de correo electr\u00f3nico.",
+        firstName: "Ingrese su nombre.",
+        lastName: "Ingrese su apellido.",
+        marketingConsent: "Acepte recibir correos del Bolet\u00edn del distrito antes de enviar.",
+        message: "Ingrese un mensaje.",
+        operationalConsent: "Acepte el reconocimiento de contacto antes de enviar.",
+        subject: "Ingrese un asunto.",
+      };
+      return requiredMessages[control.name] ?? "Complete este campo obligatorio.";
+    }
+    return control.validationMessage || "Revise este campo e int\u00e9ntelo de nuevo.";
+  }
   if (control.validity.typeMismatch && control instanceof HTMLInputElement && control.type === "email") {
     return "Enter a valid email address.";
   }
@@ -101,9 +124,16 @@ function clearFieldErrors(form: HTMLFormElement) {
 export function TurnstileAwareBuilderForm({
   variant,
   projection,
+  locale = "en",
   ...props
 }: TurnstileAwareBuilderFormProps) {
-  const [verificationMessage, setVerificationMessage] = useState(VERIFICATION_GUIDANCE);
+  const verificationGuidance = locale === "es"
+    ? "La verificaci\u00f3n se ejecuta autom\u00e1ticamente. Espere a que termine antes de enviar."
+    : VERIFICATION_GUIDANCE;
+  const verificationRequired = locale === "es"
+    ? "La verificaci\u00f3n a\u00fan se est\u00e1 cargando. Espere un momento y vuelva a enviar."
+    : VERIFICATION_REQUIRED;
+  const [verificationMessage, setVerificationMessage] = useState(verificationGuidance);
   const [formState, setFormState] = useState<PublicFormState>("idle");
   const hostRef = useRef<HTMLDivElement>(null);
   const formStateRef = useRef<PublicFormState>("idle");
@@ -111,8 +141,8 @@ export function TurnstileAwareBuilderForm({
   const pendingStatusRef = useRef<string | null>(null);
   const observedDisabledRef = useRef(false);
   const presentationProjection = useMemo(
-    () => createPresentationProjection(projection, variant),
-    [projection, variant]
+    () => createPresentationProjection(projection, variant, locale),
+    [locale, projection, variant]
   );
 
   function updateFormState(next: PublicFormState) {
@@ -163,7 +193,7 @@ export function TurnstileAwareBuilderForm({
     if (!control) return;
     event.preventDefault();
     const error = errorNodeFor(control);
-    if (error) error.textContent = invalidMessage(control);
+    if (error) error.textContent = invalidMessage(control, locale);
     updateFormState("client-invalid");
   }
 
@@ -192,7 +222,7 @@ export function TurnstileAwareBuilderForm({
       event.preventDefault();
       event.stopPropagation();
       updateFormState("verification-needed");
-      setVerificationMessage(VERIFICATION_REQUIRED);
+      setVerificationMessage(verificationRequired);
       return;
     }
 
@@ -228,7 +258,9 @@ export function TurnstileAwareBuilderForm({
       </p>
       {variant === "newsletter" && formState === "success" ? (
         <p className="newsletter-success-guidance" data-newsletter-success-guidance="true">
-          {NEWSLETTER_SUCCESS_GUIDANCE}
+          {locale === "es"
+            ? "Su correo de confirmaci\u00f3n puede tardar varios minutos en llegar. Revise la carpeta de spam o correo no deseado si no lo ve."
+            : NEWSLETTER_SUCCESS_GUIDANCE}
         </p>
       ) : null}
     </div>

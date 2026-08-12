@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PublicLocale } from "../../i18n/locale";
 
 type State = "exchanging" | "ready" | "confirming" | "activation_pending" | "already_confirmed" | "unavailable";
 
@@ -16,7 +17,7 @@ async function exchangeFragmentToken(token: string): Promise<boolean> {
   return response.ok;
 }
 
-export function NewsletterConfirmationClient() {
+export function NewsletterConfirmationClient({ locale = "en" }: { locale?: PublicLocale }) {
   const [state, setState] = useState<State>("exchanging");
 
   useEffect(() => {
@@ -55,21 +56,23 @@ export function NewsletterConfirmationClient() {
     }
   }
 
-  if (state === "exchanging") return <p role="status">Checking your confirmation link…</p>;
+  if (state === "exchanging") return <p role="status">{locale === "es" ? "Comprobando su enlace de confirmaci\u00f3n…" : "Checking your confirmation link…"}</p>;
   if (state === "unavailable") {
-    return <p role="status">This confirmation link is unavailable or expired. You can submit the newsletter form again.</p>;
+    return <p role="status">{locale === "es" ? "Este enlace de confirmaci\u00f3n no est\u00e1 disponible o ha vencido. Puede volver a enviar el formulario del bolet\u00edn." : "This confirmation link is unavailable or expired. You can submit the newsletter form again."}</p>;
   }
   if (state === "activation_pending") {
-    return <p role="status">Your confirmation was accepted. Newsletter activation is being completed.</p>;
+    return <p role="status">{locale === "es" ? "Su confirmaci\u00f3n fue aceptada. Se est\u00e1 completando la activaci\u00f3n del bolet\u00edn." : "Your confirmation was accepted. Newsletter activation is being completed."}</p>;
   }
   if (state === "already_confirmed") {
-    return <p role="status">This subscription was already confirmed. No additional action is needed.</p>;
+    return <p role="status">{locale === "es" ? "Esta suscripci\u00f3n ya fue confirmada. No se requiere ninguna acci\u00f3n adicional." : "This subscription was already confirmed. No additional action is needed."}</p>;
   }
   return (
     <div>
-      <p>Your link is valid. Confirm only if you requested the District Newsletter.</p>
+      <p>{locale === "es" ? "Su enlace es v\u00e1lido. Confirme solo si solicit\u00f3 el Bolet\u00edn del distrito." : "Your link is valid. Confirm only if you requested the District Newsletter."}</p>
       <button className="cta-link" type="button" onClick={confirm} disabled={state === "confirming"}>
-        {state === "confirming" ? "Confirming…" : "Confirm subscription"}
+        {state === "confirming"
+          ? locale === "es" ? "Confirmando…" : "Confirming…"
+          : locale === "es" ? "Confirmar suscripci\u00f3n" : "Confirm subscription"}
       </button>
     </div>
   );

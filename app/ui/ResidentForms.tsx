@@ -13,9 +13,13 @@ import { readNewsletterConfiguration } from "../../lib/newsletter/config";
 import { readNewsletterPublicReadiness } from "../../lib/newsletter/readiness";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../lib/supabase/admin";
 import { TurnstileAwareBuilderForm } from "./TurnstileAwareBuilderForm";
+import type { PublicLocale } from "../i18n/locale";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import { localizedManagedFormProjection } from "../../lib/builder/forms";
 
 type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
+  locale?: PublicLocale;
 };
 
 type ActiveResidentFormType = Exclude<ResidentFormsProps["type"], "survey">;
@@ -33,10 +37,12 @@ const PUBLIC_FORM_CARD_COPY = Object.freeze({
 
 function PublicFormCard({
   type,
+  locale,
   unavailable = false,
   children
 }: {
   type: ActiveResidentFormType;
+  locale: PublicLocale;
   unavailable?: boolean;
   children: ReactNode;
 }) {
@@ -48,10 +54,10 @@ function PublicFormCard({
       data-public-form-type={type}
     >
       <header className="public-form-card-header">
-        <p className="public-form-card-eyebrow">{copy.eyebrow}</p>
-        <h3>{copy.heading}</h3>
+        <p className="public-form-card-eyebrow">{localizedBuilderText(locale, `forms.${type}.eyebrow`, copy.eyebrow)}</p>
+        <h3>{localizedBuilderText(locale, `forms.${type}.heading`, copy.heading)}</h3>
         <p className="public-form-card-requirements">
-          Fields marked * are required. All other fields are optional.
+          {localizedBuilderText(locale, "forms.requirements", "Fields marked * are required. All other fields are optional.")}
         </p>
       </header>
       <div className="public-form-card-body">{children}</div>
@@ -59,9 +65,9 @@ function PublicFormCard({
   );
 }
 
-function Unavailable({ type }: { type: ActiveResidentFormType }) {
+function Unavailable({ type, locale }: { type: ActiveResidentFormType; locale: PublicLocale }) {
   return (
-    <PublicFormCard type={type} unavailable>
+    <PublicFormCard type={type} locale={locale} unavailable>
       <UnavailableFormFallback
         businessName="the District 34 office"
         phone={siteConfig.phoneE164}
@@ -70,16 +76,15 @@ function Unavailable({ type }: { type: ActiveResidentFormType }) {
   );
 }
 
-export async function ResidentForm({ type }: ResidentFormsProps) {
+export async function ResidentForm({ type, locale = "en" }: ResidentFormsProps) {
   if (type === "survey" || !getManagedFormDefinition(type)) {
     return (
       <div className="form-panel" data-builder-form-unavailable="true">
         <p role="status">
-          This survey is not accepting online responses. Call the district office or use the
-          official legislative contact options to share a priority.
+          {localizedBuilderText(locale, "forms.survey.unavailable", "This survey is not accepting online responses. Call the district office or use the official legislative contact options to share a priority.")}
         </p>
         <a className="cta-link" href={`tel:${siteConfig.phoneE164}`}>
-          Call {siteConfig.phoneDisplay}
+          {localizedBuilderText(locale, "forms.call", "Call")} {siteConfig.phoneDisplay}
         </a>
       </div>
     );
@@ -87,15 +92,15 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
 
   const client = getBuilderAdminClient();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  if (!client || !turnstileSiteKey) return <Unavailable type={type} />;
+  if (!client || !turnstileSiteKey) return <Unavailable type={type} locale={locale} />;
 
   const siteId = await resolveBuilderSiteId(client);
-  if (!siteId) return <Unavailable type={type} />;
+  if (!siteId) return <Unavailable type={type} locale={locale} />;
   if (type === "newsletter") {
     const configuration = readNewsletterConfiguration();
-    if (configuration.status !== "ready") return <Unavailable type={type} />;
+    if (configuration.status !== "ready") return <Unavailable type={type} locale={locale} />;
     const readiness = await readNewsletterPublicReadiness(client, siteId, configuration);
-    if (readiness.status !== "ready") return <Unavailable type={type} />;
+    if (readiness.status !== "ready") return <Unavailable type={type} locale={locale} />;
   }
 
   const repository = createSupabasePublishedFormRepository({
@@ -105,32 +110,33 @@ export async function ResidentForm({ type }: ResidentFormsProps) {
     turnstileSiteKey
   });
   const result = await loadManagedFormProjection(type, { repository, siteId });
-  if (result.status !== "ready") return <Unavailable type={type} />;
+  if (result.status !== "ready") return <Unavailable type={type} locale={locale} />;
+  const projection = localizedManagedFormProjection(type, result.projection, locale);
 
   return (
-    <PublicFormCard type={type}>
+    <PublicFormCard type={type} locale={locale}>
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
       />
       {type === "newsletter" ? (
-        <aside className="newsletter-consent-context" aria-label="Newsletter confirmation and privacy notice">
-          <strong>Confirmation is required</strong>
+        <aside className="newsletter-consent-context" aria-label={localizedBuilderText(locale, "forms.newsletter.context-label", "Newsletter confirmation and privacy notice")}>
+          <strong>{localizedBuilderText(locale, "forms.newsletter.confirmation-required", "Confirmation is required")}</strong>
           <p>
-            Submitting this form creates a pending District Newsletter confirmation request.
-            You are not subscribed until you confirm using the email sent to your inbox.
+            {localizedBuilderText(locale, "forms.newsletter.pending", "Submitting this form creates a pending District Newsletter confirmation request. You are not subscribed until you confirm using the email sent to your inbox.")}
           </p>
           <p>
-            Review how the office and Resend handle newsletter information in the <Link href="/privacy">privacy notice</Link>.
-            Every District Newsletter includes an unsubscribe link.
+            {localizedBuilderText(locale, "forms.newsletter.privacy-prefix", "Review how the office and Resend handle newsletter information in the")} <Link href="/privacy">{localizedBuilderText(locale, "forms.newsletter.privacy-link", "privacy notice")}</Link>.
+            {" "}{localizedBuilderText(locale, "forms.newsletter.unsubscribe", "Every District Newsletter includes an unsubscribe link.")}
           </p>
         </aside>
       ) : null}
       <TurnstileAwareBuilderForm
         className="builder-public-form"
         endpoint={`/api/forms/${result.projection.formKey}`}
-        projection={result.projection}
+        projection={projection}
         variant={type}
+        locale={locale}
       />
     </PublicFormCard>
   );

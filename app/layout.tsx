@@ -74,7 +74,7 @@ export default async function RootLayout({
           )}
         </a>
         <AppHeader content={content} locale={locale} />
-        {alerts.eligible ? <PublicAlertController initialProjection={alerts.projection} /> : null}
+        {alerts.eligible ? <PublicAlertController initialProjection={alerts.projection} locale={locale} /> : null}
         <main id="main">{children}</main>
         <AppFooter content={content} locale={locale} />
         <Suspense fallback={null}>

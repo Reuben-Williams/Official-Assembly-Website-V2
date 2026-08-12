@@ -92,6 +92,15 @@ afterEach(async () => {
 });
 
 describe("public alert controller", () => {
+  it("localizes public alert controls without altering the approved alert message", async () => {
+    await act(async () => {
+      root.render(<PublicAlertController initialProjection={projection()} locale="es" />);
+    });
+    expect(container.querySelector("aside")?.getAttribute("aria-label")).toBe("Alertas del sitio");
+    expect(container.querySelector('button[aria-label="Alerta anterior"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Alerta siguiente"]')).not.toBeNull();
+    expect(container.textContent).toContain("First district update");
+  });
   it("renders no space for zero alerts and a static notice without controls for one", async () => {
     await act(async () => root.render(<PublicAlertController initialProjection={null} />));
     expect(container.innerHTML).toBe("");

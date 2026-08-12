@@ -16,6 +16,7 @@ vi.mock("../lib/builder/server-content", async (importOriginal) => {
   return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
 });
 vi.mock("../lib/builder/published-posts", () => ({ listPublishedPosts: vi.fn(async () => []) }));
+vi.mock("../app/i18n/server", () => ({ readPublicLocale: vi.fn(async () => "es") }));
 vi.mock("../lib/newsletter/config", () => ({
   readNewsletterConfiguration: () => ({
     status: "ready" as const,
@@ -36,6 +37,7 @@ vi.mock("../lib/supabase/admin", () => ({
   resolveBuilderSiteId: async () => "34000000-0000-4000-8000-000000000001"
 }));
 vi.mock("../lib/builder/forms", () => ({
+  localizedManagedFormProjection: (_type: string, projection: unknown) => projection,
   getManagedFormDefinition: () => ({ formKey: "newsletter-signup" }),
   createSupabasePublishedFormRepository: () => ({}),
   loadManagedFormProjection: async () => ({
@@ -67,18 +69,18 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("News and Updates hub", () => {
   it("uses the combined hub name as its metadata fallback", async () => {
-    await expect(generateMetadata()).resolves.toMatchObject({ title: "News & Updates" });
+    await expect(generateMetadata()).resolves.toMatchObject({ title: "Noticias y novedades" });
   });
 
   it("places the managed signup after published updates", async () => {
     const html = renderToStaticMarkup(await NewsPage());
 
     expect(html).toContain('data-builder-region="news.newsletter.form"');
-    expect(html).toContain("Get News &amp; Updates by email");
+    expect(html).toContain("Reciba noticias y novedades por correo electr\u00f3nico");
     expect(html).toContain('action="/api/forms/newsletter-signup"');
     expect(html).toContain('href="/newsletter"');
-    expect(html.indexOf("Published updates")).toBeLessThan(
-      html.indexOf("Get News &amp; Updates by email")
+    expect(html.indexOf("Novedades publicadas")).toBeLessThan(
+      html.indexOf("Reciba noticias y novedades por correo electr\u00f3nico")
     );
   });
 });

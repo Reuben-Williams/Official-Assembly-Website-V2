@@ -47,6 +47,7 @@ vi.mock("../lib/supabase/admin", () => ({
   resolveBuilderSiteId: async () => "34000000-0000-4000-8000-000000000001"
 }));
 vi.mock("../lib/builder/forms", () => ({
+  localizedManagedFormProjection: (_type: string, projection: unknown) => projection,
   getManagedFormDefinition: (type: string) => type === "survey" ? null : { formKey: type },
   createSupabasePublishedFormRepository: () => ({}),
   loadManagedFormProjection: async (type: "contact" | "newsletter") => {
@@ -78,7 +79,7 @@ vi.mock("../lib/builder/forms", () => ({
   }
 }));
 
-import PrivacyPage from "../app/privacy/page";
+import { PrivacyPageContent } from "../app/privacy/PrivacyPageContent";
 import { getPageBySlug } from "../app/data/site";
 import { PageTemplate } from "../app/ui/PageTemplate";
 import { ResidentForm } from "../app/ui/ResidentForms";
@@ -112,13 +113,13 @@ describe("public newsletter and privacy experience", () => {
   });
 
   it("states the pending confirmation boundary and links privacy before active signup", async () => {
-    const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter" }));
+    const html = renderToStaticMarkup(await ResidentForm({ type: "newsletter", locale: "es" }));
 
     expect(html).toContain('data-public-form-type="newsletter"');
-    expect(html).toContain("Join the District Newsletter");
-    expect(html).toContain("Fields marked * are required. All other fields are optional.");
-    expect(html).toContain("You are not subscribed until you confirm");
-    expect(html).toContain("Verification runs automatically");
+    expect(html).toContain("Suscr\u00edbase al Bolet\u00edn del distrito");
+    expect(html).toContain("Los campos marcados con * son obligatorios");
+    expect(html).toContain("No estar\u00e1 suscrito hasta que confirme");
+    expect(html).toContain("La verificaci\u00f3n se ejecuta autom\u00e1ticamente");
     expect(html).toContain('href="/privacy"');
     expect(html).toContain('action="/api/forms/newsletter-signup"');
     expect(html).not.toContain("You are now subscribed");
@@ -126,12 +127,12 @@ describe("public newsletter and privacy experience", () => {
   });
 
   it("presents Contact as a civic service card without changing its endpoint", async () => {
-    const html = renderToStaticMarkup(await ResidentForm({ type: "contact" }));
+    const html = renderToStaticMarkup(await ResidentForm({ type: "contact", locale: "es" }));
 
     expect(html).toContain('data-public-form-type="contact"');
-    expect(html).toContain("District office service");
-    expect(html).toContain("Send a message to the District Office");
-    expect(html).toContain("Fields marked * are required. All other fields are optional.");
+    expect(html).toContain("Servicio de la oficina del distrito");
+    expect(html).toContain("Env\u00ede un mensaje a la oficina del distrito");
+    expect(html).toContain("Los campos marcados con * son obligatorios");
     expect(html).toContain('action="/api/forms/contact"');
   });
 
@@ -151,7 +152,7 @@ describe("public newsletter and privacy experience", () => {
   });
 
   it("publishes the approved privacy subjects without unsupported legal promises", () => {
-    const html = renderToStaticMarkup(<PrivacyPage />);
+    const html = renderToStaticMarkup(<PrivacyPageContent locale="en" />);
 
     for (const text of [
       "email address",
@@ -165,5 +166,21 @@ describe("public newsletter and privacy experience", () => {
     expect(html).toContain('href="/contact"');
     expect(html).toContain("(973) 450-0484");
     expect(html).not.toMatch(/guarantee|legal advice|GDPR|HIPAA/);
+  });
+
+  it("renders the complete privacy notice in Spanish without English fallback copy", () => {
+    const html = renderToStaticMarkup(<PrivacyPageContent locale="es" />);
+
+    for (const text of [
+      "Aviso de privacidad",
+      "Información que recopilamos",
+      "Cómo se utiliza la información del boletín",
+      "Entrega de correo electrónico mediante Resend",
+      "Opciones de confirmación y cancelación de suscripción",
+      "Solicitudes de acceso, corrección y eliminación",
+      "Enfoque de conservación",
+    ]) expect(html).toContain(text);
+    expect(html).not.toContain("Information we collect");
+    expect(html).not.toContain("Open contact page");
   });
 });

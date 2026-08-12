@@ -9,6 +9,7 @@ vi.mock("../lib/builder/server-content", async (importOriginal) => {
   return { ...actual, loadBuilderServerContent: vi.fn(async () => ({ regions: {} })) };
 });
 vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
+vi.mock("../app/i18n/server", () => ({ readPublicLocale: vi.fn(async () => "es") }));
 
 describe("editable not-found page", () => {
   it("renders the canonical 404 marker and every editable region", async () => {
@@ -18,7 +19,7 @@ describe("editable not-found page", () => {
       return;
     }
 
-    const { default: NotFoundPage } = await import("../app/not-found");
+    const { default: NotFoundPage, generateMetadata } = await import("../app/not-found");
     const html = renderToStaticMarkup(await NotFoundPage());
 
     expect(html).toContain('data-builder-content-path="/404"');
@@ -31,6 +32,9 @@ describe("editable not-found page", () => {
     expect(html).toContain('data-builder-region="404.hero.secondary-cta"');
     expect(html).toContain('href="/"');
     expect(html).toContain('href="/resources"');
-    expect(html).toContain('alt="Assemblywoman Carmen Morales with legislative colleagues at the State House"');
+    expect(html).toContain('alt="La asamble\u00edsta Carmen Morales con colegas legisladores en la Casa de Gobierno"');
+    expect(html).toContain("No pudimos encontrar esa p\u00e1gina.");
+    expect(html).toContain("Volver al inicio");
+    await expect(generateMetadata()).resolves.toEqual({ title: "P\u00e1gina no encontrada" });
   });
 });

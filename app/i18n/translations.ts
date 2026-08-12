@@ -239,6 +239,32 @@ Object.assign(spanishTranslations, {
   "Review newsletter signup details": "Consulte los detalles de suscripción al boletín"
 });
 
+Object.assign(spanishTranslations, {
+  "Page not found": "P\u00e1gina no encontrada",
+  "We couldn't find that page.": "No pudimos encontrar esa p\u00e1gina.",
+  "The page may have moved, or the address may be incorrect. Use one of the links below to continue.": "Es posible que la p\u00e1gina se haya movido o que la direcci\u00f3n sea incorrecta. Use uno de los enlaces a continuaci\u00f3n para seguir navegando.",
+  "Return home": "Volver al inicio",
+  "View resources": "Ver recursos",
+  "District office service": "Servicio de la oficina del distrito",
+  "Send a message to the District Office": "Env\u00ede un mensaje a la oficina del distrito",
+  "Email updates": "Novedades por correo electr\u00f3nico",
+  "Join the District Newsletter": "Suscr\u00edbase al Bolet\u00edn del distrito",
+  "Fields marked * are required. All other fields are optional.": "Los campos marcados con * son obligatorios. Todos los dem\u00e1s campos son opcionales.",
+  "Newsletter confirmation and privacy notice": "Confirmaci\u00f3n del bolet\u00edn y aviso de privacidad",
+  "Confirmation is required": "Se requiere confirmaci\u00f3n",
+  "Submitting this form creates a pending District Newsletter confirmation request. You are not subscribed until you confirm using the email sent to your inbox.": "Enviar este formulario crea una solicitud pendiente de confirmaci\u00f3n del Bolet\u00edn del distrito. No estar\u00e1 suscrito hasta que confirme mediante el correo enviado a su bandeja de entrada.",
+  "Review how the office and Resend handle newsletter information in the": "Consulte c\u00f3mo la oficina y Resend manejan la informaci\u00f3n del bolet\u00edn en el",
+  "privacy notice": "aviso de privacidad",
+  "Every District Newsletter includes an unsubscribe link.": "Cada Bolet\u00edn del distrito incluye un enlace para cancelar la suscripci\u00f3n.",
+  "News & Updates": "Noticias y novedades",
+  "Published legislative and district updates from Office of Assemblywoman Carmen Theresa Morales.": "Novedades legislativas y del distrito publicadas por la Oficina de la Asamble\u00edsta Carmen Theresa Morales.",
+  "Email Updates": "Novedades por correo electr\u00f3nico",
+  "Get News & Updates by email": "Reciba noticias y novedades por correo electr\u00f3nico",
+  "District Office": "Oficina del distrito",
+  "Published updates": "Novedades publicadas",
+  "Posts published by authorized office staff appear here.": "Las publicaciones del personal autorizado de la oficina aparecen aqu\u00ed.",
+});
+
 export function translateText(text: string, language: LanguageCode): string {
   if (language === "en") return text;
   const leading = text.match(/^\s*/)?.[0] ?? "";

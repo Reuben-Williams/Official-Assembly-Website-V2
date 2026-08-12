@@ -2,7 +2,6 @@ import "server-only";
 
 import { Resend } from "resend";
 
-import { NEWSLETTER_CONFIRMATION_SUBJECT } from "../email/render-confirmation";
 import type {
   NewsletterBroadcastProvider,
   NewsletterContactProvider,
@@ -20,6 +19,7 @@ type SendInput = {
   readonly generation: number;
   readonly deliveryOrdinal: number;
   readonly recipient: string;
+  readonly subject: string;
   readonly html: string;
   readonly text: string;
   readonly firstAttemptAt: Date;
@@ -51,7 +51,7 @@ export function createNewsletterResendSendAdapter(provider: { readonly emails: N
         {
           from: NEWSLETTER_CONFIRMATION_SENDER,
           to: input.recipient,
-          subject: NEWSLETTER_CONFIRMATION_SUBJECT,
+          subject: input.subject,
           html: input.html,
           text: input.text
         },

@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { builderText, type BuilderServerContent } from "../../lib/builder/server-content";
 import { ResidentForm } from "./ResidentForms";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 type NewsletterSignupSectionProps = {
   content: BuilderServerContent;
@@ -18,6 +20,7 @@ type NewsletterSignupSectionProps = {
   };
   showDedicatedPageLink: boolean;
   embedded?: boolean;
+  locale?: PublicLocale;
 };
 
 export async function NewsletterSignupSection({
@@ -26,8 +29,9 @@ export async function NewsletterSignupSection({
   fallback,
   showDedicatedPageLink,
   embedded = false,
+  locale = "en",
 }: NewsletterSignupSectionProps) {
-  const residentForm = await ResidentForm({ type: "newsletter" });
+  const residentForm = await ResidentForm({ type: "newsletter", locale });
 
   const contents = (
     <>
@@ -37,21 +41,21 @@ export async function NewsletterSignupSection({
             data-builder-region={regions.eyebrow}
             data-builder-kind="text"
           >
-            {builderText(content, regions.eyebrow, fallback.eyebrow)}
+            {localizedBuilderText(locale, regions.eyebrow, builderText(content, regions.eyebrow, fallback.eyebrow))}
           </p>
           <h2 data-builder-region={regions.title} data-builder-kind="text">
-            {builderText(content, regions.title, fallback.title)}
+            {localizedBuilderText(locale, regions.title, builderText(content, regions.title, fallback.title))}
           </h2>
           <p
             className="lead"
             data-builder-region={regions.body}
             data-builder-kind="text"
           >
-            {builderText(content, regions.body, fallback.body)}
+            {localizedBuilderText(locale, regions.body, builderText(content, regions.body, fallback.body))}
           </p>
           {showDedicatedPageLink ? (
             <Link className="secondary-link" href="/newsletter">
-              Review newsletter signup details
+              {localizedBuilderText(locale, "global.newsletter.details-link", "Review newsletter signup details")}
             </Link>
           ) : null}
       </div>

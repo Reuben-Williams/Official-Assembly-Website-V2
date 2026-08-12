@@ -26,6 +26,7 @@ export function createNewsletterConfirmationJobHandler(input: {
       readonly issuedAt: Date;
       readonly expiresAt: Date;
       readonly pending: boolean;
+      readonly locale: "en" | "es";
     }>;
     recordConfirmationAttempt(jobId: string, evidence: {
       readonly firstAttemptAt: Date;
@@ -40,6 +41,7 @@ export function createNewsletterConfirmationJobHandler(input: {
       readonly generation: number;
       readonly deliveryOrdinal: number;
       readonly recipient: string;
+      readonly subject: string;
       readonly html: string;
       readonly text: string;
       readonly firstAttemptAt: Date;
@@ -70,13 +72,17 @@ export function createNewsletterConfirmationJobHandler(input: {
       kid: delivery.keyId
     }, input.keyring);
     const confirmationUrl = `${input.canonicalSiteUrl}/newsletter/confirm#token=${token}`;
-    const rendered = await renderNewsletterConfirmationEmail({ confirmationUrl });
+    const rendered = await renderNewsletterConfirmationEmail({
+      confirmationUrl,
+      locale: delivery.locale,
+    });
     const result = await input.sender.sendConfirmation({
       siteId: delivery.siteId,
       subscriptionId: delivery.subscriptionId,
       generation: delivery.generation,
       deliveryOrdinal: delivery.deliveryOrdinal,
       recipient: delivery.recipient,
+      subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
       firstAttemptAt: delivery.firstAttemptAt,

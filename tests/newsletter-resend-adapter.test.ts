@@ -13,6 +13,7 @@ describe("Resend newsletter adapters", () => {
       generation: 1,
       deliveryOrdinal: 2,
       recipient: "reader@example.test",
+      subject: "Confirme su suscripci\u00f3n al Bolet\u00edn del distrito",
       html: "<p>Confirm</p>",
       text: "Confirm",
       firstAttemptAt: new Date("2026-08-06T17:00:00.000Z"),
@@ -29,7 +30,7 @@ describe("Resend newsletter adapters", () => {
       expect.objectContaining({
         from: "Office of Assemblywoman Carmen Morales <newsletter@updates.assemblywomanmorales.com>",
         to: "reader@example.test",
-        subject: "Confirm your District Newsletter subscription",
+        subject: input.subject,
         html: input.html,
         text: input.text
       }),
@@ -49,6 +50,7 @@ describe("Resend newsletter adapters", () => {
       generation: 1,
       deliveryOrdinal: 1,
       recipient: "reader@example.test",
+      subject: "Confirm your District Newsletter subscription",
       html: "<p>Confirm</p>",
       text: "Confirm",
       firstAttemptAt: new Date("2026-08-05T16:59:59.000Z"),
