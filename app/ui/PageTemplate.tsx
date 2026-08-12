@@ -11,15 +11,18 @@ import {
   builderText,
   type BuilderServerContent,
 } from "../../lib/builder/server-content";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 type PageTemplateProps = {
   page: PageContent;
   content?: BuilderServerContent;
+  locale?: PublicLocale;
 };
 
 const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
-export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTemplateProps) {
+export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en" }: PageTemplateProps) {
   const slug = page.slug ?? "home";
   const formType =
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
@@ -64,14 +67,14 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.eyebrow`}
             >
-              {builderText(content, `${slug}.hero.eyebrow`, page.eyebrow)}
+              {localizedBuilderText(locale, `${slug}.hero.eyebrow`, builderText(content, `${slug}.hero.eyebrow`, page.eyebrow))}
             </p>
             <h1
               data-builder-region={`${slug}.hero.title`}
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.title`}
             >
-              {builderText(content, `${slug}.hero.title`, page.title)}
+              {localizedBuilderText(locale, `${slug}.hero.title`, builderText(content, `${slug}.hero.title`, page.title))}
             </h1>
             <p
               className="lead"
@@ -79,7 +82,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
               data-builder-kind="text"
               data-i18n-key={`${slug}.hero.body`}
             >
-              {builderText(content, `${slug}.hero.body`, page.description)}
+              {localizedBuilderText(locale, `${slug}.hero.body`, builderText(content, `${slug}.hero.body`, page.description))}
             </p>
             <div className="hero-actions">
               <Link
@@ -88,7 +91,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 data-builder-kind="link"
                 href={primaryCta.href}
               >
-                <span data-builder-link-label>{primaryCta.label}</span>
+                <span data-builder-link-label>{localizedBuilderText(locale, `${slug}.hero.primary-cta.label`, primaryCta.label)}</span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
@@ -97,7 +100,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 data-builder-kind="link"
                 href={secondaryCta.href}
               >
-                <span data-builder-link-label>{secondaryCta.label}</span>
+                <span data-builder-link-label>{localizedBuilderText(locale, `${slug}.hero.secondary-cta.label`, secondaryCta.label)}</span>
               </Link>
             </div>
           </div>
@@ -108,6 +111,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
             priority
             variant="hero"
             content={content}
+            locale={locale}
           />
         </div>
       </section>
@@ -121,28 +125,28 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 data-builder-region={`${slug}.features.eyebrow`}
                 data-builder-kind="text"
               >
-                {builderText(content, `${slug}.features.eyebrow`, "Page Resources")}
+                {localizedBuilderText(locale, `${slug}.features.eyebrow`, builderText(content, `${slug}.features.eyebrow`, "Page Resources"))}
               </p>
               <h2
                 data-builder-region={`${slug}.features.title`}
                 data-builder-kind="text"
               >
-                {builderText(
+                {localizedBuilderText(locale, `${slug}.features.title`, builderText(
                   content,
                   `${slug}.features.title`,
                   "Verified paths for District 34 residents",
-                )}
+                ))}
               </h2>
             </div>
             <p
               data-builder-region={`${slug}.features.body`}
               data-builder-kind="text"
             >
-              {builderText(
+              {localizedBuilderText(locale, `${slug}.features.body`, builderText(
                 content,
                 `${slug}.features.body`,
                 `Use these links for current public information or contact the district office at ${siteConfig.phoneDisplay}.`,
-              )}
+              ))}
             </p>
           </div>
           <Cards
@@ -150,6 +154,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
             content={content}
             featuredFirst={slug === "contact"}
             regionId={`${slug}.cards`}
+            locale={locale}
           />
         </div>
       </section>
@@ -163,32 +168,32 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
                 data-builder-region="global.template.form-eyebrow"
                 data-builder-kind="text"
               >
-                {builderText(
+                {localizedBuilderText(locale, "global.template.form-eyebrow", builderText(
                   content,
                   "global.template.form-eyebrow",
                   "Resident Form",
-                )}
+                ))}
               </p>
               <h2
                 data-builder-region="global.template.form-title"
                 data-builder-kind="text"
               >
-                {builderText(
+                {localizedBuilderText(locale, "global.template.form-title", builderText(
                   content,
                   "global.template.form-title",
                   "District office intake",
-                )}
+                ))}
               </h2>
               <p
                 className="lead"
                 data-builder-region="global.template.form-body"
                 data-builder-kind="text"
               >
-                {builderText(
+                {localizedBuilderText(locale, "global.template.form-body", builderText(
                   content,
                   "global.template.form-body",
                   "Online submission is shown only when an approved form revision and verification service are available.",
-                )}
+                ))}
               </p>
             </div>
             <div
@@ -209,20 +214,21 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
             caption="Additional district media"
             instance={`${slug}-supporting`}
             content={content}
+            locale={locale}
           />
           <div className="timeline">
             <div className="timeline-item">
               <CheckCircle2 color="var(--accent)" aria-hidden="true" />
               <div>
-                <strong>Official sources first</strong>
-                <p>State services, voting details, and legislative records link to current government sources.</p>
+                <strong>{localizedBuilderText(locale, `${slug}.supporting.official.title`, "Official sources first")}</strong>
+                <p>{localizedBuilderText(locale, `${slug}.supporting.official.body`, "State services, voting details, and legislative records link to current government sources.")}</p>
               </div>
             </div>
             <div className="timeline-item">
               <CheckCircle2 color="var(--accent)" aria-hidden="true" />
               <div>
-                <strong>District office access</strong>
-                <p>Residents can call {siteConfig.phoneDisplay} when online intake is unavailable.</p>
+                <strong>{localizedBuilderText(locale, `${slug}.supporting.office.title`, "District office access")}</strong>
+                <p>{localizedBuilderText(locale, `${slug}.supporting.office.body`, `Residents can call ${siteConfig.phoneDisplay} when online intake is unavailable.`)}</p>
               </div>
             </div>
           </div>
@@ -238,6 +244,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT }: PageTempla
               instance="secondary"
               regionId={`${slug}.cards`}
               content={content}
+              locale={locale}
             />
           </div>
         </section>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pages, siteConfig, stats } from "../app/data/site";
+import { imageAssets, pages, siteConfig, stats } from "../app/data/site";
 import { spanishTranslations, translateText } from "../app/i18n/translations";
 
 const fixedUiStrings = [
@@ -26,6 +26,16 @@ const fixedUiStrings = [
   "Submit Message",
   "Join Newsletter",
   "Submit Feedback"
+  ,"Page Resources",
+  "Verified paths for District 34 residents",
+  `Use these links for current public information or contact the district office at ${siteConfig.phoneDisplay}.`,
+  "Official sources first",
+  "State services, voting details, and legislative records link to current government sources.",
+  "District office access",
+  `Residents can call ${siteConfig.phoneDisplay} when online intake is unavailable.`,
+  "District office media",
+  "Additional district media",
+  "Community and small business engagement"
 ];
 
 function collectVisibleSiteStrings() {
@@ -34,6 +44,7 @@ function collectVisibleSiteStrings() {
     siteConfig.representativeName,
     siteConfig.tagline,
     ...stats.flatMap((stat) => [stat.value, stat.label]),
+    ...imageAssets.map((asset) => asset.alt),
     ...pages.flatMap((page) => [
       page.navLabel,
       page.title,
@@ -56,6 +67,19 @@ describe("Spanish translator", () => {
     const missing = strings.filter((text) => spanishTranslations[text] === undefined);
 
     expect(missing).toEqual([]);
+  });
+
+  it("does not count identity placeholders as completed translations", () => {
+    const protectedNeutralValues = new Set([
+      siteConfig.representativeName,
+      siteConfig.officeName,
+      siteConfig.officeAddress,
+      siteConfig.phoneDisplay,
+    ]);
+    const untranslated = collectVisibleSiteStrings().filter((text) =>
+      spanishTranslations[text] === text && !protectedNeutralValues.has(text));
+
+    expect(untranslated).toEqual([]);
   });
 
   it("translates exact text while preserving surrounding whitespace", () => {

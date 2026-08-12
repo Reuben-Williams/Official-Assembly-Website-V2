@@ -3,6 +3,8 @@ import { Landmark, Menu } from "lucide-react";
 
 import { pages, siteConfig } from "../data/site";
 import { LanguageToggle } from "./LanguageToggle";
+import { localizedNavigationLabel, publicCopy } from "../i18n/catalog.public";
+import type { PublicLocale } from "../i18n/locale";
 import {
   builderLink,
   builderSectionIds,
@@ -20,10 +22,12 @@ function NavigationLinks({
   instance,
   all = false,
   content,
+  locale,
 }: {
   instance: string;
   all?: boolean;
   content: BuilderServerContent;
+  locale: PublicLocale;
 }) {
   const fallbackEntries = all ? pages : navPages;
   const entriesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
@@ -55,7 +59,11 @@ function NavigationLinks({
               data-builder-link-label
               data-builder-region={`global.navigation.${slug}.label`}
             >
-              {builderText(content, `global.navigation.${slug}.label`, link.label)}
+              {localizedNavigationLabel(
+                locale,
+                slug,
+                builderText(content, `global.navigation.${slug}.label`, link.label),
+              )}
             </span>
           </Link>
         );
@@ -64,13 +72,19 @@ function NavigationLinks({
   );
 }
 
-export function AppHeader({ content = EMPTY_CONTENT }: { content?: BuilderServerContent }) {
+export function AppHeader({
+  content = EMPTY_CONTENT,
+  locale = "en",
+}: {
+  content?: BuilderServerContent;
+  locale?: PublicLocale;
+}) {
   const contact = builderLink(content, "global.header.contact", {
     href: "/contact",
     label: "Contact Office",
   });
   return (
-    <header className="site-header">
+    <header className="site-header" lang={locale}>
       <div className="container">
         <div className="nav-shell">
           <Link className="brand" href="/">
@@ -83,39 +97,44 @@ export function AppHeader({ content = EMPTY_CONTENT }: { content?: BuilderServer
           </Link>
 
           <nav
-            aria-label="Primary navigation"
+            aria-label={publicCopy(locale, "global.header.primary-navigation", "Primary navigation")}
             className="nav-links"
             data-builder-instance="desktop"
             data-builder-kind="sections"
             data-builder-region="global.navigation"
           >
-            <NavigationLinks content={content} instance="desktop" />
+            <NavigationLinks content={content} instance="desktop" locale={locale} />
           </nav>
 
           <div className="header-actions">
-            <LanguageToggle />
+            <LanguageToggle locale={locale} />
             <Link
               className="cta-link nav-cta"
               data-builder-kind="link"
               data-builder-region="global.header.contact"
               href={contact.href}
             >
-              <span data-builder-link-label data-i18n-key="global.contact">{contact.label}</span>
+              <span data-builder-link-label data-i18n-key="global.contact">
+                {publicCopy(locale, "global.header.contact", contact.label)}
+              </span>
             </Link>
           </div>
 
           <details className="mobile-menu">
-            <summary className="mobile-summary" aria-label="Open menu">
+            <summary
+              className="mobile-summary"
+              aria-label={publicCopy(locale, "global.header.open-menu", "Open menu")}
+            >
               <Menu size={24} />
             </summary>
             <nav
-              aria-label="Mobile navigation"
+              aria-label={publicCopy(locale, "global.header.mobile-navigation", "Mobile navigation")}
               className="mobile-panel"
               data-builder-instance="mobile"
               data-builder-kind="sections"
               data-builder-region="global.navigation"
             >
-              <NavigationLinks all content={content} instance="mobile" />
+              <NavigationLinks all content={content} instance="mobile" locale={locale} />
             </nav>
           </details>
         </div>

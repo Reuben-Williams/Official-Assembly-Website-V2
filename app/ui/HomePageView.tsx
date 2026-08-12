@@ -13,6 +13,8 @@ import { DistrictConnectionsSection } from "./DistrictConnectionsSection";
 import { ImagePanel } from "./ImagePanel";
 import { LatestUpdatesSection } from "./LatestUpdatesSection";
 import { OfficialProfileSection } from "./OfficialProfileSection";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 // Checked-in values are used only when an authoritative server read confirms that
 // a registered region has no kind-correct published override.
@@ -38,9 +40,10 @@ const workflowSteps = [
 type HomePageViewProps = {
   content: BuilderServerContent;
   posts: readonly PublishedPost[];
+  locale?: PublicLocale;
 };
 
-export async function HomePageView({ content, posts }: HomePageViewProps) {
+export async function HomePageView({ content, posts, locale = "en" }: HomePageViewProps) {
   const contactCta = builderLink(content, "home.hero.primary-cta", {
     href: "/contact",
     label: "Contact the Office",
@@ -62,7 +65,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
     "home.workflow.steps",
     workflowSteps.map((step) => step.id),
   ).flatMap((id) => stepsById.get(id) ?? []);
-  const connections = await DistrictConnectionsSection({ content });
+  const connections = await DistrictConnectionsSection({ content, locale });
 
   return (
     <div data-builder-region="home.sections" data-builder-kind="sections">
@@ -75,14 +78,14 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
               data-builder-kind="text"
               data-i18n-key="home.hero.eyebrow"
             >
-              {builderText(content, "home.hero.eyebrow", homeFallback.eyebrow)}
+              {localizedBuilderText(locale, "home.hero.eyebrow", builderText(content, "home.hero.eyebrow", homeFallback.eyebrow))}
             </p>
             <h1
               data-builder-region="home.hero.title"
               data-builder-kind="text"
               data-i18n-key="home.hero.title"
             >
-              {builderText(content, "home.hero.title", homeFallback.title)}
+              {localizedBuilderText(locale, "home.hero.title", builderText(content, "home.hero.title", homeFallback.title))}
             </h1>
             <p
               className="lead"
@@ -90,7 +93,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
               data-builder-kind="text"
               data-i18n-key="home.hero.body"
             >
-              {builderText(content, "home.hero.body", homeFallback.description)}
+              {localizedBuilderText(locale, "home.hero.body", builderText(content, "home.hero.body", homeFallback.description))}
             </p>
             <div className="hero-actions" aria-label="Primary District 34 actions">
               <Link
@@ -99,7 +102,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
                 data-builder-kind="link"
                 href={contactCta.href}
               >
-                <span data-builder-link-label>{contactCta.label}</span>
+                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.primary-cta.label", contactCta.label)}</span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
@@ -108,7 +111,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
                 data-builder-kind="link"
                 href={newsCta.href}
               >
-                <span data-builder-link-label>{newsCta.label}</span>
+                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.news-cta.label", newsCta.label)}</span>
               </Link>
               <Link
                 className="secondary-link"
@@ -116,7 +119,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
                 data-builder-kind="link"
                 href={newsletterCta.href}
               >
-                <span data-builder-link-label>{newsletterCta.label}</span>
+                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.newsletter-cta.label", newsletterCta.label)}</span>
               </Link>
             </div>
           </div>
@@ -127,6 +130,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
             priority
             variant="hero"
             content={content}
+            locale={locale}
           />
         </div>
       </section>
@@ -144,23 +148,23 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
                 data-builder-region={`home.stats.${stat.id}.value`}
                 data-builder-kind="text"
               >
-                {builderText(content, `home.stats.${stat.id}.value`, stat.value)}
+                {localizedBuilderText(locale, `home.stats.${stat.id}.value`, builderText(content, `home.stats.${stat.id}.value`, stat.value))}
               </span>
               <span
                 className="stat-label"
                 data-builder-region={`home.stats.${stat.id}.label`}
                 data-builder-kind="text"
               >
-                {builderText(content, `home.stats.${stat.id}.label`, stat.label)}
+                {localizedBuilderText(locale, `home.stats.${stat.id}.label`, builderText(content, `home.stats.${stat.id}.label`, stat.label))}
               </span>
             </div>
           ))}
         </div>
       </section>
 
-      <OfficialProfileSection content={content} />
+      <OfficialProfileSection content={content} locale={locale} />
       {connections}
-      <LatestUpdatesSection content={content} posts={posts} />
+      <LatestUpdatesSection content={content} locale={locale} posts={posts} />
 
       <section className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
         <div className="container split">
@@ -169,6 +173,7 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
             caption="Community and small business engagement"
             instance="home-workflow"
             content={content}
+            locale={locale}
           />
           <div>
             <p
@@ -177,14 +182,14 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
               data-builder-kind="text"
               data-i18n-key="home.workflow.eyebrow"
             >
-              {builderText(content, "home.workflow.eyebrow", "Constituent guidance")}
+              {localizedBuilderText(locale, "home.workflow.eyebrow", builderText(content, "home.workflow.eyebrow", "Constituent guidance"))}
             </p>
             <h2
               data-builder-region="home.workflow.title"
               data-builder-kind="text"
               data-i18n-key="home.workflow.title"
             >
-              {builderText(content, "home.workflow.title", "Start with the path that matches your need")}
+              {localizedBuilderText(locale, "home.workflow.title", builderText(content, "home.workflow.title", "Start with the path that matches your need"))}
             </h2>
             <div
               className="timeline"
@@ -199,13 +204,13 @@ export async function HomePageView({ content, posts }: HomePageViewProps) {
                       data-builder-region={`home.workflow.steps.${step.id}.title`}
                       data-builder-kind="text"
                     >
-                      {builderText(content, `home.workflow.steps.${step.id}.title`, step.title)}
+                      {localizedBuilderText(locale, `home.workflow.steps.${step.id}.title`, builderText(content, `home.workflow.steps.${step.id}.title`, step.title))}
                     </strong>
                     <p
                       data-builder-region={`home.workflow.steps.${step.id}.body`}
                       data-builder-kind="text"
                     >
-                      {builderText(content, `home.workflow.steps.${step.id}.body`, step.body)}
+                      {localizedBuilderText(locale, `home.workflow.steps.${step.id}.body`, builderText(content, `home.workflow.steps.${step.id}.body`, step.body))}
                     </p>
                   </div>
                 </div>

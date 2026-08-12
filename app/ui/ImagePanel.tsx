@@ -6,6 +6,8 @@ import {
   type BuilderServerContent,
 } from "../../lib/builder/server-content";
 import type { ImageAsset } from "../data/site";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 type ImagePanelProps = {
   asset: ImageAsset;
@@ -14,6 +16,7 @@ type ImagePanelProps = {
   priority?: boolean;
   variant?: "hero" | "wide";
   content?: BuilderServerContent;
+  locale?: PublicLocale;
 };
 
 const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
@@ -25,6 +28,7 @@ export function ImagePanel({
   priority = false,
   variant = "wide",
   content = EMPTY_CONTENT,
+  locale = "en",
 }: ImagePanelProps) {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const resolved = builderImage(content, asset.regionId, asset);
@@ -39,7 +43,7 @@ export function ImagePanel({
     >
       <Image
         src={src}
-        alt={resolved.alt}
+        alt={localizedBuilderText(locale, `${asset.regionId}.alt`, resolved.alt)}
         fill
         priority={priority}
         sizes={
@@ -50,7 +54,7 @@ export function ImagePanel({
       />
       <div className="image-caption">
         <Camera size={18} aria-hidden="true" />
-        <span>{caption}</span>
+        <span>{localizedBuilderText(locale, `${asset.regionId}.caption`, caption)}</span>
       </div>
     </div>
   );

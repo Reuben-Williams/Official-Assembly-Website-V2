@@ -15,6 +15,8 @@ import {
   resolveLayoutAlertBoundary,
 } from "../lib/builder/alerts";
 import { INTERNAL_PATHNAME_HEADER } from "../lib/public-route";
+import { publicCopy } from "./i18n/catalog.public";
+import { readPublicLocale } from "./i18n/server";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -23,14 +25,18 @@ const publicSans = Public_Sans({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const content = await loadBuilderGlobalContent();
+  const [content, locale] = await Promise.all([loadBuilderGlobalContent(), readPublicLocale()]);
   const officeName = builderText(content, "global.office.name", siteConfig.officeName);
   return {
     title: {
       default: builderText(content, "metadata.home.title", officeName),
       template: `%s | ${officeName}`,
     },
-    description: builderText(content, "metadata.home.description", siteConfig.tagline),
+    description: publicCopy(
+      locale,
+      "metadata.home.description",
+      builderText(content, "metadata.home.description", siteConfig.tagline),
+    ),
     metadataBase: new URL(
       process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     ),
@@ -43,15 +49,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const incoming = await headers();
-  const [content, alerts] = await Promise.all([
+  const [content, alerts, locale] = await Promise.all([
     loadBuilderGlobalContent(),
     resolveLayoutAlertBoundary({
       pathnameHeader: incoming.get(INTERNAL_PATHNAME_HEADER),
       load: () => loadOfficialAssemblyPublicAlerts(),
     }),
+    readPublicLocale(),
   ]);
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={publicSans.className}>
         <a
           className="skip-link"
@@ -60,12 +67,16 @@ export default async function RootLayout({
           data-i18n-key="global.skip"
           href="#main"
         >
-          {builderText(content, "global.accessibility.skip", "Skip to content")}
+          {publicCopy(
+            locale,
+            "global.skip",
+            builderText(content, "global.accessibility.skip", "Skip to content"),
+          )}
         </a>
-        <AppHeader content={content} />
+        <AppHeader content={content} locale={locale} />
         {alerts.eligible ? <PublicAlertController initialProjection={alerts.projection} /> : null}
         <main id="main">{children}</main>
-        <AppFooter content={content} />
+        <AppFooter content={content} locale={locale} />
         <Suspense fallback={null}>
           <BuilderContentBridge />
         </Suspense>

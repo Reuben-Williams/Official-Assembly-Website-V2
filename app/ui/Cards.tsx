@@ -8,6 +8,8 @@ import {
   type BuilderServerContent,
 } from "../../lib/builder/server-content";
 import type { Card } from "../data/site";
+import { localizedBuilderText } from "../i18n/catalog.server";
+import type { PublicLocale } from "../i18n/locale";
 
 type CardsProps = {
   cards: Card[];
@@ -17,6 +19,7 @@ type CardsProps = {
   featuredFirst?: boolean;
   columns?: "two" | "three";
   content?: BuilderServerContent;
+  locale?: PublicLocale;
 };
 
 const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
@@ -29,6 +32,7 @@ export function Cards({
   featuredFirst = false,
   columns = "three",
   content = EMPTY_CONTENT,
+  locale = "en",
 }: CardsProps) {
   const cardsById = new Map(cards.map((card) => [card.id, card]));
   const orderedCards = builderSectionIds(content, regionId, cards.map((card) => card.id))
@@ -54,12 +58,22 @@ export function Cards({
             <div className="icon-box">
               <Icon size={24} aria-hidden="true" />
             </div>
-            {card.tag ? <span className="tag">{card.tag}</span> : null}
+            {card.tag ? <span className="tag">
+              {localizedBuilderText(locale, `${prefix}.tag`, card.tag)}
+            </span> : null}
             <h3 data-builder-region={`${prefix}.title`} data-builder-kind="text">
-              {builderText(content, `${prefix}.title`, card.title)}
+              {localizedBuilderText(
+                locale,
+                `${prefix}.title`,
+                builderText(content, `${prefix}.title`, card.title),
+              )}
             </h3>
             <p data-builder-region={`${prefix}.body`} data-builder-kind="text">
-              {builderText(content, `${prefix}.body`, card.text)}
+              {localizedBuilderText(
+                locale,
+                `${prefix}.body`,
+                builderText(content, `${prefix}.body`, card.text),
+              )}
             </p>
             {link ? (
               <Link
@@ -68,7 +82,9 @@ export function Cards({
                 data-builder-kind="link"
                 href={link.href}
               >
-                <span data-builder-link-label>{link.label}</span>
+                <span data-builder-link-label>
+                  {localizedBuilderText(locale, `${prefix}.link.label`, link.label)}
+                </span>
                 <ArrowRight size={17} aria-hidden="true" />
               </Link>
             ) : null}
