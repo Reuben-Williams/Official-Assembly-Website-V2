@@ -31,7 +31,7 @@ Production is also running an older application revision using the 0.2.6 package
 
 ### 1. Fail closed on expiry and preserve intent-aware ingestion - recommended
 
-On a growth API 401, the client stops and directs the staff member through the normal login flow with the current editor location encoded as a safe local return path. Staff must complete fresh authentication before a new signed editor session is issued.
+On a growth API 401, the client stops and directs the staff member through the normal login flow with the current editor location encoded as a safe local return path. Staff must complete fresh authentication before a new signed editor session is issued. A still-valid older Supabase session is not sufficient by itself to mint that session.
 
 This approach preserves the existing Supabase identity, site membership, signed preview-session, session-generation revocation, origin, capability, entitlement, and site-scoping boundaries. It repairs the misleading unavailable state across all four workspaces without allowing an expired, tampered, membership-removed, account-revoked, or generation-revoked session to renew itself.
 
@@ -58,6 +58,10 @@ The browser growth client keeps its current same-origin, no-store POST contract.
 5. Treat 403, 409, and 5xx outcomes according to their actual category rather than as authentication expiry.
 
 There is no automatic renewal, retry loop, background heartbeat, extended token lifetime, service-role exposure, or client-side membership decision. A deliberate session-generation bump, invalid signature, membership removal, or account revocation therefore remains effective until the user completes the approved authentication flow again.
+
+The successful magic-link callback creates a cryptographically random, short-lived, single-use login-completion proof. Only a digest is stored in an additive private proof table. The proof is bound to the site, authenticated user, current membership/session generation, and expiry, then delivered in a Secure, HttpOnly, SameSite=Strict cookie scoped to the session endpoint. `POST /api/builder/session` atomically consumes that proof before issuing the signed editor cookie. Missing, expired, replayed, user/site-mismatched, membership-removed, or generation-stale proofs fail closed. The endpoint clears the proof cookie after either consumption or terminal rejection. Direct calls carrying only an older Supabase session cannot mint a new editor session.
+
+The proof table has RLS enabled with no browser policy, no `anon` or `authenticated` grants, and service-role-only access. The migration is additive and applied before the application release. The earlier 0.2.6 application ignores the table and remains compatible with rollback.
 
 The workspace presentation distinguishes authentication expiry from service unavailability. An expired session prompts sign-in; empty data produces an honest empty state; forbidden access produces an access message; a genuine storage/query outage remains an unavailable state.
 
@@ -91,7 +95,7 @@ For Contact, an ambiguous or conflicting identity is not accepted as a partial s
 
 - Supabase publishable credentials remain client-visible; service-role credentials remain server-only.
 - Every growth query and mutation verifies the Supabase user, site membership, signed editor session, session generation, module entitlement, capability scope, and site identifier.
-- Expired or rejected sessions are never automatically renewed. Fresh session issuance remains behind the approved staff authentication flow and never accepts a target user, site, role, or capability from the browser.
+- Expired or rejected sessions are never automatically renewed. Fresh session issuance requires an atomically consumed login-completion proof from the successful magic-link callback and never accepts a target user, site, role, or capability from the browser.
 - Every growth mutation requires same-origin validation and CSRF verification before persistence.
 - Form ingestion remains protected by approved revision, Turnstile, allowed-origin, rate-limit, idempotency, consent, and transaction checks.
 - Public payloads cannot select whether a Lead is created.
@@ -119,6 +123,7 @@ For Contact, an ambiguous or conflicting identity is not accepted as a partial s
 - Concurrent 401 responses do not create navigation or request loops.
 - Expired, malformed, signature-invalid, generation-revoked, membership-removed, and account-revoked sessions cannot access data or automatically renew.
 - A freshly authenticated member can receive a new editor session through the existing approved login flow.
+- Direct session POST with only an old Supabase session, and missing, expired, replayed, user/site-mismatched, membership-removed, or generation-stale login-completion proofs fail closed.
 - Mutations include the current CSRF token; missing, invalid, and stale tokens fail 403 before persistence.
 - Cross-origin query and operation requests fail before authorization/persistence.
 - 403 and 5xx responses are not treated as renewable authentication failures.
@@ -135,6 +140,7 @@ For Contact, an ambiguous or conflicting identity is not accepted as a partial s
 
 - Run the isolated database tests for strict ingestion, deduplication, consent, site scoping, and rollback.
 - Confirm migration lineage and function checksums.
+- Verify the additive login-completion proof table, RLS, grants, expiry cleanup, and atomic single-use consumption.
 - Run Supabase security and performance advisors and review relevant findings.
 - Use read-only production checks to confirm module state, Customer/Lead counts, RPC authorization, and the absence of reconciliation writes before deployment.
 - Do not insert synthetic production records.
@@ -142,13 +148,14 @@ For Contact, an ambiguous or conflicting identity is not accepted as a partial s
 ### Deployment and browser acceptance
 
 1. Build and test the exact website revision using the approved 0.3.0 package set.
-2. Deploy a protected Vercel preview and verify login, deliberate session expiry, fail-closed reauthentication, revoked-session denial, CSRF enforcement, Customers, Leads, Overview, and Submissions.
-3. Confirm empty Leads and populated Customers render as data states rather than unavailable states.
-4. Verify the contact and newsletter UI without submitting synthetic production data.
-5. Promote the same verified deployment to production.
-6. Confirm the production alias points to the approved commit and package profile.
-7. Review Vercel runtime logs for successful growth routes and absence of new authorization/error clusters.
-8. Leave existing authentic records intact and avoid provider side effects.
+2. Apply the additive login-completion proof migration in the protected environment before deploying the application.
+3. Deploy a protected Vercel preview and verify login, deliberate session expiry, single-use proof issuance/consumption, direct reissue denial, revoked-session denial, CSRF enforcement, Customers, Leads, Overview, and Submissions.
+4. Confirm empty Leads and populated Customers render as data states rather than unavailable states.
+5. Verify the contact and newsletter UI without submitting synthetic production data.
+6. Apply the verified additive proof migration to production, then promote the exact verified application deployment.
+7. Confirm the production alias points to the approved commit and package profile.
+8. Review Vercel runtime logs for successful growth routes and absence of new authorization/error clusters.
+9. Leave existing authentic records intact and avoid provider side effects.
 
 ## Rollback
 
@@ -164,6 +171,7 @@ For Contact, an ambiguous or conflicting identity is not accepted as a partial s
 - An authorized staff member can open Customers, Leads, Overview, and Submissions in production.
 - An expired editor session is sent through fresh sign-in with a safe local return path and is not automatically renewed or retried.
 - An invalid, tampered, membership-removed, account-revoked, or generation-revoked session cannot read growth data or renew itself.
+- A new editor session requires a fresh, short-lived, single-use, user/site/generation-bound login-completion proof; an older Supabase session alone cannot issue it.
 - Every growth mutation enforces same-origin and CSRF validation before persistence.
 - Existing authentic newsletter signups appear as Customers and do not create Leads.
 - Every accepted Contact submission creates or matches a Customer and creates/links a Lead atomically; every accepted Newsletter submission creates or matches a Customer without a Lead.
