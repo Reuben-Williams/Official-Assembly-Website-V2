@@ -43,19 +43,36 @@ export function createSupabaseNewsletterJobRepository(client: SupabaseClient, si
       readonly leaseSeconds: number;
       readonly emailEnabled: boolean;
     }): Promise<NewsletterClaimedJob[]> {
-      const result = await client.rpc("builder_claim_newsletter_jobs_v1", {
+      const ownerLoginResult = await client.rpc("builder_claim_newsletter_auth_login_jobs_v1", {
         p_request: {
           version: 1,
           siteId,
           workerId: input.workerId,
           limit: input.limit,
-          leaseSeconds: input.leaseSeconds,
-          emailEnabled: input.emailEnabled
+          leaseSeconds: input.leaseSeconds
         }
       });
-      if (result.error) throw new Error("job claim unavailable");
-      const jobs = parseClaimedJobs(result.data);
+      if (ownerLoginResult.error) throw new Error("job claim unavailable");
+      const ownerLoginJobs = parseClaimedJobs(ownerLoginResult.data);
+      const remaining = Math.max(0, input.limit - ownerLoginJobs.length);
+      let generalJobs: NewsletterClaimedJob[] = [];
+      if (remaining > 0) {
+        const result = await client.rpc("builder_claim_newsletter_jobs_v1", {
+          p_request: {
+            version: 1,
+            siteId,
+            workerId: input.workerId,
+            limit: remaining,
+            leaseSeconds: input.leaseSeconds,
+            emailEnabled: input.emailEnabled
+          }
+        });
+        if (result.error) throw new Error("job claim unavailable");
+        generalJobs = parseClaimedJobs(result.data);
+      }
+      const jobs = [...ownerLoginJobs, ...generalJobs];
       return Promise.all(jobs.map(async (job) => {
+        if (Number.isSafeInteger(job.attemptCount)) return job;
         const attempt = await client
           .from(subjectTable(job.subject))
           .select("attempt_count")

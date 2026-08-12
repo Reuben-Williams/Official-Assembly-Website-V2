@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 
 import type { NewsletterProviderInventorySnapshot } from "../provider-inventory";
+import type { NewsletterOwnerLoginEmailReader } from "../owner-login-evidence";
 
 type PageInput = { readonly limit: 100; readonly after?: string };
 type Page<T> = {
@@ -377,6 +378,31 @@ export function createProductionNewsletterInventoryReader(input: {
     },
     async listReceivedEmails(page) {
       return cursorPage(await providerRequest(() => management.emails.receiving.list(providerPage(page))), (item) => ({ id: item.id }));
+    }
+  };
+}
+
+export function createProductionNewsletterOwnerLoginEmailReader(
+  managementApiKey: string
+): NewsletterOwnerLoginEmailReader {
+  const management = new Resend(managementApiKey);
+  let nextProviderRequestAt = 0;
+
+  return {
+    async listEmails(page) {
+      const waitMs = Math.max(0, nextProviderRequestAt - Date.now());
+      if (waitMs > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+      }
+      nextProviderRequestAt = Date.now() + 250;
+      return cursorPage(await management.emails.list(providerPage(page)), (item) => ({
+        id: item.id,
+        status: item.last_event,
+        createdAt: item.created_at,
+        from: item.from,
+        to: item.to,
+        subject: item.subject
+      }));
     }
   };
 }

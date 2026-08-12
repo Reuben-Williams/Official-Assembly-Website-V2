@@ -79,11 +79,34 @@ function evidence(
     authSmtpPermissionAttested: true,
     authSmtpLoginBeforeRevocationProved: true,
     authSmtpLoginAfterRevocationProved: true,
+    ownerLoginEvidenceValid: true,
     ...overrides
   };
 }
 
 describe("newsletter provider inventory policy", () => {
+  it("blocks transactional inventory when ongoing owner-login evidence no longer revalidates", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({ emails: [{
+        id: "owner-login-message",
+        status: "delivered",
+        createdAt: "2026-08-11T21:24:21.547Z",
+        from: "Office <no-reply@updates.assemblywomanmorales.com>",
+        to: ["owner@example.com"],
+        subject: "Your sign-in link"
+      }] }),
+      evidence: evidence({
+        allowedProviderMessageIds: new Set(["owner-login-message"]),
+        ownerLoginEvidenceValid: false
+      })
+    });
+
+    expect(result.categories.find((category) => category.category === "transactional_emails"))
+      .toMatchObject({ status: "blocked", code: "unmapped_email_history" });
+  });
+
   it("matches only a recent delivered Auth email for the exact signed-in owner", () => {
     const signedInAt = new Date("2026-08-07T18:05:00.000Z");
     const matched = findRecentNewsletterAuthSmtpLoginEmail(snapshot({

@@ -24,6 +24,15 @@ const broadcastAuditJob = {
   kind: "newsletter.broadcast.audit" as const,
   fencingToken: 5
 };
+const ownerLoginJob = {
+  subject: "site" as const,
+  id: "job-owner-login",
+  kind: "newsletter.auth_login.reconcile" as const,
+  occurrenceId: "occurrence-owner-login",
+  operatorId: "owner-user",
+  authLastSignInAt: "2026-08-11T21:24:29.356981Z",
+  fencingToken: 6
+};
 
 describe("newsletter durable worker", () => {
   it("uses bounded claims, completes with fencing, and never executes outbound work while disabled", async () => {
@@ -38,7 +47,8 @@ describe("newsletter durable worker", () => {
       contactSync: vi.fn(),
       contactAudit: vi.fn(async () => ({ code: "audit_complete" })),
       segmentReconcile: vi.fn(),
-      broadcastAudit: vi.fn(async () => ({ code: "audit_complete" }))
+      broadcastAudit: vi.fn(async () => ({ code: "audit_complete" })),
+      ownerLoginReconcile: vi.fn()
     };
 
     const result = await runNewsletterWorker({
@@ -71,7 +81,8 @@ describe("newsletter durable worker", () => {
       contactSync: vi.fn(),
       contactAudit: vi.fn(),
       segmentReconcile: vi.fn(),
-      broadcastAudit: vi.fn()
+      broadcastAudit: vi.fn(),
+      ownerLoginReconcile: vi.fn()
     };
     const now = new Date("2026-08-06T17:00:00.000Z");
 
@@ -92,5 +103,39 @@ describe("newsletter durable worker", () => {
       failureCode: "provider_unavailable",
       retryAt: calculateNewsletterRetryAt(now, 4, () => 0)
     }));
+  });
+
+  it("processes claimed owner-login evidence while all outbound sending is disabled", async () => {
+    const complete = vi.fn(async () => undefined);
+    const ownerLoginReconcile = vi.fn(async () => ({ code: "owner_login_evidence_recorded" }));
+    const repository = {
+      claim: vi.fn(async () => [ownerLoginJob]),
+      complete,
+      fail: vi.fn(async () => undefined)
+    };
+
+    const result = await runNewsletterWorker({
+      repository,
+      handlers: {
+        confirmationSend: vi.fn(),
+        contactSync: vi.fn(),
+        contactAudit: vi.fn(),
+        segmentReconcile: vi.fn(),
+        broadcastAudit: vi.fn(),
+        ownerLoginReconcile
+      },
+      workerId: "worker-owner-login",
+      emailEnabled: false,
+      limit: 10,
+      now: () => new Date("2026-08-11T21:25:00.000Z")
+    });
+
+    expect(ownerLoginReconcile).toHaveBeenCalledWith(ownerLoginJob);
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({
+      job: ownerLoginJob,
+      fencingToken: 6,
+      resultCode: "owner_login_evidence_recorded"
+    }));
+    expect(result).toEqual({ claimed: 1, completed: 1, failed: 0, blocked: 0 });
   });
 });

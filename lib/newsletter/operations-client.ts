@@ -70,6 +70,7 @@ export interface NewsletterOperationsClient {
   ): Promise<Record<string, unknown>>;
   activateProvider(commandId: string): Promise<Record<string, unknown>>;
   reconcileProviderHistory(commandId: string): Promise<Record<string, unknown>>;
+  reconcilePendingOwnerLogins(commandId: string): Promise<Record<string, unknown>>;
   recoverReconciliation(commandId: string, reason: string): Promise<Record<string, unknown>>;
   activationCheck(broadcastId: string): Promise<Record<string, unknown>>;
   openStaffTestWindow(broadcastId: string, commandId: string): Promise<Record<string, unknown>>;
@@ -236,6 +237,9 @@ export function createNewsletterOperationsClient(
       await mutation("history-reconciliation", { commandId, mode: "dry_run" });
       return mutation("history-reconciliation", { commandId, mode: "apply" });
     },
+    reconcilePendingOwnerLogins: (commandId) => mutation(
+      "owner-login-recovery", { commandId }
+    ),
     recoverReconciliation: (commandId, reason) => mutation(
       "recovery", { commandId, reason }
     ),

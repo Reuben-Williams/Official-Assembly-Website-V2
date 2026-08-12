@@ -316,6 +316,17 @@ export function NewsletterOperationsWorkspace({
             >{busy === "auth-smtp-post-revocation"
               ? "Verifying post-revocation loginâ€¦"
               : "Record post-revocation login proof"}</button>
+            <button
+              disabled={Boolean(busy)}
+              onClick={() => void run(
+                "owner-login-recovery",
+                () => operations.reconcilePendingOwnerLogins(crypto.randomUUID()),
+                "Pending owner login evidence was queued for another bounded read-only check."
+              )}
+              type="button"
+            >{busy === "owner-login-recovery"
+              ? "Queuing login evidence…"
+              : "Retry pending login evidence"}</button>
           </div>
           <p className="newsletter-control-hint">
             The second proof becomes available after the replacement proof is recorded. It also

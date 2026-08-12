@@ -98,6 +98,7 @@ export type NewsletterProviderInventoryEvidence = {
   readonly authSmtpPermissionAttested: boolean;
   readonly authSmtpLoginBeforeRevocationProved: boolean;
   readonly authSmtpLoginAfterRevocationProved: boolean;
+  readonly ownerLoginEvidenceValid: boolean;
 };
 
 export type NewsletterInventoryCategory =
@@ -328,7 +329,7 @@ export function evaluateNewsletterProviderInventory(input: {
   const sentReady = sentBroadcasts.every((broadcast) =>
     evidence.allowedSentBroadcastIds.has(broadcast.id)
   );
-  const emailsReady = snapshot.emails.every((email) =>
+  const emailsReady = evidence.ownerLoginEvidenceValid && snapshot.emails.every((email) =>
     evidence.allowedProviderMessageIds.has(email.id)
   );
   const authSmtpReady =

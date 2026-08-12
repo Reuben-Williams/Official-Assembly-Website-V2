@@ -85,6 +85,7 @@ describe("newsletter operations workspace", () => {
       activateProvider: vi.fn(async () => ({ state: "active" as const })),
       recoverReconciliation: vi.fn(async () => ({ state: "queued" as const })),
       reconcileProviderHistory: vi.fn(async () => ({ state: "reconciled" as const })),
+      reconcilePendingOwnerLogins: vi.fn(async () => ({ state: "queued" as const })),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(async () => ({ state: "open" as const, windowId: "window_1" })),
       validate: vi.fn()
@@ -106,6 +107,7 @@ describe("newsletter operations workspace", () => {
         "Confirm dashboard review",
         "Record replacement login proof",
         "Record post-revocation login proof",
+        "Retry pending login evidence",
         "Run activation check",
         "Open staff test window",
         "Validate newsletter"
@@ -142,6 +144,14 @@ describe("newsletter operations workspace", () => {
       expect.stringMatching(/^[0-9a-f-]{36}$/),
       "replacement_login"
     );
+
+    const retryLoginButton = Array.from(host.querySelectorAll("button"))
+      .find((button) => button.textContent === "Retry pending login evidence")!;
+    await act(async () => retryLoginButton.click());
+    await settle();
+    expect(client.reconcilePendingOwnerLogins).toHaveBeenCalledWith(
+      expect.stringMatching(/^[0-9a-f-]{36}$/)
+    );
   });
 
   it("keeps non-owner roles read-only and exposes loading and error states", async () => {
@@ -154,6 +164,7 @@ describe("newsletter operations workspace", () => {
       activateProvider: vi.fn(),
       recoverReconciliation: vi.fn(),
       reconcileProviderHistory: vi.fn(),
+      reconcilePendingOwnerLogins: vi.fn(),
       activationCheck: vi.fn(),
       openStaffTestWindow: vi.fn(),
       validate: vi.fn()

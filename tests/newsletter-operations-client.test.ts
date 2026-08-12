@@ -48,6 +48,7 @@ describe("newsletter operations client", () => {
       "Provider incident reviewed by the site owner."
     );
     await client.reconcileProviderHistory("34000000-0000-4000-8000-000000000015");
+    await client.reconcilePendingOwnerLogins("34000000-0000-4000-8000-000000000016");
 
     expect(fetch.mock.calls.map(([url]) => url)).toEqual([
       "/api/newsletter/operations/provider-attestation",
@@ -55,7 +56,8 @@ describe("newsletter operations client", () => {
       "/api/newsletter/operations/provider-activation",
       "/api/newsletter/operations/recovery",
       "/api/newsletter/operations/history-reconciliation",
-      "/api/newsletter/operations/history-reconciliation"
+      "/api/newsletter/operations/history-reconciliation",
+      "/api/newsletter/operations/owner-login-recovery"
     ]);
     expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({
       commandId: "34000000-0000-4000-8000-000000000011",
@@ -79,6 +81,9 @@ describe("newsletter operations client", () => {
     expect(JSON.parse(String(fetch.mock.calls[5]?.[1]?.body))).toEqual({
       commandId: "34000000-0000-4000-8000-000000000015",
       mode: "apply"
+    });
+    expect(JSON.parse(String(fetch.mock.calls[6]?.[1]?.body))).toEqual({
+      commandId: "34000000-0000-4000-8000-000000000016"
     });
   });
 });

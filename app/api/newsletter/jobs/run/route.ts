@@ -6,6 +6,8 @@ import { readNewsletterConfiguration } from "../../../../../lib/newsletter/confi
 import { createNewsletterContactAuditHandler } from "../../../../../lib/newsletter/contact-audit";
 import { readNewsletterConfirmationKeyring } from "../../../../../lib/newsletter/confirmation-token";
 import { createNewsletterCronHandler } from "../../../../../lib/newsletter/cron-handler";
+import { createNewsletterOwnerLoginReconciliationHandler } from "../../../../../lib/newsletter/owner-login-handler";
+import { createSupabaseNewsletterOwnerLoginData } from "../../../../../lib/newsletter/owner-login-repository";
 import {
   createSupabaseNewsletterAuditData,
   createSupabaseNewsletterJobRepository,
@@ -18,6 +20,7 @@ import {
   createProductionNewsletterReconciliationProvider,
   createProductionNewsletterSendAdapter
 } from "../../../../../lib/newsletter/resend/client";
+import { createProductionNewsletterOwnerLoginEmailReader } from "../../../../../lib/newsletter/resend/inventory-adapter";
 import { createNewsletterSegmentReconciliationHandler } from "../../../../../lib/newsletter/segment-reconciliation";
 import {
   createNewsletterConfirmationJobHandler,
@@ -49,6 +52,7 @@ export async function GET(request: Request) {
       const keyring = readNewsletterConfirmationKeyring();
       const sendKey = process.env.RESEND_SEND_API_KEY;
       const managementKey = process.env.RESEND_MANAGEMENT_API_KEY;
+      const ownerLoginData = createSupabaseNewsletterOwnerLoginData(client, siteId);
       const managementProvider = managementKey
         ? createProductionNewsletterContactProvider(managementKey)
         : null;
@@ -127,6 +131,13 @@ export async function GET(request: Request) {
             }
           })
         : unavailable;
+      const ownerLoginReconcile = managementKey
+        ? createNewsletterOwnerLoginReconciliationHandler({
+            siteId,
+            provider: createProductionNewsletterOwnerLoginEmailReader(managementKey),
+            data: ownerLoginData
+          })
+        : unavailable;
 
       return {
         run: async () => {
@@ -134,7 +145,14 @@ export async function GET(request: Request) {
           if (enabled) await reconciliationData.schedule();
           return runNewsletterWorker({
             repository,
-            handlers: { confirmationSend, contactSync, contactAudit, segmentReconcile, broadcastAudit },
+            handlers: {
+              confirmationSend,
+              contactSync,
+              contactAudit,
+              segmentReconcile,
+              broadcastAudit,
+              ownerLoginReconcile
+            },
             workerId,
             emailEnabled: enabled,
             limit: 10,

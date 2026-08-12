@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NewsletterProviderInventoryEvidence } from "./provider-inventory";
 import { NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION } from "./history-reconciliation";
+import { OWNER_LOGIN_POLICY_VERSION } from "./owner-login-evidence";
 
 const PAGE_SIZE = 1_000;
 const REQUIRED_MANUAL_CATEGORIES = [
@@ -38,6 +39,29 @@ async function allRows(
 
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+export function validateNewsletterOwnerLoginEvidenceRows(
+  evidenceRows: readonly Record<string, unknown>[],
+  receiptRows: readonly Record<string, unknown>[]
+) {
+  return evidenceRows.every((evidence) => {
+    const providerMessageId = text(evidence.provider_message_id);
+    if (!providerMessageId || evidence.policy_version !== OWNER_LOGIN_POLICY_VERSION) return false;
+    const receipts = receiptRows.filter((receipt) =>
+      text(receipt.provider_message_id) === providerMessageId
+    );
+    const validScope = receipts.every((receipt) =>
+      receipt.disposition === "matched" &&
+      receipt.provider_scope_id === "resend-team-production" &&
+      receipt.provider_broadcast_id === null &&
+      ["email.sent", "email.delivered", "email.opened", "email.clicked"]
+        .includes(text(receipt.event_type))
+    );
+    return validScope &&
+      receipts.filter((receipt) => receipt.event_type === "email.sent").length === 1 &&
+      receipts.filter((receipt) => receipt.event_type === "email.delivered").length === 1;
+  });
 }
 
 export function collectAllowedNewsletterProviderMessageIds(input: {
@@ -132,7 +156,7 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .range(from, to));
       const receipts = await allRows((from, to) => client
         .from("builder_newsletter_webhook_receipts")
-        .select("provider_message_id,provider_broadcast_id,disposition")
+        .select("provider_message_id,provider_broadcast_id,provider_scope_id,disposition,event_type")
         .eq("site_id", siteId)
         .eq("disposition", "matched")
         .order("id", { ascending: true })
@@ -148,6 +172,12 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .select("provider_message_id")
         .eq("site_id", siteId)
         .eq("policy_version", NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION)
+        .order("created_at", { ascending: true })
+        .range(from, to));
+      const ownerLoginEvidence = await allRows((from, to) => client
+        .from("builder_newsletter_auth_login_evidence")
+        .select("provider_message_id,policy_version")
+        .eq("site_id", siteId)
         .order("created_at", { ascending: true })
         .range(from, to));
 
@@ -201,6 +231,16 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         receipts,
         allowedSentBroadcastIds
       });
+      const ownerLoginEvidenceValid = validateNewsletterOwnerLoginEvidenceRows(
+        ownerLoginEvidence,
+        receipts
+      );
+      if (ownerLoginEvidenceValid) {
+        for (const row of ownerLoginEvidence) {
+          const providerMessageId = text(row.provider_message_id);
+          if (providerMessageId) allowedProviderMessageIds.add(providerMessageId);
+        }
+      }
 
       const categories = new Set(
         Array.isArray(attestation.data?.categories)
@@ -223,7 +263,8 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         manualAttestationCurrent: REQUIRED_MANUAL_CATEGORIES.every((name) => categories.has(name)),
         authSmtpPermissionAttested: replacementLoginProved,
         authSmtpLoginBeforeRevocationProved: replacementLoginProved,
-        authSmtpLoginAfterRevocationProved: postRevocationLoginProved
+        authSmtpLoginAfterRevocationProved: postRevocationLoginProved,
+        ownerLoginEvidenceValid
       };
     }
   };

@@ -8,7 +8,8 @@ export type NewsletterClaimedJob = {
     | "newsletter.contact.sync"
     | "newsletter.contact.audit"
     | "newsletter.segment.reconcile"
-    | "newsletter.broadcast.audit";
+    | "newsletter.broadcast.audit"
+    | "newsletter.auth_login.reconcile";
   readonly fencingToken: number;
   readonly attemptCount?: number;
   readonly [key: string]: unknown;
@@ -74,6 +75,7 @@ export async function runNewsletterWorker(input: {
     readonly contactAudit: Handler;
     readonly segmentReconcile: Handler;
     readonly broadcastAudit: Handler;
+    readonly ownerLoginReconcile: Handler;
   };
   readonly workerId: string;
   readonly emailEnabled: boolean;
@@ -111,7 +113,9 @@ export async function runNewsletterWorker(input: {
           ? input.handlers.contactAudit
           : job.kind === "newsletter.segment.reconcile"
             ? input.handlers.segmentReconcile
-            : input.handlers.broadcastAudit;
+            : job.kind === "newsletter.broadcast.audit"
+              ? input.handlers.broadcastAudit
+              : input.handlers.ownerLoginReconcile;
     try {
       const result = await handler(job);
       if (!result.alreadyCompleted) {
