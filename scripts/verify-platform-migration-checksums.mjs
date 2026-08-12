@@ -34,7 +34,7 @@ export const EXPECTED_PLATFORM_MIGRATIONS = Object.freeze([
   ["migrations/20260807032126_official_assembly_editor_content_publishing_v2.sql", "7877e78aa73f9fb39ae193c17950a78b34ea50500aadd83430414c3c9fd17563"],
   ["migrations/20260808092616_versioned_site_alerts.sql", "9b9a8492c9b990bd4ce65708f46408ea2318836527064b24506f0c8949e2bad6"],
   ["migrations/20260811222019_alert_scroll_mode.sql", "04cde38701f34ee2739772565bcc559ae8e7cb26345520a5e17d8b138aad79bd"],
-  ["migrations/20260812035711_complete_bilingual_publishing.sql", "9c176dfb5fddc8697921494ca4804298e29060b594607a26168a5390077cdae3"]
+  ["migrations/20260812035711_complete_bilingual_publishing.sql", "073b44f0a19f6d4370aece008a2c189c40c076e3b2b50f9a6b63441aaf58a01a"]
 ]);
 
 export async function verifyPlatformMigrationChecksums(repositoryRoot) {

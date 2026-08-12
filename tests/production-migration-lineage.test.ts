@@ -41,7 +41,7 @@ describe("production migration lineage", () => {
   it("includes the canonical bilingual publishing migration as approved pending lineage", () => {
     expect(EXPECTED_PENDING_MIGRATIONS).toContainEqual([
       "20260812035711_complete_bilingual_publishing.sql",
-      "9c176dfb5fddc8697921494ca4804298e29060b594607a26168a5390077cdae3",
+      "073b44f0a19f6d4370aece008a2c189c40c076e3b2b50f9a6b63441aaf58a01a",
     ]);
     expect(EXPECTED_PENDING_MIGRATIONS).toContainEqual([
       "20260812221730_editor_login_completion_proofs.sql",

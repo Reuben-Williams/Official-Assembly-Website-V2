@@ -856,7 +856,7 @@ begin
         'publicationId', v_publication_id,
         'digest', v_manifest_digest
       )
-    ) references(value);
+    ) publication_references(value);
     v_intended_delta := jsonb_build_object(
       'kind', 'domain',
       'domain', v_revision.domain,

@@ -38,7 +38,7 @@ describe("vendored platform migration history", () => {
   it("registers the canonical complete bilingual publishing migration", () => {
     expect(EXPECTED_PLATFORM_MIGRATIONS).toContainEqual([
       "migrations/20260812035711_complete_bilingual_publishing.sql",
-      "9c176dfb5fddc8697921494ca4804298e29060b594607a26168a5390077cdae3",
+      "073b44f0a19f6d4370aece008a2c189c40c076e3b2b50f9a6b63441aaf58a01a",
     ]);
   });
   it("contains every approved migration with its immutable checksum", async () => {
