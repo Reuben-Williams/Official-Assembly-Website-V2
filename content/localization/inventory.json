@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "readOnly": true,
-  "itemCount": 519,
-  "blockerCount": 519,
-  "inventoryDigest": "c0fe74e99ecd3dcd3777e33fa67acc5c63dafa8cd2bacc0a3300552c535db17f",
+  "itemCount": 521,
+  "blockerCount": 521,
+  "inventoryDigest": "b088c7f746f50707d9d9ef8fb40fa9240429682f4bdb5e1fae037a2b6cd0f38d",
   "items": [
     {
       "domain": "alerts",
@@ -4503,6 +4503,28 @@
       "sourceDigest": "903337003fc197e19c5604a1b23ceccc66e9b68947a1f75c366a57912c65868c",
       "exemptionEligible": false,
       "source": "public_html:/newsletter"
+    },
+    {
+      "domain": "site",
+      "stableId": "post.back-to-news",
+      "fieldId": "value",
+      "english": "Back to News",
+      "spanish": "Volver a Noticias",
+      "status": "needs_review",
+      "sourceDigest": "7866d5cf3ad0836dc5e11baddff3b0450cc39e1ea3f4cf619abcf8a93b72bd18",
+      "exemptionEligible": false,
+      "source": "checked_in_public_catalog"
+    },
+    {
+      "domain": "site",
+      "stableId": "post.district-update",
+      "fieldId": "value",
+      "english": "District Update",
+      "spanish": "Novedad del distrito",
+      "status": "needs_review",
+      "sourceDigest": "1d6e56d6961273f772dc14faaa1f5cec5361f6e5b090eba2aef8c1ce91fd6203",
+      "exemptionEligible": false,
+      "source": "checked_in_public_catalog"
     },
     {
       "domain": "site",
