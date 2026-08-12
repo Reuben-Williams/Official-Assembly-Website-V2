@@ -5,6 +5,10 @@ const migrationUrl = new URL(
   "../supabase/migrations/20260811235246_newsletter_owner_login_evidence.sql",
   import.meta.url
 );
+const immutabilityMigrationUrl = new URL(
+  "../supabase/migrations/20260812001718_newsletter_owner_login_immutability.sql",
+  import.meta.url
+);
 
 describe("newsletter owner-login production migration", () => {
   it("defines RLS-protected occurrence and evidence tables with service-role-only RPCs", async () => {
@@ -40,5 +44,14 @@ describe("newsletter owner-login production migration", () => {
     expect(sql).toContain("email.clicked");
     expect(sql).toContain("provider_broadcast_id is not null");
     expect(sql).toContain("pg_advisory_xact_lock");
+  });
+
+  it("removes Supabase default service-role mutation privileges from every immutable ledger", async () => {
+    const sql = await readFile(immutabilityMigrationUrl, "utf8");
+    expect(sql).toMatch(/revoke all on table[\s\S]+from service_role/i);
+    expect(sql).toMatch(/grant select, insert on table[\s\S]+to service_role/i);
+    expect(sql).toContain("builder_newsletter_auth_login_occurrences");
+    expect(sql).toContain("builder_newsletter_auth_login_evidence");
+    expect(sql).toContain("builder_newsletter_auth_login_recovery_commands");
   });
 });
