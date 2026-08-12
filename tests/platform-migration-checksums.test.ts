@@ -35,6 +35,12 @@ async function platformFixture() {
 }
 
 describe("vendored platform migration history", () => {
+  it("registers the canonical complete bilingual publishing migration", () => {
+    expect(EXPECTED_PLATFORM_MIGRATIONS).toContainEqual([
+      "migrations/20260812035711_complete_bilingual_publishing.sql",
+      "9c176dfb5fddc8697921494ca4804298e29060b594607a26168a5390077cdae3",
+    ]);
+  });
   it("contains every approved migration with its immutable checksum", async () => {
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
@@ -43,7 +49,7 @@ describe("vendored platform migration history", () => {
     );
 
     expect(stderr).toBe("");
-    expect(stdout).toBe("Verified 30 approved platform migrations.\n");
+    expect(stdout).toBe("Verified 31 approved platform migrations.\n");
   });
 
   it("adopts the exact alert migration and rejects any byte difference", async () => {
@@ -52,7 +58,7 @@ describe("vendored platform migration history", () => {
     const migrationPath = path.join(directory, "supabase", relativePath);
 
     await expect(verifyPlatformMigrationChecksums(directory)).resolves.toMatchObject({
-      checked: 30,
+      checked: 31,
       valid: true,
     });
 
