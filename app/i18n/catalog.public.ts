@@ -36,6 +36,8 @@ const source = Object.freeze({
   "news.read-update": "Read update",
   "news.empty-title": "No district posts have been published yet",
   "news.empty-body": "Published district office updates will appear here.",
+  "post.back-to-news": "Back to News",
+  "post.district-update": "District Update",
 } as const);
 
 const spanish: { readonly [K in keyof typeof source]: string } = Object.freeze({
@@ -74,6 +76,8 @@ const spanish: { readonly [K in keyof typeof source]: string } = Object.freeze({
   "news.read-update": "Leer novedad",
   "news.empty-title": "A\u00fan no se han publicado novedades del distrito",
   "news.empty-body": "Las novedades publicadas por la oficina del distrito aparecer\u00e1n aqu\u00ed.",
+  "post.back-to-news": "Volver a Noticias",
+  "post.district-update": "Novedad del distrito",
 });
 
 export type PublicCatalogKey = keyof typeof source;
