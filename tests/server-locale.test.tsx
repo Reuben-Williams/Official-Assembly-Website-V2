@@ -4,7 +4,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 import { AppFooter } from "../app/ui/AppFooter";
 import { AppHeader } from "../app/ui/AppHeader";
@@ -58,6 +61,8 @@ describe("server-owned public locale", () => {
     expect(header).toContain("Inicio");
     expect(header).toContain("Acerca de");
     expect(header).toContain("Contactar a la oficina");
+    expect(header).toContain("Abrir menú");
+    expect(header).not.toContain("<details");
     expect(header).toContain('lang="es"');
     expect(footer).toContain("Secciones del sitio");
     expect(footer).toContain("Portal del personal");

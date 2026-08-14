@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Landmark, Menu } from "lucide-react";
+import { Landmark } from "lucide-react";
 
 import { pages, siteConfig } from "../data/site";
 import { LanguageToggle } from "./LanguageToggle";
 import { localizedNavigationLabel, publicCopy } from "../i18n/catalog.public";
 import type { PublicLocale } from "../i18n/locale";
+import { MobileNavigation, type MobileNavigationItem } from "./MobileNavigation";
 import {
   builderLink,
   builderSectionIds,
@@ -29,47 +30,64 @@ function NavigationLinks({
   content: BuilderServerContent;
   locale: PublicLocale;
 }) {
+  const entries = navigationEntries({ all, content, locale });
+  return (
+    <>
+      {entries.map((entry) => (
+        <Link
+          data-builder-instance={instance}
+          data-builder-item-id={entry.slug}
+          data-builder-kind="link"
+          data-builder-region={`global.navigation.${entry.slug}.link`}
+          href={entry.href}
+          key={entry.slug}
+        >
+          <span
+            data-builder-instance={instance}
+            data-builder-kind="text"
+            data-builder-link-label
+            data-builder-region={`global.navigation.${entry.slug}.label`}
+          >
+            {entry.label}
+          </span>
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function navigationEntries({
+  all = false,
+  content,
+  locale,
+}: {
+  all?: boolean;
+  content: BuilderServerContent;
+  locale: PublicLocale;
+}): MobileNavigationItem[] {
   const fallbackEntries = all ? pages : navPages;
   const entriesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
-  const entries = builderSectionIds(
+  return builderSectionIds(
     content,
     "global.navigation",
     fallbackEntries.map((page) => page.slug ?? "home"),
-  ).flatMap((slug) => entriesBySlug.get(slug) ?? []);
-  return (
-    <>
-      {entries.map((page) => {
-        const slug = page.slug ?? "home";
-        const link = builderLink(content, `global.navigation.${slug}.link`, {
-          href: page.href,
-          label: page.navLabel,
-        });
-        return (
-          <Link
-            data-builder-instance={instance}
-            data-builder-item-id={slug}
-            data-builder-kind="link"
-            data-builder-region={`global.navigation.${slug}.link`}
-            href={link.href}
-            key={page.href}
-          >
-            <span
-              data-builder-instance={instance}
-              data-builder-kind="text"
-              data-builder-link-label
-              data-builder-region={`global.navigation.${slug}.label`}
-            >
-              {localizedNavigationLabel(
-                locale,
-                slug,
-                builderText(content, `global.navigation.${slug}.label`, link.label),
-              )}
-            </span>
-          </Link>
-        );
-      })}
-    </>
-  );
+  ).flatMap((slug) => {
+    const page = entriesBySlug.get(slug);
+    if (!page) return [];
+    const link = builderLink(content, `global.navigation.${slug}.link`, {
+      href: page.href,
+      label: page.navLabel,
+    });
+    return [{
+      slug,
+      href: link.href,
+      label: localizedNavigationLabel(
+        locale,
+        slug,
+        builderText(content, `global.navigation.${slug}.label`, link.label),
+      ),
+    }];
+  });
 }
 
 export function AppHeader({
@@ -83,6 +101,8 @@ export function AppHeader({
     href: "/contact",
     label: "Contact Office",
   });
+  const brandLabel = builderText(content, "global.header.brand", siteConfig.officeName);
+  const mobileNavigationLabel = publicCopy(locale, "global.header.mobile-navigation", "Mobile navigation");
   return (
     <header className="site-header" lang={locale}>
       <div className="container">
@@ -92,7 +112,7 @@ export function AppHeader({
               <Landmark size={24} />
             </span>
             <span data-builder-region="global.header.brand" data-builder-kind="text">
-              {builderText(content, "global.header.brand", siteConfig.officeName)}
+              {brandLabel}
             </span>
           </Link>
 
@@ -120,23 +140,13 @@ export function AppHeader({
             </Link>
           </div>
 
-          <details className="mobile-menu">
-            <summary
-              className="mobile-summary"
-              aria-label={publicCopy(locale, "global.header.open-menu", "Open menu")}
-            >
-              <Menu size={24} />
-            </summary>
-            <nav
-              aria-label={publicCopy(locale, "global.header.mobile-navigation", "Mobile navigation")}
-              className="mobile-panel"
-              data-builder-instance="mobile"
-              data-builder-kind="sections"
-              data-builder-region="global.navigation"
-            >
-              <NavigationLinks all content={content} instance="mobile" locale={locale} />
-            </nav>
-          </details>
+          <MobileNavigation
+            brandLabel={brandLabel}
+            closeLabel={publicCopy(locale, "global.header.close-menu", "Close menu")}
+            items={navigationEntries({ all: true, content, locale })}
+            navigationLabel={mobileNavigationLabel}
+            openLabel={publicCopy(locale, "global.header.open-menu", "Open menu")}
+          />
         </div>
       </div>
     </header>
