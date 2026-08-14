@@ -49,10 +49,10 @@ The existing language selector stays visible in the header while the drawer is c
 - The panel is `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` by its visible navigation heading. Its nested `<nav>` has its own localized label. Decorative icons and the backdrop are hidden from assistive technology, and pointer interaction outside the drawer is blocked.
 - Opening moves focus to the close button.
 - Tab and Shift+Tab cycle within the drawer while it is open.
-- Escape, the backdrop, the close button, or an unmodified internal-link activation closes the drawer. Clicking inside the drawer never dismisses it through backdrop bubbling. Modified or new-tab link activation leaves the current drawer open.
-- Close button, Escape, and backdrop dismissal restore focus to the trigger. Link activation, pathname change, browser Back/Forward, desktop-breakpoint change, and unmount close without attempting to focus a hidden or obsolete trigger.
+- Escape, the backdrop, the close button, or an unmodified internal-link activation closes the drawer. Activating the already-current route closes and restores focus to the trigger because no pathname transition will replace that focus target. Clicking inside the drawer never dismisses it through backdrop bubbling. Modified or new-tab link activation leaves the current drawer open.
+- Close button, Escape, backdrop dismissal, and same-route activation restore focus to the trigger. Link activation to another route, pathname change, browser Back/Forward, desktop-breakpoint change, and unmount close without attempting to focus a hidden or obsolete trigger.
 - Body scrolling is locked while the drawer is open. The implementation preserves the existing inline overflow and padding styles, compensates for removed scrollbar width, preserves scroll position, and restores the exact original styles. Setup and cleanup are idempotent under React Strict Mode, route changes, unmount, and breakpoint changes.
-- `usePathname()` owns current-route matching inside the mobile component. `/` matches only Home; a trailing slash is normalized; same-origin internal paths are eligible; builder-managed absolute/external URLs are never current; and `/news/[slug]` marks News & Updates current. `aria-current="page"` applies only to mobile drawer links, leaving desktop output unchanged.
+- `usePathname()` owns current-route matching inside the mobile component. Each href is parsed against `window.location.origin`; relative URLs and absolute URLs with that same origin are eligible, while cross-origin URLs are never current. Query strings and fragments are ignored. `/` matches only Home, trailing slashes are normalized, and `/news/[slug]` marks News & Updates current. `aria-current="page"` applies only to mobile drawer links, leaving desktop output unchanged.
 - The drawer and backdrop animate with a short, restrained transition. `prefers-reduced-motion: reduce` removes that transition.
 - The overlay uses a layer above the current header (`z-index: 50`) while the skip link moves above the modal layer when focused. This preserves keyboard escape from repeated navigation without allowing ordinary page interaction through the backdrop.
 
@@ -83,10 +83,10 @@ Automated tests must prove:
 - the mobile panel is implemented as a fixed dialog/drawer rather than normal-flow `<details>` content;
 - trigger state and accessible names are correct in English and Spanish;
 - opening, closing, Escape, backdrop click, and link click work;
-- clicking inside the panel does not dismiss it, and modified/new-tab link activation does not close the current document's drawer;
+- clicking inside the panel does not dismiss it, modified/new-tab link activation does not close the current document's drawer, and same-route activation closes with trigger focus restored;
 - focus enters the drawer, is trapped, and returns to the trigger;
 - body scroll locking, scrollbar compensation, preserved scroll position, and exact style restoration work under close, route change, breakpoint change, Strict Mode, and unmount;
-- exact route, Home, trailing-slash, external builder href, and post-detail matching produce the intended mobile-only `aria-current="page"` behavior;
+- exact route, Home, trailing-slash, query/hash, relative URL, absolute same-origin URL, cross-origin builder href, and post-detail matching produce the intended mobile-only `aria-current="page"` behavior;
 - pathname changes and Back/Forward close without focus races, and all listeners are cleaned up;
 - a non-empty `BuilderServerContent` fixture preserves mobile order, overridden labels/hrefs, region metadata, item IDs, and the single Contact destination through the client boundary;
 - mobile CSS fixes the drawer to the viewport and does not change desktop navigation;
@@ -96,4 +96,4 @@ Browser checks compare header height, main-content position, scroll position, an
 
 ## Release Boundary
 
-`AppHeader` is mounted by the root layout on public, `/admin`, and `/auth` routes, so the corrected mobile drawer behaves consistently wherever that shared header appears. Regression checks cover a public route plus `/admin/login` and `/auth/callback`. The release does not alter editor workspace navigation, page content, routes, builder storage, forms, growth data, or provider configuration.
+`AppHeader` is mounted by the root layout on public and `/admin` pages, so the corrected mobile drawer behaves consistently wherever that shared header appears. Regression checks cover a public route, `/admin/login`, and an authenticated or mocked `/admin/editor` route. The release does not alter editor workspace navigation, page content, routes, builder storage, forms, growth data, or provider configuration.
