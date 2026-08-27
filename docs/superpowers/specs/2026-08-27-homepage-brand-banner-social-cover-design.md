@@ -2,7 +2,7 @@
 
 Date: 2026-08-27
 
-Status: Approved design; specification under review
+Status: Independently reviewed; awaiting final user approval
 
 Website: `official-assembly-website-v2`
 
@@ -82,7 +82,7 @@ The render map is reviewed with the derivatives and is the only authority for re
 
 The 620px value is a banner-specific art-direction breakpoint chosen for the legibility of this wide brand artwork in the required 390px portrait and 667px landscape reviews. It is independent of the navigation drawer's 920px breakpoint and may change only with another responsive visual review. If no distinct mobile composition is approved, the mobile IDs still point to separately optimized complete horizontal derivatives of the same artwork; the implementation never invents a stacked redesign.
 
-A repository check verifies that every mapped ID exists, has the required purpose and variant, each banner set contains exactly one ID for each required banner variant, each representative picker path matches its desktop WebP entry, the fallback set exists, and the social ID resolves to the 1200x630 social entry. It verifies that each checked-in public file's lowercase hexadecimal SHA-256 digest, decoded dimensions, and MIME type match the manifest. It also verifies that every source SHA-256 in the manifest is present in the asset-preparation record. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
+A repository check verifies that every mapped ID exists, has the required purpose and variant, banner-set IDs and representative picker paths are unique, each banner set contains exactly one ID for each required banner variant, each representative picker path matches its desktop WebP entry, the fallback set exists, and the social ID resolves to the 1200x630 social entry. It verifies that each checked-in public file's lowercase hexadecimal SHA-256 digest, decoded dimensions, and MIME type match the manifest. It also verifies that every source SHA-256 in the manifest is present in the asset-preparation record. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
 
 ## 4. Homepage banner contract
 
@@ -133,7 +133,7 @@ The checked-in fallback banner set is authoritative when no kind-correct publish
 
 The editor preview must show the banner in its fixed first position. An authorized replacement saves the existing image value shape using the stable manifest `publicPath` and canonical English alt, then follows the existing draft, preview, publish, audit, and history workflow.
 
-One pure server-side `validateHomeBrandBannerValue` rule is reused by draft save, publication, history restoration, and public fallback resolution. It resolves the submitted `src` to exactly one banner set through its representative picker path, revalidates all four checked-in derivatives in that set against the manifest, and normalizes the stored value to the representative path plus canonical English alt. Unknown URLs, non-representative derivative paths, upload signed URLs, purpose or variant mismatches, incomplete sets, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner.
+One pure server-side `validateHomeBrandBannerValue` rule is reused by draft save, publication, history restoration, and public fallback resolution. File loading, decoding, and hashing happen once in the manifest-verification boundary, which passes an immutable verified manifest snapshot into the pure validator. The validator resolves the submitted `src` to exactly one banner set through its representative picker path, requires all four derivatives in that set to be present in the verified snapshot, and normalizes the stored value to the representative path plus canonical English alt. Unknown URLs, non-representative derivative paths, upload signed URLs, purpose or variant mismatches, incomplete sets, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner.
 
 History restoration preserves the editor's existing immediate rollback behavior. Before executing a restore that contains `media.home-brand-banner`, the server loads the candidate source version and runs the same validator. If its banner is no longer in the current approved manifest, the whole restore is rejected and the current published version remains unchanged; otherwise the existing restore command proceeds and publishes its rollback version as it does today. This design does not add a new restoration draft workflow.
 
