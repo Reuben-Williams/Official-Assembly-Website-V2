@@ -2,7 +2,7 @@
 
 Date: 2026-08-27
 
-Status: Independently reviewed; awaiting final user approval
+Status: Approved and activated with the 2026-08-27 pasted-reference restoration amendment
 
 Website: `official-assembly-website-v2`
 
@@ -21,21 +21,23 @@ The homepage banner is editable through the private Site Editor. The social-shar
 - Keep the brand banner fixed as the first homepage section; staff may replace its image but may not reorder it below another section.
 - Let authorized staff update the homepage banner through the Site Editor.
 - Keep the Open Graph and Twitter/X cover controlled separately from the editable banner.
-- Derive all public files from the clean original asset supplied in the forthcoming official asset folder.
-- Do not publish the attached 1290x639 screenshot. It contains large white margins and a scan-control overlay and is reference material only.
-- Preserve the supplied logo without redrawing the seal, wordmark, typography, colors, or LD34 treatment.
+- Derive all public files from the checked-in restored master approved after the owner confirmed that only a pasted copy was available.
+- Do not publish the raw 1290x639 pasted screenshot. It contains large white margins and a scan-control overlay and remains provenance evidence only.
+- Preserve the supplied seal, wordmark, typography, colors, and LD34 treatment outside the tightly bounded scan-control removal; restore only the obscured lower-right portion of the final `S`.
 - Use the same official logo on English and Spanish pages as reviewed language-neutral brand artwork. Localize its accessible text.
 
 ## 3. Source-asset gate and provenance
 
-Implementation is asset-gated. Before any logo file enters `public/` or production storage:
+Implementation remains asset-gated. For the approved 2026-08-27 pasted-reference release:
 
-1. Inventory the supplied asset folder without assuming every file is public or current.
-2. Identify the official logo source with the best available fidelity, preferring vector artwork (`SVG`, `PDF`, or `EPS`) and then a transparent, high-resolution raster.
-3. Record the source filename, dimensions, format, digest, and the user-provided approval context.
-4. Compare duplicate logo variants and surface meaningful differences instead of guessing which is canonical.
-5. Obtain confirmation if the folder contains conflicting official, campaign, district-office, or outdated marks.
-6. Retain the source unchanged and derive optimized public variants reproducibly.
+1. Retain the owner-supplied pasted reference unchanged and record its dimensions, format, digest, and approval context.
+2. Confirm the same Assemblywoman Carmen T. Morales / LD34 brand treatment against the office's public Facebook and Instagram accounts.
+3. Reject the first automated restoration because it changed the seal and typography beyond the approved boundary.
+4. Use a checked-in restoration mask only for the portion hidden by the scan control; crop the white screenshot canvas and preserve all other supplied artwork.
+5. Record the restored-master digest separately from the unchanged pasted-reference digest.
+6. Derive optimized public variants reproducibly from the restored master.
+
+A future clean vector or high-resolution original may replace this release through the same reviewed manifest process; it must not silently supersede the approved restored master.
 
 No screenshot controls, messaging UI, white screenshot canvas, unapproved crop, metadata, or unrelated folder assets may enter a derivative.
 
@@ -180,7 +182,7 @@ Public rendering flow:
 
 ## 8. Failure handling
 
-- Before the clean source asset is approved, make no production visual change.
+- Before a source or restored master passes the manifest gate, make no production visual change.
 - If an editor candidate is invalid, keep the previous published banner and report the exact validation problem privately.
 - If no published override exists, render the checked-in approved fallback.
 - The build fails if a checked-in brand file does not match its manifest, preventing a known-broken asset release. A later external network failure leaves the stable navy banner field and accessible text available; it never substitutes the screenshot or an unrelated gallery image.
@@ -202,7 +204,7 @@ Public rendering flow:
 - The banner and current hero retain distinct stable media region IDs.
 - Root and deep-route metadata preserve their route-specific localized title and description, root title template, post canonical/robots values, and confirmation `noindex`/`nofollow`/`no-referrer` values while containing the absolute 1200x630 Open Graph image, localized image alt, and Twitter/X large-image card.
 - Metadata tests confirm route titles receive the existing suffix exactly once.
-- The checked-in asset inventory contains no reference to the screenshot path or digest.
+- The public asset inventory contains neither the raw screenshot bytes nor its digest; the private provenance record retains both intentionally.
 - Build output contains no broken, local-only, or credential-bearing metadata URL.
 
 ### 9.2 Browser and visual coverage

@@ -35,6 +35,25 @@ describe("editable not-found page", () => {
     expect(html).toContain('alt="La asamble\u00edsta Carmen Morales con colegas legisladores en la Casa de Gobierno"');
     expect(html).toContain("No pudimos encontrar esa p\u00e1gina.");
     expect(html).toContain("Volver al inicio");
-    await expect(generateMetadata()).resolves.toEqual({ title: "P\u00e1gina no encontrada" });
+    await expect(generateMetadata()).resolves.toMatchObject({
+      title: "P\u00e1gina no encontrada",
+      openGraph: {
+        images: [
+          expect.objectContaining({
+            url: "http://localhost:3000/brand/morales-ld34-social-1200x630.png",
+            width: 1200,
+            height: 630,
+          }),
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        images: [
+          expect.objectContaining({
+            url: "http://localhost:3000/brand/morales-ld34-social-1200x630.png",
+          }),
+        ],
+      },
+    });
   }, 15_000);
 });

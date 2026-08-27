@@ -7,6 +7,7 @@ import { verifyApprovedBrandAssetFiles } from "../lib/brand/file-verification.ts
 
 const MIME_BY_FORMAT = {
   avif: "image/avif",
+  heif: "image/avif",
   png: "image/png",
   webp: "image/webp",
 };
