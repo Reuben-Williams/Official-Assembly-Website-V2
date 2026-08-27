@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "node --conditions=react-server --import tsx scripts/verify-newsletter-production-readiness.mjs && next build --webpack",
+    "build": "node --conditions=react-server --import tsx scripts/verify-brand-assets.mjs && node --conditions=react-server --import tsx scripts/verify-newsletter-production-readiness.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",

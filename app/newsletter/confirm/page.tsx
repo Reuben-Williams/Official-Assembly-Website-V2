@@ -2,13 +2,23 @@ import type { Metadata } from "next";
 
 import { NewsletterConfirmationClient } from "./confirmation-client";
 import { readPublicLocale } from "../../i18n/server";
+import { approvedBrandAssets } from "../../../lib/brand/approved-assets";
+import { withBrandSocialMetadata } from "../../../lib/brand/metadata";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "Confirm District Newsletter",
-  referrer: "no-referrer",
-  robots: { index: false, follow: false }
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await readPublicLocale();
+  const title = locale === "es" ? "Confirmar el Boletín del distrito" : "Confirm District Newsletter";
+  const description = locale === "es"
+    ? "Complete el paso de confirmación seguro para el Boletín del distrito."
+    : "Complete the secure confirmation step for the District Newsletter.";
+  return withBrandSocialMetadata({
+    title,
+    description,
+    referrer: "no-referrer",
+    robots: { index: false, follow: false }
+  }, { title, description, locale }, approvedBrandAssets);
+}
 
 export default async function NewsletterConfirmationPage() {
   const locale = await readPublicLocale();

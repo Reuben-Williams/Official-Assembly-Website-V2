@@ -17,6 +17,11 @@ import {
   createSiteKeyResolvingAdapter
 } from "../../../lib/builder/repositories";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../lib/supabase/admin";
+import { approvedBrandAssets } from "../../../lib/brand/approved-assets";
+import {
+  normalizeProtectedBrandValue,
+  validateProtectedBrandSnapshot,
+} from "../../../lib/brand/assets";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -59,7 +64,35 @@ function createHandlers(request: Request) {
         .eq("entry_id", entryId)
         .maybeSingle();
       return !result.error && Boolean(result.data?.entry_id);
-    }
+    },
+    normalizeEditableValue: async (input) => normalizeProtectedBrandValue(input, approvedBrandAssets),
+    validateContentSnapshot: async (input) => validateProtectedBrandSnapshot(input, approvedBrandAssets),
+    validateRestoreVersion: async ({ pagePath, versionId }) => {
+      if (pagePath !== "/" || !approvedBrandAssets) return;
+      const siteId = await resolveBuilderSiteId(admin);
+      if (!siteId) throw new TypeError("The site is not provisioned.");
+      const result = await admin
+        .from("builder_versions")
+        .select("page_path, snapshot")
+        .eq("site_id", siteId)
+        .eq("id", versionId)
+        .maybeSingle();
+      if (result.error || !result.data || result.data.page_path !== pagePath) {
+        throw new TypeError("The restore source is unavailable.");
+      }
+      const snapshot = result.data.snapshot;
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+        throw new TypeError("The restore source is invalid.");
+      }
+      const regions = (snapshot as Record<string, unknown>).regions;
+      if (!regions || typeof regions !== "object" || Array.isArray(regions)) {
+        throw new TypeError("The restore source is invalid.");
+      }
+      validateProtectedBrandSnapshot({
+        pagePath,
+        regions: regions as Record<string, import("@reuben-williams/core").EditableValue>,
+      }, approvedBrandAssets);
+    },
   });
 }
 

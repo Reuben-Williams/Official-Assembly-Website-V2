@@ -9,20 +9,26 @@ import { PublishedPostList } from "../ui/PublishedPosts";
 import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
 import { readPublicLocale } from "../i18n/server";
 import { localizedBuilderText } from "../i18n/catalog.server";
+import { approvedBrandAssets } from "../../lib/brand/approved-assets";
+import { withBrandSocialMetadata } from "../../lib/brand/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
   const [content, locale] = await Promise.all([loadBuilderServerContent("/news"), readPublicLocale()]);
-  return {
-    title: localizedBuilderText(locale, "metadata.news.title", builderText(content, "metadata.news.title", "News & Updates")),
-    description: localizedBuilderText(locale, "metadata.news.description", builderText(
-      content,
-      "metadata.news.description",
-      `Published legislative and district updates from ${siteConfig.officeName}.`,
-    )),
-  };
+  const title = localizedBuilderText(locale, "metadata.news.title", builderText(content, "metadata.news.title", "News & Updates"));
+  const description = localizedBuilderText(locale, "metadata.news.description", builderText(
+    content,
+    "metadata.news.description",
+    `Published legislative and district updates from ${siteConfig.officeName}.`,
+  ));
+  return withBrandSocialMetadata({ title, description }, {
+    title,
+    description,
+    locale,
+    canonicalUrl: new URL("/news", process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").toString(),
+  }, approvedBrandAssets);
 }
 
 export default async function NewsPage() {

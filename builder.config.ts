@@ -360,6 +360,11 @@ export default {
       "label": "Home",
       "regions": [
         {
+          "id": "media.home-brand-banner",
+          "kind": "image",
+          "label": "Homepage official brand banner"
+        },
+        {
           "id": "home.sections",
           "kind": "sections",
           "label": "home page sections"

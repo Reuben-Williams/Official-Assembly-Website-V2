@@ -14,10 +14,20 @@ import {
   loadBuilderServerContent,
   type BuilderServerContent,
 } from "../lib/builder/server-content";
+import { approvedBrandAssets } from "../lib/brand/approved-assets";
+import { withBrandSocialMetadata } from "../lib/brand/metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await readPublicLocale();
-  return { title: locale === "es" ? "P\u00e1gina no encontrada" : "Page not found" };
+  const title = locale === "es" ? "P\u00e1gina no encontrada" : "Page not found";
+  const description = locale === "es"
+    ? "La página solicitada no está disponible."
+    : "The requested page is not available.";
+  return withBrandSocialMetadata({ title }, {
+    title,
+    description,
+    locale,
+  }, approvedBrandAssets);
 }
 
 function NotFoundPageView({ content, locale }: { content: BuilderServerContent; locale: PublicLocale }) {

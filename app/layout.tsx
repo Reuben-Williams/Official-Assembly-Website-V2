@@ -17,6 +17,8 @@ import {
 import { INTERNAL_PATHNAME_HEADER } from "../lib/public-route";
 import { publicCopy } from "./i18n/catalog.public";
 import { readPublicLocale } from "./i18n/server";
+import { approvedBrandAssets } from "../lib/brand/approved-assets";
+import { withBrandSocialMetadata } from "../lib/brand/metadata";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -27,20 +29,28 @@ const publicSans = Public_Sans({
 export async function generateMetadata(): Promise<Metadata> {
   const [content, locale] = await Promise.all([loadBuilderGlobalContent(), readPublicLocale()]);
   const officeName = builderText(content, "global.office.name", siteConfig.officeName);
-  return {
+  const title = builderText(content, "metadata.home.title", officeName);
+  const description = publicCopy(
+    locale,
+    "metadata.home.description",
+    builderText(content, "metadata.home.description", siteConfig.tagline),
+  );
+  const metadataBase = new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  );
+  return withBrandSocialMetadata({
     title: {
-      default: builderText(content, "metadata.home.title", officeName),
+      default: title,
       template: `%s | ${officeName}`,
     },
-    description: publicCopy(
-      locale,
-      "metadata.home.description",
-      builderText(content, "metadata.home.description", siteConfig.tagline),
-    ),
-    metadataBase: new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-    ),
-  };
+    description,
+    metadataBase,
+  }, {
+    title,
+    description,
+    locale,
+    canonicalUrl: metadataBase.toString(),
+  }, approvedBrandAssets);
 }
 
 export default async function RootLayout({

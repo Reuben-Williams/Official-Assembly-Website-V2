@@ -9,6 +9,8 @@ import { createBuilderRouteHandlers } from "@reuben-williams/next/routes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { BuilderAuthorizationError } from "./authorization";
+import { approvedBrandAssets } from "../brand/approved-assets";
+import { brandBannerSeedAssets } from "../brand/assets";
 
 const STABLE_REGION = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const GLOBAL_CONTENT_PATH = "/__builder/global";
@@ -41,6 +43,24 @@ type BuilderContentCommandResult = {
 export interface BuilderContentCommandExecutor {
   execute(siteKey: string, command: BuilderContentCommand): Promise<BuilderContentCommandResult>;
 }
+
+type EditableValueNormalizer = (input: Readonly<{
+  operation: "save";
+  pagePath: string;
+  regionId: string;
+  value: EditableValue;
+}>) => EditableValue | Promise<EditableValue>;
+
+type ContentSnapshotValidator = (input: Readonly<{
+  operation: "publish";
+  pagePath: string;
+  regions: Readonly<Record<string, EditableValue>>;
+}>) => void | Promise<void>;
+
+type RestoreVersionValidator = (input: Readonly<{
+  pagePath: string;
+  versionId: string;
+}>) => void | Promise<void>;
 
 export type BuilderContentCommandErrorCode =
   | "STALE_REVISION"
@@ -341,7 +361,13 @@ export function createSiteKeyResolvingAdapter(input: {
     undoRollback: async (value) => base.undoRollback({ ...value, siteId: await siteId() }),
     listAuditLog: async (_site, path) => base.listAuditLog(await siteId(), path),
     createMediaAsset: async (value) => base.createMediaAsset({ ...value, siteId: await siteId() }),
-    listMediaAssets: async () => listNormalizedMediaAssets(input.client, await siteId())
+    listMediaAssets: async () => {
+      const resolvedSiteId = await siteId();
+      const uploads = await listNormalizedMediaAssets(input.client, resolvedSiteId);
+      return approvedBrandAssets
+        ? [...brandBannerSeedAssets(resolvedSiteId, approvedBrandAssets), ...uploads]
+        : uploads;
+    }
   };
 }
 
@@ -352,6 +378,9 @@ export function createSecuredBuilderHandlers(input: {
   getUserId: NonNullable<Parameters<typeof createBuilderRouteHandlers>[0]["getUserId"]>;
   validateLinkedPost?: (entryId: string) => Promise<boolean>;
   contentCommands?: BuilderContentCommandExecutor;
+  normalizeEditableValue?: EditableValueNormalizer;
+  validateContentSnapshot?: ContentSnapshotValidator;
+  validateRestoreVersion?: RestoreVersionValidator;
 }) {
   const base = createBuilderRouteHandlers(input);
 
@@ -379,8 +408,16 @@ export function createSecuredBuilderHandlers(input: {
             });
           }
         }
-        const { expectedVersionId: _expected, ...sanitized } = body;
-        const editableValue = body.value as EditableValue;
+        const editableValue = input.normalizeEditableValue
+          ? await input.normalizeEditableValue({
+            operation: "save",
+            pagePath: String(body.pagePath),
+            regionId: String(body.regionId),
+            value: body.value as EditableValue,
+          })
+          : body.value as EditableValue;
+        const { expectedVersionId: _expected, ...requestWithoutExpectedVersion } = body;
+        const sanitized = { ...requestWithoutExpectedVersion, value: editableValue };
         const postEntryId = editableValue.type === "link"
           ? editableValue.postEntryId
           : editableValue.type === "sections" || editableValue.type === "postCollection"
@@ -431,6 +468,11 @@ export function createSecuredBuilderHandlers(input: {
           input.adapter.getDraftContent(input.site.siteId, pagePath),
           input.adapter.getPublishedContent(input.site.siteId, pagePath)
         ]);
+        await input.validateContentSnapshot?.({
+          operation: "publish",
+          pagePath,
+          regions: draft.regions,
+        });
         return {
           scope: { kind: pagePath === GLOBAL_CONTENT_PATH ? "global" : "page", path: pagePath },
           expectedDraftVersionId: draft.versionId ?? null,
@@ -456,6 +498,10 @@ export function createSecuredBuilderHandlers(input: {
         throw new TypeError("Invalid restore request");
       }
       await input.authorize?.(request, "history.rollback");
+      await input.validateRestoreVersion?.({
+        pagePath: String(body.pagePath),
+        versionId: body.versionId,
+      });
       const actorId = await input.getUserId(request);
       const [draft, published] = await Promise.all([
         input.adapter.getDraftContent(input.site.siteId, body.pagePath),

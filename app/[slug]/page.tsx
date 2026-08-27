@@ -6,6 +6,8 @@ import { PageTemplate } from "../ui/PageTemplate";
 import { builderText, loadBuilderServerContent } from "../../lib/builder/server-content";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import { readPublicLocale } from "../i18n/server";
+import { approvedBrandAssets } from "../../lib/brand/approved-assets";
+import { withBrandSocialMetadata } from "../../lib/brand/metadata";
 
 type PageProps = {
   params: Promise<{
@@ -35,12 +37,16 @@ export async function generateMetadata({
 
   const [content, locale] = await Promise.all([loadBuilderServerContent(page.href), readPublicLocale()]);
 
-  return {
-    title: localizedBuilderText(locale, `metadata.${slug}.title`, builderText(content, `metadata.${slug}.title`, page.navLabel)),
-    description: localizedBuilderText(locale, `metadata.${slug}.description`, builderText(
-      content, `metadata.${slug}.description`, `${page.description} | ${siteConfig.officeName}`,
-    )),
-  };
+  const title = localizedBuilderText(locale, `metadata.${slug}.title`, builderText(content, `metadata.${slug}.title`, page.navLabel));
+  const description = localizedBuilderText(locale, `metadata.${slug}.description`, builderText(
+    content, `metadata.${slug}.description`, `${page.description} | ${siteConfig.officeName}`,
+  ));
+  return withBrandSocialMetadata({ title, description }, {
+    title,
+    description,
+    locale,
+    canonicalUrl: new URL(page.href, process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").toString(),
+  }, approvedBrandAssets);
 }
 
 export default async function DynamicPage({ params }: PageProps) {

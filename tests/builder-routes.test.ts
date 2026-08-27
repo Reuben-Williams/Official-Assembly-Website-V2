@@ -33,6 +33,102 @@ function historyReaders(values: Partial<Record<HistorySource, readonly HistoryEv
 }
 
 describe("secured builder route handlers", () => {
+  it("normalizes protected values before saving a V2 draft snapshot", async () => {
+    const base = createInMemoryAdapter();
+    const normalizeEditableValue = vi.fn(async (input: { value: EditableValue }) => ({
+      ...input.value,
+      ...(input.value.type === "image" ? { alt: "Canonical brand alt" } : {}),
+    } as EditableValue));
+    const execute = vi.fn(async (_siteKey: string, command: Record<string, unknown>) => ({
+      commandId: String(command.commandId), operation: "save" as const, scopes: [], siteGenerationId: null,
+    }));
+    const handlers = createSecuredBuilderHandlers({
+      site,
+      adapter: {
+        ...base,
+        getDraftContent: async () => ({ path: "/", regions: {}, versionId: "draft" }),
+        getPublishedContent: async () => ({ path: "/", regions: {}, versionId: "published" }),
+      },
+      authorize: async () => undefined,
+      getUserId: async () => "user-1",
+      contentCommands: { execute },
+      normalizeEditableValue,
+    });
+
+    const response = await handlers.POST(new Request("http://localhost:3000/api/builder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pagePath: "/",
+        regionId: "media.home-brand-banner",
+        value: { type: "image", src: "/brand/banner.webp", alt: "Untrusted alt" },
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(normalizeEditableValue).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "save",
+      pagePath: "/",
+      regionId: "media.home-brand-banner",
+    }));
+    expect(execute.mock.calls[0]?.[1]).toMatchObject({
+      scopes: [{ values: {
+        "media.home-brand-banner": {
+          type: "image", src: "/brand/banner.webp", alt: "Canonical brand alt",
+        },
+      } }],
+    });
+  });
+
+  it("validates protected draft snapshots before publish and source versions before restore", async () => {
+    const base = createInMemoryAdapter();
+    const validateContentSnapshot = vi.fn(async () => undefined);
+    const validateRestoreVersion = vi.fn(async () => {
+      throw new TypeError("Obsolete brand banner");
+    });
+    const execute = vi.fn(async (_siteKey: string, command: Record<string, unknown>) => ({
+      commandId: String(command.commandId), operation: String(command.operation) as "publish", scopes: [], siteGenerationId: 1,
+    }));
+    const handlers = createSecuredBuilderHandlers({
+      site,
+      adapter: {
+        ...base,
+        getDraftContent: async () => ({
+          path: "/",
+          regions: { "media.home-brand-banner": { type: "image", src: "/brand/banner.webp", alt: "Brand" } },
+          versionId: "draft",
+        }),
+        getPublishedContent: async () => ({ path: "/", regions: {}, versionId: "published" }),
+      },
+      authorize: async () => undefined,
+      getUserId: async () => "user-1",
+      contentCommands: { execute },
+      validateContentSnapshot,
+      validateRestoreVersion,
+    });
+
+    const publish = await handlers.PUT(new Request("http://localhost:3000/api/builder", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pagePath: "/" }),
+    }));
+    expect(publish.status).toBe(200);
+    expect(validateContentSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "publish",
+      pagePath: "/",
+      regions: expect.objectContaining({ "media.home-brand-banner": expect.any(Object) }),
+    }));
+
+    const restore = await handlers.PATCH(new Request("http://localhost:3000/api/builder", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pagePath: "/", versionId: "source-version" }),
+    }));
+    expect(restore.status).toBe(400);
+    expect(validateRestoreVersion).toHaveBeenCalledWith({ pagePath: "/", versionId: "source-version" });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it("returns a no-store unified site history response with bounded query filters", async () => {
     const sourceEventId = "post-event-1";
     const item: HistoryEventV1 = {

@@ -15,6 +15,9 @@ import { LatestUpdatesSection } from "./LatestUpdatesSection";
 import { OfficialProfileSection } from "./OfficialProfileSection";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
+import { approvedBrandAssets } from "../../lib/brand/approved-assets";
+import type { VerifiedApprovedBrandAssets } from "../../lib/brand/assets";
+import { HomepageBrandBanner } from "./HomepageBrandBanner";
 
 // Checked-in values are used only when an authoritative server read confirms that
 // a registered region has no kind-correct published override.
@@ -38,12 +41,18 @@ const workflowSteps = [
 ];
 
 type HomePageViewProps = {
+  assets?: VerifiedApprovedBrandAssets | null;
   content: BuilderServerContent;
   posts: readonly PublishedPost[];
   locale?: PublicLocale;
 };
 
-export async function HomePageView({ content, posts, locale = "en" }: HomePageViewProps) {
+export async function HomePageView({
+  assets = approvedBrandAssets,
+  content,
+  posts,
+  locale = "en",
+}: HomePageViewProps) {
   const contactCta = builderLink(content, "home.hero.primary-cta", {
     href: "/contact",
     label: "Contact the Office",
@@ -68,7 +77,9 @@ export async function HomePageView({ content, posts, locale = "en" }: HomePageVi
   const connections = await DistrictConnectionsSection({ content, locale });
 
   return (
-    <div data-builder-region="home.sections" data-builder-kind="sections">
+    <>
+      <HomepageBrandBanner assets={assets} content={content} locale={locale} />
+      <div data-builder-region="home.sections" data-builder-kind="sections">
       <section className="hero" data-builder-item-id="hero" data-home-section="hero">
         <div className="container hero-grid">
           <div>
@@ -127,7 +138,7 @@ export async function HomePageView({ content, posts, locale = "en" }: HomePageVi
             asset={getImage(homeFallback.imageKey)}
             caption="District office media"
             instance="home-hero"
-            priority
+            priority={!assets}
             variant="hero"
             content={content}
             locale={locale}
@@ -219,6 +230,7 @@ export async function HomePageView({ content, posts, locale = "en" }: HomePageVi
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
