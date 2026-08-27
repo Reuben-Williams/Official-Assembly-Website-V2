@@ -160,13 +160,20 @@ export function disabledNewsletterInventoryCanEnterInitialActivation(
   );
 }
 
+export class NewsletterProviderIdentityChangedError extends Error {
+  constructor() {
+    super("provider_identity_changed");
+    this.name = "NewsletterProviderIdentityChangedError";
+  }
+}
+
 export function resolveNewsletterInventoryActivationStage(
   activeResourceIdentityDigest: string | null,
   currentResourceIdentityDigest: string
 ): "initial" | "steady" {
   if (!activeResourceIdentityDigest) return "initial";
   if (activeResourceIdentityDigest === currentResourceIdentityDigest) return "steady";
-  throw new Error("provider_identity_changed");
+  throw new NewsletterProviderIdentityChangedError();
 }
 
 type ReadyInventoryConfiguration = Extract<

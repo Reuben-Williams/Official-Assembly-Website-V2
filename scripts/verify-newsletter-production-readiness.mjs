@@ -1,6 +1,7 @@
 import { readNewsletterConfiguration, readNewsletterProviderInventoryConfiguration } from "../lib/newsletter/config.ts";
 import {
   evaluateNewsletterProviderInventory,
+  NewsletterProviderIdentityChangedError,
   resolveNewsletterInventoryActivationStage
 } from "../lib/newsletter/provider-inventory.ts";
 import {
@@ -72,10 +73,25 @@ async function main() {
   });
   preflightStep = "activation_digest";
   const activeDigest = await repository.activeActivationDigest();
-  const stage = resolveNewsletterInventoryActivationStage(
-    activeDigest,
-    initial.resourceIdentityDigest
-  );
+  let stage;
+  try {
+    stage = resolveNewsletterInventoryActivationStage(
+      activeDigest,
+      initial.resourceIdentityDigest
+    );
+  } catch (error) {
+    if (!(error instanceof NewsletterProviderIdentityChangedError)) throw error;
+    stop("provider_identity_changed", {
+      step: preflightStep,
+      categories: initial.categories.map(({ category, status, code, count }) => ({
+        category,
+        status,
+        code,
+        count
+      }))
+    });
+    return;
+  }
   preflightStep = "steady_evaluation";
   const result = stage === "initial"
     ? initial

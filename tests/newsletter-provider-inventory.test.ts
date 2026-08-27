@@ -5,6 +5,7 @@ import {
   disabledNewsletterInventoryCanEnterInitialActivation,
   findRecentNewsletterAuthSmtpLoginEmail,
   NEWSLETTER_INVENTORY_POLICY_VERSION,
+  NewsletterProviderIdentityChangedError,
   REQUIRED_NEWSLETTER_WEBHOOK_EVENTS,
   resolveNewsletterInventoryActivationStage,
   type NewsletterProviderInventoryEvidence,
@@ -191,8 +192,12 @@ describe("newsletter provider inventory policy", () => {
     const digest = "a".repeat(64);
     expect(resolveNewsletterInventoryActivationStage(null, digest)).toBe("initial");
     expect(resolveNewsletterInventoryActivationStage(digest, digest)).toBe("steady");
-    expect(() => resolveNewsletterInventoryActivationStage("b".repeat(64), digest))
-      .toThrow("provider_identity_changed");
+    try {
+      resolveNewsletterInventoryActivationStage("b".repeat(64), digest);
+      throw new Error("expected provider identity drift");
+    } catch (error) {
+      expect(error).toBeInstanceOf(NewsletterProviderIdentityChangedError);
+    }
   });
 
   it("accepts the exact zero-audience initial inventory without exposing provider IDs", () => {

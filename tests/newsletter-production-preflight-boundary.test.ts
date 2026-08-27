@@ -12,6 +12,8 @@ describe("newsletter production preflight boundary", () => {
     expect(source).toContain("collectNewsletterProviderInventory");
     expect(source).toContain("NewsletterProviderInventoryReadError");
     expect(source).toContain("NewsletterProviderEvidenceReadError");
+    expect(source).toContain("NewsletterProviderIdentityChangedError");
+    expect(source).toContain('stop("provider_identity_changed"');
     expect(source).toContain("postgrestCode: error.postgrestCode");
     expect(source).toContain("stage: error.stage");
     expect(source).toContain("preflightStep");
