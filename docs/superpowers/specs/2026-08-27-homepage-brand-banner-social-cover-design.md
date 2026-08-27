@@ -44,18 +44,36 @@ The asset gate produces a checked-in `ApprovedBrandAssetManifest` before impleme
 ```ts
 type ApprovedBrandAssetManifestEntry = Readonly<{
   id: string;
-  sourceDigest: string;
+  sourceSha256: string;
+  publicSha256: string;
   publicPath: `/brand/${string}`;
   mimeType: "image/avif" | "image/webp" | "image/png";
   width: number;
   height: number;
   purpose: "homepage_banner" | "social_cover";
+  variant:
+    | "banner_desktop_avif"
+    | "banner_desktop_webp"
+    | "banner_mobile_avif"
+    | "banner_mobile_webp"
+    | "social_1200x630_png";
   approvedBy: string;
   approvedAt: string;
 }>;
+
+type ApprovedBrandRenderMap = Readonly<{
+  banner: {
+    mobileMaxWidthPx: 620;
+    desktop: { avifId: string; webpId: string };
+    mobile: { avifId: string; webpId: string };
+  };
+  socialCoverId: string;
+}>;
 ```
 
-The manifest binds every selectable or published file to its reviewed source, exact public path, dimensions, format, purpose, and approval evidence. Banner derivatives use `/brand/morales-ld34-banner-*`; the social derivative uses `/brand/morales-ld34-social-cover.png`. A repository check verifies each path exists and its decoded dimensions, MIME type, and digest match the manifest. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
+The manifest binds every selectable or published file to its reviewed source digest, exact derivative digest, public path, dimensions, format, purpose, variant, and approval evidence. Banner derivatives use `/brand/morales-ld34-banner-*`; the social derivative uses `/brand/morales-ld34-social-cover.png`. The render map is reviewed with the derivatives and is the only authority for desktop/mobile art direction. The 620px breakpoint matches the website's current compact-navigation boundary. If no distinct mobile composition is approved, the mobile IDs still point to separately optimized complete horizontal derivatives of the same artwork; the implementation never invents a stacked redesign.
+
+A repository check verifies that every mapped ID exists, has the required purpose and variant, and that its checked-in public file's SHA-256 digest, decoded dimensions, and MIME type match the manifest. It also verifies that every source SHA-256 in the manifest is present in the asset-preparation record. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
 
 ## 4. Homepage banner contract
 
@@ -75,7 +93,7 @@ The banner is not represented as a `data-builder-item-id` inside `home.sections`
 
 The banner is full bleed across the viewport. Its approved navy field reaches both viewport edges with no screenshot-white margins. The internal logo artwork remains inside responsive safe margins and is never cropped, stretched, recolored, or covered by controls.
 
-Derived banner files include appropriate desktop and mobile resolutions. If the official folder contains an approved mobile or stacked composition, use it at the reviewed breakpoint. Otherwise, use the same complete horizontal artwork with `object-fit: contain`; do not invent a stacked redesign.
+Derived banner files include the reviewed desktop and mobile AVIF/WebP pairs named by `ApprovedBrandRenderMap`. A `<picture>` source changes to the mapped mobile pair at `(max-width: 620px)` and otherwise uses the mapped desktop pair. If the official folder contains an approved mobile or stacked composition, it may become the mapped mobile pair. Otherwise, both pairs preserve the same complete horizontal artwork with `object-fit: contain`; do not invent a stacked redesign.
 
 The implementation reserves intrinsic space to prevent layout shift. The banner image is the homepage's primary eager image and receives the framework's high-priority loading treatment. The existing hero portrait becomes normally loaded when it is below the initial viewport so the page does not compete for two large priority images.
 
@@ -106,7 +124,9 @@ The checked-in approved banner is the authoritative fallback when no kind-correc
 
 The editor preview must show the banner in its fixed first position. An authorized replacement saves the existing image value shape using the stable manifest `publicPath` and canonical English alt, then follows the existing draft, preview, publish, audit, and history workflow.
 
-Banner-specific save and publication validation resolve the submitted `src` to exactly one `homepage_banner` manifest entry, revalidate the checked-in file against the manifest, and normalize the alt value. Unknown URLs, upload signed URLs, purpose mismatches, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner. Restoring history creates a new reviewed draft under the existing restoration rules and can publish only if its path remains in the current approved manifest.
+One pure server-side `validateHomeBrandBannerValue` rule is reused by draft save, publication, history restoration, and public fallback resolution. It resolves the submitted `src` to exactly one mapped `homepage_banner` manifest entry, revalidates the checked-in file against the manifest, and normalizes the alt value. Unknown URLs, upload signed URLs, purpose or variant mismatches, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner.
+
+History restoration preserves the editor's existing immediate rollback behavior. Before executing a restore that contains `media.home-brand-banner`, the server loads the candidate source version and runs the same validator. If its banner is no longer in the current approved manifest, the whole restore is rejected and the current published version remains unchanged; otherwise the existing restore command proceeds and publishes its rollback version as it does today. This design does not add a new restoration draft workflow.
 
 Changing `media.home-brand-banner` does not change the social-sharing cover.
 
@@ -119,14 +139,14 @@ Define exact localized social-cover alt values:
 - English: `Official logo of Assemblywoman Carmen T. Morales, Legislative District 34`
 - Spanish: `Logotipo oficial de la asambleísta Carmen T. Morales, Distrito Legislativo 34`
 
-A shared server-only metadata helper receives the resolved route title, description, locale, and canonical URL, then returns one complete metadata object containing:
+A shared server-only metadata helper receives the route's complete base `Metadata` object plus separately resolved plain social title, social description, locale, and optional canonical URL. It returns the base object augmented with:
 
 - Open Graph `images`
 - Twitter/X `summary_large_image`
 
-The Open Graph image entry contains the absolute production URL, width `1200`, height `630`, and locale-specific alt. The Twitter/X image entry uses the same absolute URL and locale-specific alt. The helper copies the route's already-resolved title and description into document, Open Graph, and Twitter metadata so social-image configuration cannot freeze every shared route to the homepage title.
+The Open Graph image entry contains the absolute production URL, width `1200`, height `630`, and locale-specific alt. The Twitter/X image entry uses the same absolute URL and locale-specific alt. The helper preserves every unrelated base field, including title templates, `metadataBase`, alternates, canonical URLs, robots directives, referrer policy, and existing Open Graph/Twitter fields. It replaces only the controlled social title, description, image, image alt, and card type, and adds the optional social URL when supplied. The resolved plain social title is passed separately so a document title template is neither flattened nor applied twice.
 
-Every public `generateMetadata` path, including the homepage, standard pages, news index, published post routes, confirmation, privacy, and 404 behavior where supported, composes through this helper. No route relies on implicit nested metadata inheritance. A future route-specific cover must supply a separately approved manifest entry through the same helper. Existing localized titles and descriptions remain dynamic and locale-aware.
+Every public metadata path, including the homepage, standard pages, news index, published post routes, confirmation, privacy, and 404 behavior where supported, composes its existing metadata through this helper. No route relies on implicit nested metadata inheritance for the controlled social cover. A future route-specific cover must supply a separately approved manifest entry through the same helper. Existing localized titles and descriptions remain dynamic and locale-aware; published-post canonical and robots values and newsletter-confirmation `noindex`, `nofollow`, and `no-referrer` guarantees remain unchanged.
 
 The social cover is a checked-in controlled asset rather than a normal page-editor field. Updating it requires an explicit reviewed brand release so an editor cannot unintentionally change the image shown in messages or social posts. Third-party platforms may cache earlier metadata; deployment verification distinguishes correct live metadata from external cache refresh timing.
 
@@ -137,8 +157,8 @@ The implementation keeps responsibilities separate:
 1. A checked-in brand manifest owns approved paths, digests, formats, intrinsic dimensions, purposes, and approval evidence.
 2. A small homepage brand-banner component owns responsive rendering, editor attributes, locale-aware application-owned accessible text, and fallback resolution.
 3. The homepage owns fixed placement before the existing `home.sections` collection.
-4. The builder mapping registers `media.home-brand-banner`; a banner validator restricts its existing image value to manifest seed assets while the existing content workflow owns drafts/history.
-5. A shared server-only metadata helper composes route-specific titles/descriptions with the controlled social-cover image and localized image alt.
+4. The builder mapping registers `media.home-brand-banner`; one pure banner validator restricts its existing image value to mapped manifest seed assets across save, publish, restore, and fallback resolution while the existing content workflow owns drafts/history.
+5. A shared server-only metadata helper augments each route's complete metadata with the controlled social-cover image and localized image alt without dropping route-specific SEO or privacy fields.
 6. An asset preparation record owns provenance and derivative commands; application code never embeds the supplied screenshot.
 
 Public rendering flow:
@@ -167,9 +187,11 @@ Public rendering flow:
 - Manifest seed assets appear in the private picker with stable public paths; upload signed URLs do not qualify.
 - A kind-correct, manifest-approved published editor override renders; missing, wrong-kind, unknown-path, or purpose-mismatched content uses the approved fallback or is rejected before publication as applicable.
 - Banner save/publish validation rejects non-manifest paths and normalizes alt ownership.
+- Banner history restore reuses the same validator, rejects an obsolete manifest path atomically, and otherwise preserves the existing immediate rollback publication behavior.
 - English and Spanish application-owned accessible text resolve exactly and no duplicate heading is introduced.
 - The banner and current hero retain distinct stable media region IDs.
-- Root and deep-route metadata preserve their route-specific localized title and description while containing the absolute 1200x630 Open Graph image, localized image alt, and Twitter/X large-image card.
+- Root and deep-route metadata preserve their route-specific localized title and description, root title template, post canonical/robots values, and confirmation `noindex`/`nofollow`/`no-referrer` values while containing the absolute 1200x630 Open Graph image, localized image alt, and Twitter/X large-image card.
+- Metadata tests confirm route titles receive the existing suffix exactly once.
 - The checked-in asset inventory contains no reference to the screenshot path or digest.
 - Build output contains no broken, local-only, or credential-bearing metadata URL.
 
