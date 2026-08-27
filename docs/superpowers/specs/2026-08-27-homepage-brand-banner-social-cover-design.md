@@ -64,16 +64,25 @@ type ApprovedBrandAssetManifestEntry = Readonly<{
 type ApprovedBrandRenderMap = Readonly<{
   banner: {
     mobileMaxWidthPx: 620;
-    desktop: { avifId: string; webpId: string };
-    mobile: { avifId: string; webpId: string };
+    fallbackBannerSetId: string;
+    sets: ReadonlyArray<{
+      id: string;
+      pickerPublicPath: `/brand/${string}`;
+      desktop: { avifId: string; webpId: string };
+      mobile: { avifId: string; webpId: string };
+    }>;
   };
   socialCoverId: string;
 }>;
 ```
 
-The manifest binds every selectable or published file to its reviewed source digest, exact derivative digest, public path, dimensions, format, purpose, variant, and approval evidence. Banner derivatives use `/brand/morales-ld34-banner-*`; the social derivative uses `/brand/morales-ld34-social-cover.png`. The render map is reviewed with the derivatives and is the only authority for desktop/mobile art direction. The 620px breakpoint matches the website's current compact-navigation boundary. If no distinct mobile composition is approved, the mobile IDs still point to separately optimized complete horizontal derivatives of the same artwork; the implementation never invents a stacked redesign.
+The manifest binds every selectable or published file to its reviewed source digest, exact derivative digest, public path, dimensions, format, purpose, variant, and approval evidence. SHA-256 values are lowercase 64-character hexadecimal strings, and `approvedAt` is an RFC 3339 UTC timestamp. Banner derivatives use `/brand/morales-ld34-banner-*`; the social derivative uses `/brand/morales-ld34-social-cover.png`.
 
-A repository check verifies that every mapped ID exists, has the required purpose and variant, and that its checked-in public file's SHA-256 digest, decoded dimensions, and MIME type match the manifest. It also verifies that every source SHA-256 in the manifest is present in the asset-preparation record. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
+The render map is reviewed with the derivatives and is the only authority for responsive art direction. Each approved banner set owns all four derivative IDs and one stable `pickerPublicPath`, which must equal that set's desktop WebP public path. Only the representative picker path is exposed to the Site Editor. Selecting or restoring that one path deterministically selects its complete responsive set; individual mobile or format derivatives are never independent editor choices.
+
+The 620px value is a banner-specific art-direction breakpoint chosen for the legibility of this wide brand artwork in the required 390px portrait and 667px landscape reviews. It is independent of the navigation drawer's 920px breakpoint and may change only with another responsive visual review. If no distinct mobile composition is approved, the mobile IDs still point to separately optimized complete horizontal derivatives of the same artwork; the implementation never invents a stacked redesign.
+
+A repository check verifies that every mapped ID exists, has the required purpose and variant, each banner set contains exactly one ID for each required banner variant, each representative picker path matches its desktop WebP entry, the fallback set exists, and the social ID resolves to the 1200x630 social entry. It verifies that each checked-in public file's lowercase hexadecimal SHA-256 digest, decoded dimensions, and MIME type match the manifest. It also verifies that every source SHA-256 in the manifest is present in the asset-preparation record. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
 
 ## 4. Homepage banner contract
 
@@ -93,7 +102,7 @@ The banner is not represented as a `data-builder-item-id` inside `home.sections`
 
 The banner is full bleed across the viewport. Its approved navy field reaches both viewport edges with no screenshot-white margins. The internal logo artwork remains inside responsive safe margins and is never cropped, stretched, recolored, or covered by controls.
 
-Derived banner files include the reviewed desktop and mobile AVIF/WebP pairs named by `ApprovedBrandRenderMap`. A `<picture>` source changes to the mapped mobile pair at `(max-width: 620px)` and otherwise uses the mapped desktop pair. If the official folder contains an approved mobile or stacked composition, it may become the mapped mobile pair. Otherwise, both pairs preserve the same complete horizontal artwork with `object-fit: contain`; do not invent a stacked redesign.
+Derived banner files include the reviewed desktop and mobile AVIF/WebP pairs named by the banner set selected through `ApprovedBrandRenderMap`. A `<picture>` source changes to that set's mapped mobile pair at `(max-width: 620px)` and otherwise uses that set's mapped desktop pair. If the official folder contains an approved mobile or stacked composition, it may become the mapped mobile pair. Otherwise, both pairs preserve the same complete horizontal artwork with `object-fit: contain`; do not invent a stacked redesign.
 
 The implementation reserves intrinsic space to prevent layout shift. The banner image is the homepage's primary eager image and receives the framework's high-priority loading treatment. The existing hero portrait becomes normally loaded when it is below the initial viewport so the page does not compete for two large priority images.
 
@@ -118,13 +127,13 @@ Register one new stable page-local editable image region:
 - Kind: image
 - Page: `/`
 - Label: `Homepage official brand banner`
-- Allowed source: `purpose: "homepage_banner"` entries from `ApprovedBrandAssetManifest`
+- Allowed source: representative `pickerPublicPath` values from approved banner sets in `ApprovedBrandRenderMap`
 
-The checked-in approved banner is the authoritative fallback when no kind-correct published override exists. Approved manifest banner entries are also projected into the private media picker as `source: "seed"` assets with stable `/brand/...` paths; private uploaded assets and their expiring signed preview URLs are not eligible for this region. The existing image editor may display the choices, but the server—not the browser—enforces manifest membership.
+The checked-in fallback banner set is authoritative when no kind-correct published override exists. One representative asset per approved banner set is projected into the private media picker as a `source: "seed"` asset using the set's stable `pickerPublicPath`; the other format and mobile derivatives remain hidden implementation assets. Private uploaded assets and their expiring signed preview URLs are not eligible for this region. The existing image editor may display the choices, but the server—not the browser—enforces render-map membership.
 
 The editor preview must show the banner in its fixed first position. An authorized replacement saves the existing image value shape using the stable manifest `publicPath` and canonical English alt, then follows the existing draft, preview, publish, audit, and history workflow.
 
-One pure server-side `validateHomeBrandBannerValue` rule is reused by draft save, publication, history restoration, and public fallback resolution. It resolves the submitted `src` to exactly one mapped `homepage_banner` manifest entry, revalidates the checked-in file against the manifest, and normalizes the alt value. Unknown URLs, upload signed URLs, purpose or variant mismatches, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner.
+One pure server-side `validateHomeBrandBannerValue` rule is reused by draft save, publication, history restoration, and public fallback resolution. It resolves the submitted `src` to exactly one banner set through its representative picker path, revalidates all four checked-in derivatives in that set against the manifest, and normalizes the stored value to the representative path plus canonical English alt. Unknown URLs, non-representative derivative paths, upload signed URLs, purpose or variant mismatches, incomplete sets, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner.
 
 History restoration preserves the editor's existing immediate rollback behavior. Before executing a restore that contains `media.home-brand-banner`, the server loads the candidate source version and runs the same validator. If its banner is no longer in the current approved manifest, the whole restore is rejected and the current published version remains unchanged; otherwise the existing restore command proceeds and publishes its rollback version as it does today. This design does not add a new restoration draft workflow.
 
@@ -164,7 +173,7 @@ The implementation keeps responsibilities separate:
 Public rendering flow:
 
 1. Load the authoritative published homepage content.
-2. Resolve a kind-correct banner override whose path still matches the approved manifest, or the checked-in fallback.
+2. Resolve a kind-correct banner override whose representative path still maps to a complete approved banner set, or use the checked-in fallback set.
 3. Resolve accessible text for the selected locale.
 4. Render the fixed banner before the existing hero.
 5. Generate route metadata with the controlled absolute social-cover URL.
@@ -184,7 +193,8 @@ Public rendering flow:
 
 - Homepage markup places `brand-banner` before `hero` and keeps all existing sections in order.
 - `HomepageBrandBanner` renders before and outside the `home.sections` region, so section-order data cannot reorder, hide, or remove it.
-- Manifest seed assets appear in the private picker with stable public paths; upload signed URLs do not qualify.
+- Exactly one representative seed asset per approved banner set appears in the private picker; individual mobile/format derivatives and upload signed URLs do not qualify.
+- Saving one representative path deterministically renders its complete desktop/mobile AVIF/WebP set in preview, public output, and restored history.
 - A kind-correct, manifest-approved published editor override renders; missing, wrong-kind, unknown-path, or purpose-mismatched content uses the approved fallback or is rejected before publication as applicable.
 - Banner save/publish validation rejects non-manifest paths and normalizes alt ownership.
 - Banner history restore reuses the same validator, rejects an obsolete manifest path atomically, and otherwise preserves the existing immediate rollback publication behavior.
