@@ -12,6 +12,8 @@ describe("newsletter production preflight boundary", () => {
     expect(source).toContain("collectNewsletterProviderInventory");
     expect(source).toContain("NewsletterProviderInventoryReadError");
     expect(source).toContain("stage: error.stage");
+    expect(source).toContain("preflightStep");
+    expect(source).toContain("step: preflightStep");
     expect(source).toContain("repository.read()");
     expect(source).toContain("repository.activeActivationDigest()");
     expect(source).not.toMatch(/\.rpc\s*\(/);

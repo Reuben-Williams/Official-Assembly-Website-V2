@@ -16,7 +16,10 @@ function stop(code, details = {}) {
   process.exitCode = 1;
 }
 
+let preflightStep = "structural_configuration";
+
 async function main() {
+  preflightStep = "structural_configuration";
   const structural = readNewsletterConfiguration();
   if (structural.status === "disabled") {
     process.stdout.write(`${JSON.stringify({ newsletterPreflight: "disabled" })}\n`);
@@ -27,16 +30,19 @@ async function main() {
     return;
   }
 
+  preflightStep = "inventory_configuration";
   const inventoryConfiguration = readNewsletterProviderInventoryConfiguration();
   if (inventoryConfiguration.status !== "ready") {
     stop(inventoryConfiguration.code);
     return;
   }
+  preflightStep = "database_client";
   const client = getBuilderAdminClient();
   if (!client) {
     stop("database_unavailable");
     return;
   }
+  preflightStep = "site_resolution";
   const siteId = await resolveBuilderSiteId(client);
   if (!siteId) {
     stop("site_unavailable");
@@ -44,6 +50,7 @@ async function main() {
   }
 
   const repository = createNewsletterProviderInventoryEvidenceRepository(client, siteId);
+  preflightStep = "provider_inventory";
   const snapshot = await collectNewsletterProviderInventory(
     createProductionNewsletterInventoryReader({
       managementApiKey: process.env.RESEND_MANAGEMENT_API_KEY,
@@ -51,18 +58,22 @@ async function main() {
       segmentId: inventoryConfiguration.segmentId
     })
   );
+  preflightStep = "evidence_read";
   const evidence = await repository.read();
+  preflightStep = "initial_evaluation";
   const initial = evaluateNewsletterProviderInventory({
     stage: "initial",
     configuration: inventoryConfiguration,
     snapshot,
     evidence
   });
+  preflightStep = "activation_digest";
   const activeDigest = await repository.activeActivationDigest();
   const stage = resolveNewsletterInventoryActivationStage(
     activeDigest,
     initial.resourceIdentityDigest
   );
+  preflightStep = "steady_evaluation";
   const result = stage === "initial"
     ? initial
     : evaluateNewsletterProviderInventory({
@@ -96,8 +107,8 @@ async function main() {
 
 main().catch((error) => {
   if (error instanceof NewsletterProviderInventoryReadError) {
-    stop(error.code, { stage: error.stage });
+    stop(error.code, { step: preflightStep, stage: error.stage });
     return;
   }
-  stop("unsupported_inventory");
+  stop("unsupported_inventory", { step: preflightStep });
 });
