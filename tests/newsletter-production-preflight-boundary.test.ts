@@ -11,6 +11,8 @@ describe("newsletter production preflight boundary", () => {
     const source = await readFile(preflightUrl, "utf8");
     expect(source).toContain("collectNewsletterProviderInventory");
     expect(source).toContain("NewsletterProviderInventoryReadError");
+    expect(source).toContain("NewsletterProviderEvidenceReadError");
+    expect(source).toContain("postgrestCode: error.postgrestCode");
     expect(source).toContain("stage: error.stage");
     expect(source).toContain("preflightStep");
     expect(source).toContain("step: preflightStep");

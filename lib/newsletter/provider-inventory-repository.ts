@@ -13,6 +13,26 @@ const REQUIRED_MANUAL_CATEGORIES = [
   "team_membership"
 ] as const;
 
+export function sanitizeNewsletterEvidenceErrorCode(error: unknown): string {
+  if (!error || typeof error !== "object" || Array.isArray(error)) return "unknown";
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" && /^[A-Z0-9]{2,10}$/.test(code)
+    ? code
+    : "unknown";
+}
+
+export class NewsletterProviderEvidenceReadError extends Error {
+  readonly code = "inventory_evidence_unavailable";
+
+  constructor(
+    readonly operation: "activation_digest",
+    readonly postgrestCode: string
+  ) {
+    super("newsletter inventory evidence unavailable");
+    this.name = "NewsletterProviderEvidenceReadError";
+  }
+}
+
 type QueryResult = {
   readonly data: unknown[] | null;
   readonly error: unknown;
@@ -96,7 +116,12 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .eq("provider_scope_id", "resend-team-production")
         .eq("state", "active")
         .maybeSingle();
-      if (result.error) throw new Error("newsletter inventory evidence unavailable");
+      if (result.error) {
+        throw new NewsletterProviderEvidenceReadError(
+          "activation_digest",
+          sanitizeNewsletterEvidenceErrorCode(result.error)
+        );
+      }
       return result.data?.resource_identity_digest
         ? String(result.data.resource_identity_digest)
         : null;

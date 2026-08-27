@@ -3,7 +3,10 @@ import {
   evaluateNewsletterProviderInventory,
   resolveNewsletterInventoryActivationStage
 } from "../lib/newsletter/provider-inventory.ts";
-import { createNewsletterProviderInventoryEvidenceRepository } from "../lib/newsletter/provider-inventory-repository.ts";
+import {
+  createNewsletterProviderInventoryEvidenceRepository,
+  NewsletterProviderEvidenceReadError
+} from "../lib/newsletter/provider-inventory-repository.ts";
 import {
   collectNewsletterProviderInventory,
   createProductionNewsletterInventoryReader,
@@ -106,6 +109,14 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (error instanceof NewsletterProviderEvidenceReadError) {
+    stop(error.code, {
+      step: preflightStep,
+      operation: error.operation,
+      postgrestCode: error.postgrestCode
+    });
+    return;
+  }
   if (error instanceof NewsletterProviderInventoryReadError) {
     stop(error.code, { step: preflightStep, stage: error.stage });
     return;
