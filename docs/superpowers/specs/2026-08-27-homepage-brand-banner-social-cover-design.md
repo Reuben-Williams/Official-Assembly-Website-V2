@@ -39,19 +39,37 @@ Implementation is asset-gated. Before any logo file enters `public/` or producti
 
 No screenshot controls, messaging UI, white screenshot canvas, unapproved crop, metadata, or unrelated folder assets may enter a derivative.
 
+The asset gate produces a checked-in `ApprovedBrandAssetManifest` before implementation can pass:
+
+```ts
+type ApprovedBrandAssetManifestEntry = Readonly<{
+  id: string;
+  sourceDigest: string;
+  publicPath: `/brand/${string}`;
+  mimeType: "image/avif" | "image/webp" | "image/png";
+  width: number;
+  height: number;
+  purpose: "homepage_banner" | "social_cover";
+  approvedBy: string;
+  approvedAt: string;
+}>;
+```
+
+The manifest binds every selectable or published file to its reviewed source, exact public path, dimensions, format, purpose, and approval evidence. Banner derivatives use `/brand/morales-ld34-banner-*`; the social derivative uses `/brand/morales-ld34-social-cover.png`. A repository check verifies each path exists and its decoded dimensions, MIME type, and digest match the manifest. If the clean source cannot produce a sharp reviewed derivative at the required display size without upscaling, asset selection stops for user review.
+
 ## 4. Homepage banner contract
 
 ### 4.1 Placement and hierarchy
 
-The banner is the first child of the homepage content composition, before the existing `hero` item. Global navigation and eligible alerts remain outside that composition and retain their current behavior.
+The banner renders before, and outside, the existing reorderable `home.sections` collection. Global navigation and eligible alerts remain outside the homepage component and retain their current behavior. This placement enforces the required order without inventing a pinned-item capability in the generic sections editor.
 
 The homepage order begins:
 
-1. `brand-banner`
-2. `hero`
+1. Fixed `HomepageBrandBanner`
+2. Existing reorderable `home.sections` collection, beginning with its current `hero`
 3. Existing homepage sections in their current approved order
 
-`brand-banner` is required and pinned. The `home.sections` editor may expose its presence but cannot move, hide, or delete it. The current hero continues to own `home.hero.*` and `media.hero`; the new banner uses a distinct media identity and never overloads the portrait region.
+The banner is not represented as a `data-builder-item-id` inside `home.sections`; therefore section-order data cannot move, hide, or delete it. The current hero continues to own `home.hero.*` and `media.hero`; the new banner uses a distinct media identity and never overloads the portrait region.
 
 ### 4.2 Rendering
 
@@ -65,26 +83,30 @@ Motion is not added. The brand should appear immediately and remain stable.
 
 ### 4.3 Accessibility and localization
 
-The banner is an informative brand image, not an empty background. Its accessible text is resolved through the existing locale system:
+The banner is an informative brand image, not an empty background. Its accessible text is application-owned and resolved from fixed locale keys independent of the selected manifest image:
 
 - English: `Assemblywoman Carmen T. Morales — Legislative District 34`
 - Spanish: `Asambleísta Carmen T. Morales — Distrito Legislativo 34`
 
 The official artwork itself is an approved language-neutral brand asset even though its wordmark is English. Switching locale must not fetch a different unapproved logo or create duplicate announcements. The banner is not a heading and does not replace the existing semantic `h1` in the constituent-services hero.
 
+The generic editable image `alt` value is not authoritative for this region. Save and publication normalization set it to the canonical English catalog value, while public rendering selects the English or Spanish application-owned value. Staff choose artwork; they do not bypass bilingual review by editing this brand image's accessible name.
+
 ## 5. Site Editor contract
 
-Register one new stable editable image region:
+Register one new stable page-local editable image region:
 
 - Region ID: `media.home-brand-banner`
 - Kind: image
 - Page: `/`
 - Label: `Homepage official brand banner`
-- Allowed source: approved private media-gallery assets promoted through the existing publication boundary
+- Allowed source: `purpose: "homepage_banner"` entries from `ApprovedBrandAssetManifest`
 
-The checked-in approved banner is the authoritative fallback when no kind-correct published override exists. The editor preview must show the banner in its fixed first position. An authorized replacement follows the existing draft, preview, publish, audit, and history workflow.
+The checked-in approved banner is the authoritative fallback when no kind-correct published override exists. Approved manifest banner entries are also projected into the private media picker as `source: "seed"` assets with stable `/brand/...` paths; private uploaded assets and their expiring signed preview URLs are not eligible for this region. The existing image editor may display the choices, but the server—not the browser—enforces manifest membership.
 
-Publication validation rejects missing files, unsupported formats, dimensions below the approved minimum, unsafe or unapproved source URLs, and absent localized accessible text. A rejected candidate does not replace the last valid published banner. Restoring history creates a new reviewed draft under the existing restoration rules.
+The editor preview must show the banner in its fixed first position. An authorized replacement saves the existing image value shape using the stable manifest `publicPath` and canonical English alt, then follows the existing draft, preview, publish, audit, and history workflow.
+
+Banner-specific save and publication validation resolve the submitted `src` to exactly one `homepage_banner` manifest entry, revalidate the checked-in file against the manifest, and normalize the alt value. Unknown URLs, upload signed URLs, purpose mismatches, missing files, and manifest mismatches are rejected. A rejected candidate does not replace the last valid published banner. Restoring history creates a new reviewed draft under the existing restoration rules and can publish only if its path remains in the current approved manifest.
 
 Changing `media.home-brand-banner` does not change the social-sharing cover.
 
@@ -92,12 +114,19 @@ Changing `media.home-brand-banner` does not change the social-sharing cover.
 
 Create a separately reviewed 1200x630 social cover derived from the same official source logo. The logo is centered within platform-safe margins on its approved navy background. The derivative contains no extra slogan, page-specific headline, screenshot chrome, animation, or white outer canvas.
 
-The root metadata defines absolute production URLs for:
+Define exact localized social-cover alt values:
+
+- English: `Official logo of Assemblywoman Carmen T. Morales, Legislative District 34`
+- Spanish: `Logotipo oficial de la asambleísta Carmen T. Morales, Distrito Legislativo 34`
+
+A shared server-only metadata helper receives the resolved route title, description, locale, and canonical URL, then returns one complete metadata object containing:
 
 - Open Graph `images`
 - Twitter/X `summary_large_image`
 
-Every public route inherits the approved brand cover unless a future route-specific cover receives its own design and approval. Existing localized titles and descriptions remain dynamic and locale-aware; this change supplies the missing image metadata without replacing those values.
+The Open Graph image entry contains the absolute production URL, width `1200`, height `630`, and locale-specific alt. The Twitter/X image entry uses the same absolute URL and locale-specific alt. The helper copies the route's already-resolved title and description into document, Open Graph, and Twitter metadata so social-image configuration cannot freeze every shared route to the homepage title.
+
+Every public `generateMetadata` path, including the homepage, standard pages, news index, published post routes, confirmation, privacy, and 404 behavior where supported, composes through this helper. No route relies on implicit nested metadata inheritance. A future route-specific cover must supply a separately approved manifest entry through the same helper. Existing localized titles and descriptions remain dynamic and locale-aware.
 
 The social cover is a checked-in controlled asset rather than a normal page-editor field. Updating it requires an explicit reviewed brand release so an editor cannot unintentionally change the image shown in messages or social posts. Third-party platforms may cache earlier metadata; deployment verification distinguishes correct live metadata from external cache refresh timing.
 
@@ -105,16 +134,17 @@ The social cover is a checked-in controlled asset rather than a normal page-edit
 
 The implementation keeps responsibilities separate:
 
-1. A small homepage brand-banner component owns responsive rendering, editor attributes, locale-aware accessible text, and fallback resolution.
-2. The homepage composition owns fixed placement immediately before the existing hero.
-3. The builder mapping registers `media.home-brand-banner` and delegates draft/history behavior to the existing media workflow.
-4. The root metadata layer owns the controlled social-cover URL and dimensions.
-5. An asset preparation record owns provenance and derivative commands; application code never embeds the supplied screenshot.
+1. A checked-in brand manifest owns approved paths, digests, formats, intrinsic dimensions, purposes, and approval evidence.
+2. A small homepage brand-banner component owns responsive rendering, editor attributes, locale-aware application-owned accessible text, and fallback resolution.
+3. The homepage owns fixed placement before the existing `home.sections` collection.
+4. The builder mapping registers `media.home-brand-banner`; a banner validator restricts its existing image value to manifest seed assets while the existing content workflow owns drafts/history.
+5. A shared server-only metadata helper composes route-specific titles/descriptions with the controlled social-cover image and localized image alt.
+6. An asset preparation record owns provenance and derivative commands; application code never embeds the supplied screenshot.
 
 Public rendering flow:
 
 1. Load the authoritative published homepage content.
-2. Resolve a kind-correct approved banner override or the checked-in fallback.
+2. Resolve a kind-correct banner override whose path still matches the approved manifest, or the checked-in fallback.
 3. Resolve accessible text for the selected locale.
 4. Render the fixed banner before the existing hero.
 5. Generate route metadata with the controlled absolute social-cover URL.
@@ -124,7 +154,7 @@ Public rendering flow:
 - Before the clean source asset is approved, make no production visual change.
 - If an editor candidate is invalid, keep the previous published banner and report the exact validation problem privately.
 - If no published override exists, render the checked-in approved fallback.
-- If the public banner request fails unexpectedly, preserve the rest of the homepage and expose the failure to application observability; never substitute the screenshot or an unrelated gallery image.
+- The build fails if a checked-in brand file does not match its manifest, preventing a known-broken asset release. A later external network failure leaves the stable navy banner field and accessible text available; it never substitutes the screenshot or an unrelated gallery image.
 - If social metadata is valid on the live response but a third-party service shows an older card, treat it as external cache state rather than republishing arbitrary variants.
 - If supplied assets conflict, stop asset selection and request a canonical choice.
 
@@ -133,11 +163,13 @@ Public rendering flow:
 ### 9.1 Automated coverage
 
 - Homepage markup places `brand-banner` before `hero` and keeps all existing sections in order.
-- The brand banner cannot be reordered, hidden, or removed through section-order data.
-- A kind-correct published editor override renders; missing or wrong-kind content uses the approved fallback.
-- English and Spanish accessible text resolve exactly and no duplicate heading is introduced.
+- `HomepageBrandBanner` renders before and outside the `home.sections` region, so section-order data cannot reorder, hide, or remove it.
+- Manifest seed assets appear in the private picker with stable public paths; upload signed URLs do not qualify.
+- A kind-correct, manifest-approved published editor override renders; missing, wrong-kind, unknown-path, or purpose-mismatched content uses the approved fallback or is rejected before publication as applicable.
+- Banner save/publish validation rejects non-manifest paths and normalizes alt ownership.
+- English and Spanish application-owned accessible text resolve exactly and no duplicate heading is introduced.
 - The banner and current hero retain distinct stable media region IDs.
-- Root and deep-route metadata contain an absolute 1200x630 Open Graph image and Twitter/X large-image card.
+- Root and deep-route metadata preserve their route-specific localized title and description while containing the absolute 1200x630 Open Graph image, localized image alt, and Twitter/X large-image card.
 - The checked-in asset inventory contains no reference to the screenshot path or digest.
 - Build output contains no broken, local-only, or credential-bearing metadata URL.
 
