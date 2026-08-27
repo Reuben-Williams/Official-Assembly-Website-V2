@@ -1,10 +1,16 @@
 # District Newsletter operations runbook
 
-Updated: August 6, 2026
+Updated: August 27, 2026
 
 This runbook covers the live District Newsletter for the Office of Assemblywoman Carmen Morales. Supabase is the system of record for submissions, consent, confirmation, subscriber state, and audit evidence. Resend provides transactional confirmation delivery, Contacts, the dedicated Segment and Topic, verified webhooks, and dashboard Broadcast composition.
 
 The application never creates, updates, schedules, or sends a Resend Broadcast. Final composition and sending remain deliberate Resend-dashboard actions. No Production Segment Broadcast is sent during activation.
+
+## Scoped provider inventory
+
+The Morales activation fingerprint includes only the exact verified sending domain `updates.assemblywomanmorales.com`. Domains owned by unrelated projects in the same provider account are inventoried but do not enter the Morales identity digest and cannot satisfy the Morales domain check. A missing, duplicate, or unverified Morales sending domain still fails the release closed.
+
+All remaining Morales boundaries stay strict: the named purpose-specific API keys, District Newsletter Segment and Topic, exact production webhook, mapped audience and suppressions, approved Broadcast evidence, transactional history, Auth SMTP proof, and manual access attestation must continue to pass. An unrelated domain is not permission to send from it or to mix its Contacts, Broadcasts, or email history into the Morales newsletter.
 
 ## Fixed production contract
 

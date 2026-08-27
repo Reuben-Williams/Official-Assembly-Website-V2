@@ -204,10 +204,11 @@ function canonicalResourceIdentity(
   configuration: ReadyInventoryConfiguration,
   snapshot: NewsletterProviderInventorySnapshot
 ) {
+  const newsletterDomains = snapshot.domains.filter((item) => item.name === NEWSLETTER_DOMAIN);
   return JSON.stringify({
     policyVersion: NEWSLETTER_INVENTORY_POLICY_VERSION,
     canonicalSiteUrl: configuration.canonicalSiteUrl,
-    domain: snapshot.domains.map((item) => [item.id, item.name, item.status]).sort(),
+    domain: newsletterDomains.map((item) => [item.id, item.name, item.status]).sort(),
     segment: snapshot.segments.map((item) => [item.id, item.name]).sort(),
     topic: snapshot.topics
       .map((item) => [item.id, item.name, item.defaultSubscription, item.visibility])
@@ -272,10 +273,12 @@ export function evaluateNewsletterProviderInventory(input: {
   const queuedBroadcasts = snapshot.broadcasts.filter((item) => item.status === "queued");
   const draftBroadcasts = snapshot.broadcasts.filter((item) => item.status === "draft");
 
+  const newsletterDomains = snapshot.domains.filter((domain) =>
+    domain.name === NEWSLETTER_DOMAIN
+  );
   const domainReady =
-    snapshot.domains.length === 1 &&
-    snapshot.domains[0]?.name === NEWSLETTER_DOMAIN &&
-    snapshot.domains[0]?.status === "verified";
+    newsletterDomains.length === 1 &&
+    newsletterDomains[0]?.status === "verified";
   const configuredSegments = snapshot.segments.filter((segment) =>
     segment.id === configuration.segmentId && segment.name === NEWSLETTER_RESOURCE_NAME
   );

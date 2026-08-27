@@ -218,7 +218,7 @@ export function NewsletterOperationsWorkspace({
         <section className="newsletter-operations-panel" aria-label="Provider readiness controls">
           <div className="newsletter-control-copy">
             <p className="newsletter-operations-eyebrow">Read-only provider readiness</p>
-            <h2>Audit the dedicated Resend team</h2>
+            <h2>Audit the Morales Resend boundary</h2>
             <p>
               This checks provider resources and local evidence without sending email or changing
               Contacts, Segments, Topics, webhooks, keys, or Broadcasts.
@@ -330,7 +330,7 @@ export function NewsletterOperationsWorkspace({
           </div>
           <p className="newsletter-control-hint">
             The second proof becomes available after the replacement proof is recorded. It also
-            requires the legacy Onboarding API key to be absent from the dedicated Resend team.
+            requires the legacy Onboarding API key to be absent from the Morales Resend boundary.
           </p>
         </section>
       ) : null}

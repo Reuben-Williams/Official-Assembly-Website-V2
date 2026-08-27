@@ -246,6 +246,52 @@ describe("newsletter provider inventory policy", () => {
     ]));
   });
 
+  it("keeps unrelated provider domains outside the Morales activation identity", () => {
+    const base = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot(),
+      evidence: evidence()
+    });
+    const withUnrelatedDomain = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({
+        domains: [
+          { id: "unrelated-domain", name: "mail.other-project.example", status: "failed" },
+          { id: "domain-1", name: "updates.assemblywomanmorales.com", status: "verified" }
+        ]
+      }),
+      evidence: evidence()
+    });
+
+    expect(withUnrelatedDomain.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "domains", status: "ready", count: 2 })
+    ]));
+    expect(withUnrelatedDomain.resourceIdentityDigest).toBe(base.resourceIdentityDigest);
+  });
+
+  it("still rejects a missing, duplicate, or unverified Morales sending domain", () => {
+    for (const domains of [
+      [{ id: "other", name: "mail.other-project.example", status: "verified" }],
+      [
+        { id: "domain-1", name: "updates.assemblywomanmorales.com", status: "verified" },
+        { id: "domain-2", name: "updates.assemblywomanmorales.com", status: "verified" }
+      ],
+      [{ id: "domain-1", name: "updates.assemblywomanmorales.com", status: "failed" }]
+    ]) {
+      const result = evaluateNewsletterProviderInventory({
+        stage: "steady",
+        configuration,
+        snapshot: snapshot({ domains }),
+        evidence: evidence()
+      });
+      expect(result.categories).toEqual(expect.arrayContaining([
+        expect.objectContaining({ category: "domains", status: "blocked" })
+      ]));
+    }
+  });
+
   it("still rejects any additional non-default segment", () => {
     const result = evaluateNewsletterProviderInventory({
       stage: "initial",
