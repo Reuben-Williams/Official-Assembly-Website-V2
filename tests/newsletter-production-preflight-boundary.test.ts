@@ -10,6 +10,8 @@ describe("newsletter production preflight boundary", () => {
   it("remains a read-only inventory gate", async () => {
     const source = await readFile(preflightUrl, "utf8");
     expect(source).toContain("collectNewsletterProviderInventory");
+    expect(source).toContain("NewsletterProviderInventoryReadError");
+    expect(source).toContain("stage: error.stage");
     expect(source).toContain("repository.read()");
     expect(source).toContain("repository.activeActivationDigest()");
     expect(source).not.toMatch(/\.rpc\s*\(/);

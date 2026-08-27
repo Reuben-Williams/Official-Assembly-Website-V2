@@ -6,12 +6,13 @@ import {
 import { createNewsletterProviderInventoryEvidenceRepository } from "../lib/newsletter/provider-inventory-repository.ts";
 import {
   collectNewsletterProviderInventory,
-  createProductionNewsletterInventoryReader
+  createProductionNewsletterInventoryReader,
+  NewsletterProviderInventoryReadError
 } from "../lib/newsletter/resend/inventory-adapter.ts";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../lib/supabase/admin.ts";
 
-function stop(code) {
-  process.stderr.write(`${JSON.stringify({ newsletterPreflight: "blocked", code })}\n`);
+function stop(code, details = {}) {
+  process.stderr.write(`${JSON.stringify({ newsletterPreflight: "blocked", code, ...details })}\n`);
   process.exitCode = 1;
 }
 
@@ -93,4 +94,10 @@ async function main() {
   })}\n`);
 }
 
-main().catch(() => stop("unsupported_inventory"));
+main().catch((error) => {
+  if (error instanceof NewsletterProviderInventoryReadError) {
+    stop(error.code, { stage: error.stage });
+    return;
+  }
+  stop("unsupported_inventory");
+});
