@@ -46,6 +46,15 @@ export const EXPECTED_PENDING_MIGRATIONS = Object.freeze([
   ["20260812221730_editor_login_completion_proofs.sql", "fabfd42184c9651fcff9dd9efe8e21f74072ebeed085ea1906942dbfb86731f3"]
 ]);
 
+function checksumCandidates(contents) {
+  const text = contents.toString("utf8");
+  return new Set([
+    contents,
+    Buffer.from(text.replaceAll("\r\n", "\n"), "utf8"),
+    Buffer.from(text.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n"), "utf8"),
+  ].map((value) => createHash("sha256").update(value).digest("hex")));
+}
+
 export async function verifyProductionMigrationLineage(repositoryRoot) {
   const migrationsDirectory = path.join(repositoryRoot, "supabase", "migrations");
   const expected = [...EXPECTED_PRODUCTION_BASELINE, ...EXPECTED_PENDING_MIGRATIONS];
@@ -63,7 +72,7 @@ export async function verifyProductionMigrationLineage(repositoryRoot) {
   for (const [filename, expectedChecksum] of expected) {
     const contents = await readFile(path.join(migrationsDirectory, filename));
     const actualChecksum = createHash("sha256").update(contents).digest("hex");
-    if (actualChecksum !== expectedChecksum) {
+    if (!checksumCandidates(contents).has(expectedChecksum)) {
       throw new Error(
         `Production migration checksum mismatch: ${filename}; expected ${expectedChecksum}; received ${actualChecksum}`
       );

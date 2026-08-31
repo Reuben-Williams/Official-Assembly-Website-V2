@@ -77,10 +77,9 @@ export async function HomePageView({
   const connections = await DistrictConnectionsSection({ content, locale });
 
   return (
-    <>
-      <HomepageBrandBanner assets={assets} content={content} locale={locale} />
-      <div data-builder-region="home.sections" data-builder-kind="sections">
-      <section className="hero" data-builder-item-id="hero" data-home-section="hero">
+    <div data-builder-region="home.sections" data-builder-kind="sections">
+      <section className="hero home-hero" data-builder-item-id="hero" data-home-section="hero">
+        <HomepageBrandBanner assets={assets} content={content} locale={locale} />
         <div className="container hero-grid">
           <div>
             <p
@@ -230,7 +229,6 @@ export async function HomePageView({
           </div>
         </div>
       </section>
-      </div>
-    </>
+    </div>
   );
 }

@@ -35,7 +35,7 @@ export function HomepageBrandBanner({
   const alt = locale === "es" ? HOME_BRAND_BANNER_ALT_ES : HOME_BRAND_BANNER_ALT_EN;
 
   return (
-    <section
+    <div
       className="home-brand-banner"
       data-builder-kind="image"
       data-builder-region={HOME_BRAND_BANNER_REGION_ID}
@@ -71,6 +71,6 @@ export function HomepageBrandBanner({
           width={selected.desktop.webp.width}
         />
       </picture>
-    </section>
+    </div>
   );
 }

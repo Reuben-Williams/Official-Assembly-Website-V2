@@ -138,7 +138,7 @@ async function sha256(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function contentCommand(input: {
+export async function createBuilderContentCommand(input: {
   siteId: string;
   actorId: string;
   operation: ContentCommandOperation;
@@ -436,7 +436,7 @@ export function createSecuredBuilderHandlers(input: {
             input.adapter.getDraftContent(input.site.siteId, pagePath),
             input.adapter.getPublishedContent(input.site.siteId, pagePath)
           ]);
-          const command = await contentCommand({
+          const command = await createBuilderContentCommand({
             siteId: input.site.siteId,
             actorId,
             operation: "save",
@@ -480,7 +480,7 @@ export function createSecuredBuilderHandlers(input: {
           values: draft.regions
         };
       }));
-      const command = await contentCommand({
+      const command = await createBuilderContentCommand({
         siteId: input.site.siteId,
         actorId,
         operation: "publish",
@@ -507,7 +507,7 @@ export function createSecuredBuilderHandlers(input: {
         input.adapter.getDraftContent(input.site.siteId, body.pagePath),
         input.adapter.getPublishedContent(input.site.siteId, body.pagePath)
       ]);
-      const command = await contentCommand({
+      const command = await createBuilderContentCommand({
         siteId: input.site.siteId,
         actorId,
         operation: "restore",

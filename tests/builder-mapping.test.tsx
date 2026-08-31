@@ -44,6 +44,11 @@ describe("approved builder mapping", () => {
     expect(configured).toContain("newsletter.form.title");
     expect(configured).toContain("newsletter.form.body");
     expect(configured).toContain("newsletter.form");
+    expect(configured).not.toContain("newsletter.hero.eyebrow");
+    expect(configured).not.toContain("newsletter.hero.title");
+    expect(configured).not.toContain("newsletter.hero.body");
+    expect(configured).not.toContain("newsletter.hero.primary-cta");
+    expect(configured).not.toContain("newsletter.hero.secondary-cta");
     expect(configured).toContain("survey.form.eyebrow");
     expect(configured).toContain("survey.form.title");
     expect(configured).toContain("survey.form.body");
@@ -126,6 +131,8 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="contact.form"');
     expect(html).toContain('data-builder-item-id="send-message"');
     expect(html).toContain('data-builder-form-unavailable="true"');
+    expect(html).toContain('data-builder-instance="contact-hero"');
+    expect(html).toContain('data-builder-instance="contact-supporting"');
   });
 
   it("keeps the survey unavailable and outside managed form regions", async () => {

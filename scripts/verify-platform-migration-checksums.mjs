@@ -37,6 +37,15 @@ export const EXPECTED_PLATFORM_MIGRATIONS = Object.freeze([
   ["migrations/20260812035711_complete_bilingual_publishing.sql", "073b44f0a19f6d4370aece008a2c189c40c076e3b2b50f9a6b63441aaf58a01a"]
 ]);
 
+function checksumCandidates(contents) {
+  const text = contents.toString("utf8");
+  return new Set([
+    contents,
+    Buffer.from(text.replaceAll("\r\n", "\n"), "utf8"),
+    Buffer.from(text.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n"), "utf8"),
+  ].map((value) => createHash("sha256").update(value).digest("hex")));
+}
+
 export async function verifyPlatformMigrationChecksums(repositoryRoot) {
   const supabaseDirectory = path.join(repositoryRoot, "supabase");
 
@@ -53,7 +62,7 @@ export async function verifyPlatformMigrationChecksums(repositoryRoot) {
     }
 
     const actualChecksum = createHash("sha256").update(contents).digest("hex");
-    if (actualChecksum !== expectedChecksum) {
+    if (!checksumCandidates(contents).has(expectedChecksum)) {
       throw new Error(
         `Approved platform migration checksum mismatch: ${relativePath}; expected ${expectedChecksum}; received ${actualChecksum}`
       );

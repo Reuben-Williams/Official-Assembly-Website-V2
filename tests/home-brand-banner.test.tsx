@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/ui/ResidentForms", () => ({
@@ -91,9 +92,11 @@ describe("homepage official brand banner", () => {
     expect(html).toContain('--brand-banner-mobile-aspect:900 / 420');
     expect(html).toContain('alt="Asambleísta Carmen T. Morales — Distrito Legislativo 34"');
     expect(html).not.toContain("Editor value that must not become public alt");
+    expect(html).toContain('<div class="home-brand-banner"');
+    expect(html).not.toContain("<section");
   });
 
-  it("renders before the reorderable homepage sections while retaining the existing hero", async () => {
+  it("renders as the first layer inside the homepage hero instead of a separate strip", async () => {
     const html = renderToStaticMarkup(await HomePageView({
       assets,
       content: { regions: {} },
@@ -103,8 +106,35 @@ describe("homepage official brand banner", () => {
     const bannerPosition = html.indexOf('data-home-brand-banner="true"');
     const sectionsPosition = html.indexOf('data-builder-region="home.sections"');
     const heroPosition = html.indexOf('data-builder-item-id="hero"');
+    const gridPosition = html.indexOf('class="container hero-grid"');
     expect(bannerPosition).toBeGreaterThanOrEqual(0);
-    expect(bannerPosition).toBeLessThan(sectionsPosition);
     expect(sectionsPosition).toBeLessThan(heroPosition);
+    expect(heroPosition).toBeLessThan(bannerPosition);
+    expect(bannerPosition).toBeLessThan(gridPosition);
+    expect(html).toContain('class="hero home-hero"');
+  });
+
+  it("verifies the settled desktop, tablet, and mobile background relationship", () => {
+    const verifier = readFileSync(new URL("../scripts/verify-homepage-brand-visual.mjs", import.meta.url), "utf8");
+    expect(verifier).toContain('{ name: "desktop", viewport: { width: 1280, height: 800 } }');
+    expect(verifier).toContain('{ name: "tablet", viewport: { width: 768, height: 1024 } }');
+    expect(verifier).toContain('{ name: "mobile", viewport: { width: 390, height: 844 } }');
+    expect(verifier).toContain("bannerInsideHero");
+    expect(verifier).not.toContain("bannerBeforeHero");
+  });
+
+  it("provides a credential-free visual-review harness for the approved layouts", () => {
+    const harnessUrl = new URL("../scripts/render-layout-review.mjs", import.meta.url);
+    expect(existsSync(harnessUrl)).toBe(true);
+    const harness = readFileSync(harnessUrl, "utf8");
+    expect(harness).toContain("HomePageView");
+    expect(harness).toContain("NewsletterPageView");
+    expect(harness).toContain('{ name: "desktop", width: 1280, height: 800 }');
+    expect(harness).toContain('{ name: "tablet", width: 768, height: 1024 }');
+    expect(harness).toContain('{ name: "mobile", width: 390, height: 844 }');
+    expect(harness).toContain("data-home-brand-banner");
+    expect(harness).toContain("data-newsletter-page-view");
+    expect(harness).toContain("detailScreenshot");
+    expect(harness).toContain("locator(reviewSelector)");
   });
 });

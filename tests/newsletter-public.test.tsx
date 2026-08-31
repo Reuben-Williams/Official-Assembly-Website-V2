@@ -1,4 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+// @ts-expect-error The installed JSDOM runtime does not include TypeScript declarations.
+import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NewsletterConfigurationState } from "../lib/newsletter/types";
@@ -102,17 +105,82 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("public newsletter and privacy experience", () => {
-  it("keeps exactly one managed signup on the dedicated Newsletter page", async () => {
+  it("puts the compact heading and one managed signup first without newsletter photography", async () => {
     const newsletter = getPageBySlug("newsletter");
     expect(newsletter).toBeDefined();
 
-    const html = renderToStaticMarkup(await PageTemplate({ page: newsletter! }));
+    const html = renderToStaticMarkup(await PageTemplate({
+      page: newsletter!,
+      content: {
+        regions: {
+          "newsletter.sections": {
+            type: "sections",
+            value: ["supporting", "hero", "features", "form", "form", "unknown"],
+          },
+        },
+      },
+    }));
+    const document = new JSDOM(html).window.document as Document;
+    const page = document.querySelector('[data-newsletter-page-view="true"]');
+    const items = Array.from(page?.children ?? [])
+      .map((element) => element.getAttribute("data-builder-item-id"))
+      .filter(Boolean);
+    const headings = Array.from(document.querySelectorAll("h1"));
+    const heading = headings[0];
+    const firstSection = page?.firstElementChild;
+    const headingBlock = firstSection?.querySelector(".newsletter-first-copy");
+    const formRegion = firstSection?.querySelector('[data-builder-region="newsletter.form"]');
+
+    expect(items).toEqual(["form", "features", "supporting"]);
+    expect(firstSection?.getAttribute("data-builder-item-id")).toBe("form");
+    expect(headings).toHaveLength(1);
+    expect(heading?.getAttribute("data-builder-region")).toBe("newsletter.form.title");
+    expect(heading?.id).toBe("newsletter-signup-title");
+    expect(headingBlock?.nextElementSibling).toBe(formRegion);
     expect(html.match(/action="\/api\/forms\/newsletter-signup"/g)).toHaveLength(1);
     expect(html).toContain('data-builder-region="newsletter.form.eyebrow"');
     expect(html).toContain('data-builder-region="newsletter.form.title"');
     expect(html).toContain('data-builder-region="newsletter.form.body"');
     expect(html).not.toContain('data-builder-region="global.template.form-');
     expect(html).toContain('data-builder-region="newsletter.form"');
+    expect(html).not.toContain('data-builder-instance="newsletter-hero"');
+    expect(html).not.toContain('data-builder-instance="newsletter-supporting"');
+    expect(firstSection?.querySelector(".public-form-card-eyebrow")).toBeNull();
+    expect(firstSection?.querySelector("h3")).toBeNull();
+
+    const namedForm = firstSection?.querySelector('[role="form"]');
+    const nativeForm = firstSection?.querySelector("form");
+    expect(firstSection?.querySelectorAll('[role="form"]')).toHaveLength(1);
+    expect(namedForm?.getAttribute("aria-labelledby")).toBe(heading?.id);
+    expect(nativeForm?.hasAttribute("aria-label")).toBe(false);
+    expect(nativeForm?.hasAttribute("aria-labelledby")).toBe(false);
+    expect(nativeForm?.querySelector("legend")?.textContent).toContain("District Newsletter");
+
+    const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.newsletter-first-copy h1\s*\{[^}]*font-size:\s*clamp\(2\.15rem,\s*5vw,\s*3\.6rem\)/);
+    expect(css).toMatch(/\.newsletter-first-shell\s*\{[^}]*gap:\s*clamp\(1\.1rem,\s*3vw,\s*1\.75rem\)/);
+  });
+
+  it("names the truthful unavailable newsletter group from the compact page heading", async () => {
+    mocks.configuration.mockReturnValue({
+      status: "disabled",
+      code: "newsletter_disabled",
+      environment: "production"
+    });
+    const newsletter = getPageBySlug("newsletter");
+    const html = renderToStaticMarkup(await PageTemplate({ page: newsletter! }));
+    const document = new JSDOM(html).window.document as Document;
+    const heading = document.querySelector("h1");
+    const firstSection = document.querySelector('[data-builder-item-id="form"]');
+    const group = firstSection?.querySelector('[role="group"]');
+
+    expect(heading?.id).toBe("newsletter-signup-title");
+    expect(group?.getAttribute("aria-labelledby")).toBe(heading?.id);
+    expect(firstSection?.querySelector('[role="form"]')).toBeNull();
+    expect(firstSection?.querySelector(".public-form-card-eyebrow")).toBeNull();
+    expect(firstSection?.querySelector("h3")).toBeNull();
+    expect(html).toContain("Call");
+    expect(html).not.toContain("/api/forms/newsletter-signup");
   });
 
   it("states the pending confirmation boundary and links privacy before active signup", async () => {

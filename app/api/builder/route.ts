@@ -22,6 +22,10 @@ import {
   normalizeProtectedBrandValue,
   validateProtectedBrandSnapshot,
 } from "../../../lib/brand/assets";
+import {
+  normalizeNewsletterEditableValue,
+  validateNewsletterLayoutSnapshot,
+} from "../../../lib/builder/newsletter-layout";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -65,8 +69,14 @@ function createHandlers(request: Request) {
         .maybeSingle();
       return !result.error && Boolean(result.data?.entry_id);
     },
-    normalizeEditableValue: async (input) => normalizeProtectedBrandValue(input, approvedBrandAssets),
-    validateContentSnapshot: async (input) => validateProtectedBrandSnapshot(input, approvedBrandAssets),
+    normalizeEditableValue: async (input) => normalizeNewsletterEditableValue({
+      ...input,
+      value: normalizeProtectedBrandValue(input, approvedBrandAssets),
+    }),
+    validateContentSnapshot: async (input) => {
+      validateProtectedBrandSnapshot(input, approvedBrandAssets);
+      validateNewsletterLayoutSnapshot(input);
+    },
     validateRestoreVersion: async ({ pagePath, versionId }) => {
       if (pagePath !== "/" || !approvedBrandAssets) return;
       const siteId = await resolveBuilderSiteId(admin);

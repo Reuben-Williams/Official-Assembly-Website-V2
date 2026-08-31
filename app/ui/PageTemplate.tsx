@@ -3,9 +3,9 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { getImage, siteConfig, type PageContent } from "../data/site";
 import { Cards } from "./Cards";
-import { NewsletterSignupSection } from "./NewsletterSignupSection";
 import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
+import { NewsletterPageView } from "./NewsletterPageView";
 import {
   builderLink,
   builderText,
@@ -24,6 +24,9 @@ const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
 export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en" }: PageTemplateProps) {
   const slug = page.slug ?? "home";
+  if (slug === "newsletter") {
+    return NewsletterPageView({ page, content, locale });
+  }
   const formType =
     slug === "contact" || slug === "newsletter" || slug === "survey" ? slug : null;
   const formCopyRegions = formType
@@ -36,24 +39,6 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
   const supportingImage = slug === "community" ? "graduation" : "coverage";
   const residentForm = formType && formType !== "newsletter"
     ? await ResidentForm({ type: formType, locale })
-    : null;
-  const newsletterSignup = formType === "newsletter"
-    ? await NewsletterSignupSection({
-        content,
-        regions: {
-          eyebrow: formCopyRegions!.eyebrow,
-          title: formCopyRegions!.title,
-          body: formCopyRegions!.body,
-          form: "newsletter.form"
-        },
-        fallback: {
-          eyebrow: "Email Updates",
-          title: "Request District Newsletter emails",
-          body: "The live form is shown only when privacy, consent, confirmation, and delivery readiness checks are complete."
-        },
-        showDedicatedPageLink: false,
-        locale,
-      })
     : null;
   const primaryCta = builderLink(content, `${slug}.hero.primary-cta`, {
     href: "/contact",
@@ -167,7 +152,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         </div>
       </section>
 
-      {newsletterSignup ?? (formType ? (
+      {formType ? (
         <section className="section section-muted" data-builder-item-id="form">
           <div className="container split">
             <div>
@@ -213,7 +198,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
             </div>
           </div>
         </section>
-      ) : null)}
+      ) : null}
 
       <section className="section section-muted" data-builder-item-id="supporting">
         <div className="container split">

@@ -13,6 +13,7 @@ const results = [];
 try {
   for (const profile of [
     { name: "desktop", viewport: { width: 1280, height: 800 } },
+    { name: "tablet", viewport: { width: 768, height: 1024 } },
     { name: "mobile", viewport: { width: 390, height: 844 } },
   ]) {
     const context = await browser.newContext({ viewport: profile.viewport });
@@ -46,14 +47,16 @@ try {
           ),
         ),
         bannerExists: Boolean(banner),
-        bannerBeforeHero: Boolean(
-          banner &&
-            hero &&
-            banner.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING,
+        bannerInsideHero: Boolean(banner && hero && hero.contains(banner)),
+        bannerFillsHero: Boolean(
+          bannerRect
+            && heroRect
+            && Math.abs(bannerRect.top - heroRect.top) <= 1
+            && Math.abs(bannerRect.right - heroRect.right) <= 1
+            && Math.abs(bannerRect.bottom - heroRect.bottom) <= 1
+            && Math.abs(bannerRect.left - heroRect.left) <= 1,
         ),
         bannerWidth: bannerRect?.width,
-        heroTop: heroRect?.top,
-        bannerBottom: bannerRect?.bottom,
         imageLoaded: image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
         imageSource: image instanceof HTMLImageElement ? image.currentSrc : undefined,
         imageAlt: image?.getAttribute("alt"),
@@ -89,8 +92,8 @@ for (const result of results) {
     !result.hasContent ||
     result.hasErrorOverlay ||
     !result.bannerExists ||
-    !result.bannerBeforeHero ||
-    result.bannerBottom !== result.heroTop ||
+    !result.bannerInsideHero ||
+    !result.bannerFillsHero ||
     !result.imageLoaded ||
     result.horizontalOverflow ||
     result.consoleErrors.length > 0 ||

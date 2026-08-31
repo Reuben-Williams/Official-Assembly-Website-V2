@@ -1,0 +1,54 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+
+function hex(name: string) {
+  const match = css.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, "i"));
+  expect(match?.[1], `${name} must be an opaque six-digit color`).toBeDefined();
+  return match![1];
+}
+
+function luminance(value: string) {
+  const channels = value.slice(1).match(/.{2}/g)!.map((channel) => {
+    const normalized = Number.parseInt(channel, 16) / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrast(foreground: string, background: string) {
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+describe("homepage hero background styles", () => {
+  it("keeps the dark artwork treatment scoped to the homepage hero", () => {
+    expect(css).toMatch(/\.home-hero\s*\{/);
+    expect(css).toMatch(/\.home-hero\s+\.home-brand-banner\s*\{/);
+    expect(css).toMatch(/\.home-hero::before\s*\{/);
+    expect(css).toMatch(/\.home-hero::after\s*\{/);
+    expect(css).toMatch(/\.home-hero\s+\.hero-grid\s*\{/);
+    expect(css).toMatch(/\.home-hero\s+\.secondary-link:(?:hover|focus-visible)/);
+    expect(css).toMatch(/--home-brand-zone:\s*clamp\(/);
+    expect(css).toMatch(/\.home-hero\s+\.hero-grid\s*\{[^}]*padding-top:\s*var\(--home-brand-zone\)/);
+    expect(css).toMatch(/\.home-hero\s+\.hero-image\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*3/);
+  });
+
+  it("preserves the generic light hero as a separate style contract", () => {
+    expect(css).toMatch(/(?:^|\n)\.hero\s*\{/);
+    expect(css).toMatch(/\.hero\s*\{[^}]*background:\s*linear-gradient/);
+    expect(css).not.toMatch(/(?:^|\n)\.hero\s+h1\s*\{[^}]*color:\s*(?:#fff|white)/);
+  });
+
+  it("meets WCAG AA for homepage copy and every opaque action state", () => {
+    const backdrop = hex("--home-hero-readable-background");
+    expect(contrast(hex("--home-hero-copy"), backdrop)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-body"), backdrop)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-eyebrow"), backdrop)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-primary-foreground"), hex("--home-hero-primary-background"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-primary-foreground"), hex("--home-hero-primary-hover-background"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-secondary-foreground"), hex("--home-hero-secondary-background"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex("--home-hero-secondary-foreground"), hex("--home-hero-secondary-hover-background"))).toBeGreaterThanOrEqual(4.5);
+  });
+});

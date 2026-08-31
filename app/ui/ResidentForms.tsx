@@ -20,6 +20,8 @@ import { localizedManagedFormProjection } from "../../lib/builder/forms";
 type ResidentFormsProps = {
   type: "contact" | "newsletter" | "survey";
   locale?: PublicLocale;
+  presentation?: "card" | "newsletter-page-first";
+  labelledBy?: string;
 };
 
 type ActiveResidentFormType = Exclude<ResidentFormsProps["type"], "survey">;
@@ -39,35 +41,56 @@ function PublicFormCard({
   type,
   locale,
   unavailable = false,
+  presentation = "card",
+  labelledBy,
   children
 }: {
   type: ActiveResidentFormType;
   locale: PublicLocale;
   unavailable?: boolean;
+  presentation?: ResidentFormsProps["presentation"];
+  labelledBy?: string;
   children: ReactNode;
 }) {
   const copy = PUBLIC_FORM_CARD_COPY[type];
+  const pageFirst = presentation === "newsletter-page-first";
   return (
     <div
-      className={`form-panel public-form-card public-form-card-${type}`}
+      className={`form-panel public-form-card public-form-card-${type}${pageFirst ? " public-form-card-page-first" : ""}`}
       data-builder-form-unavailable={unavailable ? "true" : undefined}
       data-public-form-type={type}
+      role={pageFirst ? unavailable ? "group" : "form" : undefined}
+      aria-labelledby={pageFirst ? labelledBy : undefined}
     >
-      <header className="public-form-card-header">
-        <p className="public-form-card-eyebrow">{localizedBuilderText(locale, `forms.${type}.eyebrow`, copy.eyebrow)}</p>
-        <h3>{localizedBuilderText(locale, `forms.${type}.heading`, copy.heading)}</h3>
+      {pageFirst ? null : (
+        <header className="public-form-card-header">
+          <p className="public-form-card-eyebrow">{localizedBuilderText(locale, `forms.${type}.eyebrow`, copy.eyebrow)}</p>
+          <h3>{localizedBuilderText(locale, `forms.${type}.heading`, copy.heading)}</h3>
+          <p className="public-form-card-requirements">
+            {localizedBuilderText(locale, "forms.requirements", "Fields marked * are required. All other fields are optional.")}
+          </p>
+        </header>
+      )}
+      <div className="public-form-card-body">
+        {pageFirst ? (
         <p className="public-form-card-requirements">
           {localizedBuilderText(locale, "forms.requirements", "Fields marked * are required. All other fields are optional.")}
         </p>
-      </header>
-      <div className="public-form-card-body">{children}</div>
+        ) : null}
+        {children}
+      </div>
     </div>
   );
 }
 
-function Unavailable({ type, locale }: { type: ActiveResidentFormType; locale: PublicLocale }) {
+function Unavailable({ type, locale, presentation, labelledBy }: {
+  type: ActiveResidentFormType;
+  locale: PublicLocale;
+  presentation?: ResidentFormsProps["presentation"];
+  labelledBy?: string;
+}) {
   return (
-    <PublicFormCard type={type} locale={locale} unavailable>
+    <PublicFormCard type={type} locale={locale} unavailable presentation={presentation} labelledBy={labelledBy}>
       <UnavailableFormFallback
         businessName="the District 34 office"
         phone={siteConfig.phoneE164}
@@ -76,7 +99,7 @@ function Unavailable({ type, locale }: { type: ActiveResidentFormType; locale: P
   );
 }
 
-export async function ResidentForm({ type, locale = "en" }: ResidentFormsProps) {
+export async function ResidentForm({ type, locale = "en", presentation = "card", labelledBy }: ResidentFormsProps) {
   if (type === "survey" || !getManagedFormDefinition(type)) {
     return (
       <div className="form-panel" data-builder-form-unavailable="true">
@@ -92,15 +115,15 @@ export async function ResidentForm({ type, locale = "en" }: ResidentFormsProps) 
 
   const client = getBuilderAdminClient();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  if (!client || !turnstileSiteKey) return <Unavailable type={type} locale={locale} />;
+  if (!client || !turnstileSiteKey) return <Unavailable type={type} locale={locale} presentation={presentation} labelledBy={labelledBy} />;
 
   const siteId = await resolveBuilderSiteId(client);
-  if (!siteId) return <Unavailable type={type} locale={locale} />;
+  if (!siteId) return <Unavailable type={type} locale={locale} presentation={presentation} labelledBy={labelledBy} />;
   if (type === "newsletter") {
     const configuration = readNewsletterConfiguration();
-    if (configuration.status !== "ready") return <Unavailable type={type} locale={locale} />;
+    if (configuration.status !== "ready") return <Unavailable type={type} locale={locale} presentation={presentation} labelledBy={labelledBy} />;
     const readiness = await readNewsletterPublicReadiness(client, siteId, configuration);
-    if (readiness.status !== "ready") return <Unavailable type={type} locale={locale} />;
+    if (readiness.status !== "ready") return <Unavailable type={type} locale={locale} presentation={presentation} labelledBy={labelledBy} />;
   }
 
   const repository = createSupabasePublishedFormRepository({
@@ -110,11 +133,11 @@ export async function ResidentForm({ type, locale = "en" }: ResidentFormsProps) 
     turnstileSiteKey
   });
   const result = await loadManagedFormProjection(type, { repository, siteId });
-  if (result.status !== "ready") return <Unavailable type={type} locale={locale} />;
+  if (result.status !== "ready") return <Unavailable type={type} locale={locale} presentation={presentation} labelledBy={labelledBy} />;
   const projection = localizedManagedFormProjection(type, result.projection, locale);
 
   return (
-    <PublicFormCard type={type} locale={locale}>
+    <PublicFormCard type={type} locale={locale} presentation={presentation} labelledBy={labelledBy}>
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"

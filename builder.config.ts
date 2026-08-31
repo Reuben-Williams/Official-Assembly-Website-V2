@@ -1302,31 +1302,6 @@ export default {
           "label": "newsletter page sections"
         },
         {
-          "id": "newsletter.hero.eyebrow",
-          "kind": "text",
-          "label": "newsletter hero eyebrow"
-        },
-        {
-          "id": "newsletter.hero.title",
-          "kind": "text",
-          "label": "newsletter hero title"
-        },
-        {
-          "id": "newsletter.hero.body",
-          "kind": "text",
-          "label": "newsletter hero description"
-        },
-        {
-          "id": "newsletter.hero.primary-cta",
-          "kind": "link",
-          "label": "newsletter primary call to action"
-        },
-        {
-          "id": "newsletter.hero.secondary-cta",
-          "kind": "link",
-          "label": "newsletter secondary call to action"
-        },
-        {
           "id": "newsletter.features.eyebrow",
           "kind": "text",
           "label": "newsletter feature eyebrow"
