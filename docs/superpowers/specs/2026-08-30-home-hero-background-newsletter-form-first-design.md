@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 
-Status: Approved in conversation; awaiting written-spec review
+Status: Approved in conversation; independent review revision 1
 
 Website: `official-assembly-website-v2`
 
@@ -40,7 +40,7 @@ These are presentation changes only. They do not alter the approved banner asset
 
 ### 3.1 Component placement
 
-`HomepageBrandBanner` moves from before `home.sections` into the existing hero section, before the foreground `.hero-grid`. The hero remains the first item of the reorderable `home.sections` collection. The banner component retains:
+`HomepageBrandBanner` moves from before `home.sections` into the existing hero, before the foreground `.hero-grid`. The hero remains the first item of the reorderable `home.sections` collection. The banner component changes its current unheaded `<section>` root to a non-landmark positioned `<div>` so the implementation does not nest one sectioning landmark inside another without a heading. The non-landmark wrapper retains:
 
 - `data-builder-region="media.home-brand-banner"`;
 - `data-builder-kind="image"`;
@@ -49,7 +49,7 @@ These are presentation changes only. They do not alter the approved banner asset
 - the representative editor picker path and approved fallback behavior; and
 - priority loading because it remains above the fold.
 
-The component becomes a positioned media layer rather than a document-flow strip. Its wrapper and picture fill the hero, sit below foreground content, ignore pointer input, and remain selectable through the editor’s registered region mapping rather than through public pointer behavior.
+The component becomes a positioned media layer rather than a document-flow strip. Its wrapper and picture fill the hero, sit below foreground content, ignore public pointer input, and remain selectable through the editor’s registered region mapping. The responsive image keeps its locale-aware accessible text; the wrapper does not add a second landmark or accessible name.
 
 ### 3.2 Artwork treatment
 
@@ -74,20 +74,23 @@ Foreground hero text uses the existing white/high-contrast palette on the dark b
 
 ### 4.1 Dedicated rendering branch
 
-`PageTemplate` retains the generic route rendering for all non-newsletter pages. The `newsletter` slug takes a small dedicated branch or bounded subcomponent so its form-first composition does not accumulate fragile conditionals throughout the generic template.
+`PageTemplate` retains the generic route rendering for all non-newsletter pages. The `newsletter` slug delegates to a bounded `NewsletterPageView` (or equivalently isolated newsletter-only component) so its form-first composition does not accumulate fragile conditionals throughout the generic template.
 
 The newsletter page order becomes:
 
-1. compact newsletter heading section;
-2. `NewsletterSignupSection`, including the managed live form or its truthful unavailable fallback;
-3. existing newsletter resource cards and supporting explanatory content, without photography; and
-4. any configured secondary cards.
+1. one first section with compact newsletter copy and, immediately after it, the managed live form or its truthful unavailable fallback;
+2. existing newsletter resource cards and supporting explanatory content, without photography; and
+3. any configured secondary cards.
 
-No `ImagePanel` is rendered for the newsletter hero or newsletter supporting section. Existing image regions remain registered for other pages and are not deleted from shared data.
+The first section owns stable item ID `form` and renders the existing `newsletter.form.eyebrow`, `newsletter.form.title`, and `newsletter.form.body` regions as one compact heading block. `newsletter.form.title` is promoted from `h2` to the page’s single `h1`; `newsletter.form.eyebrow` remains its eyebrow; and `newsletter.form.body` is the optional one-sentence explanation. The `newsletter.form` managed-form region follows that block immediately in the same section. The dedicated page does not call the current two-column `NewsletterSignupSection`; it either adds a form-first presentation mode with exactly this markup or renders `ResidentForm` directly inside the bounded newsletter view. It must not render a second signup eyebrow, title, or body.
+
+The former `newsletter.hero.*` and newsletter hero CTA regions are retired from the active `/newsletter` render and builder mapping. Their persisted versions and history remain intact, but they are no longer presented as editable live regions. A versioned builder-content migration records the layout transition and makes `newsletter.form.*` the authoritative compact heading contract. No runtime fallback reads both the old hero and form regions, avoiding ambiguous or duplicated copy.
+
+No `ImagePanel` is rendered for the newsletter hero or newsletter supporting section. Existing image regions remain registered for other pages and are not deleted from shared page data.
 
 ### 4.2 Content and editing
 
-The compact heading continues to use the existing `newsletter.hero.*` or explicitly mapped newsletter heading regions so published editor copy is not lost. The embedded form continues to use the current `newsletter.form.*` copy regions and `newsletter.form` managed-form section.
+`newsletter.sections` remains the page-level sections region. The migration publishes the normalized stable order `form → features → supporting → secondary` (omitting `secondary` when absent) and removes the former `hero` item from the active order. The form item is pinned first by the newsletter view; any later editor reorder command is normalized so `form` cannot move below another item. The existing `features`, `supporting`, and `secondary` item IDs remain stable, preserving editor selection and history for the content that continues to render.
 
 The page must preserve one clear `h1`, correct heading order below it, keyboard order that reaches the form before secondary resources, and English/Spanish rendering for all application-owned strings.
 
@@ -102,17 +105,20 @@ The page must preserve one clear `h1`, correct heading order below it, keyboard 
 
 ### Automated checks
 
-- Update the homepage structural test to prove the brand banner is inside the hero and before the foreground grid, with no separate pre-hero banner strip.
+- Update the homepage structural test to prove the brand banner uses a non-landmark wrapper inside the hero and before the foreground grid, with no separate pre-hero banner strip.
 - Preserve responsive source, approved-manifest, locale-aware alt, and Site Editor region tests.
-- Add a newsletter-page composition test proving the compact title precedes the managed form and no newsletter `ImagePanel` is rendered.
+- Add a newsletter-page composition test proving one first section contains `newsletter.form.title` as the single `h1`, followed immediately by `newsletter.form`, with no duplicate newsletter intro and no newsletter `ImagePanel`.
+- Add builder mapping and migration tests proving the old newsletter hero regions are retired, `newsletter.form.*` remains authoritative, and `newsletter.sections` normalizes to the stable form-first order without losing retained item IDs.
 - Confirm other generic pages still render their hero and supporting images.
 - Run targeted Vitest tests, TypeScript, ESLint, the brand-asset verifier, and a production build.
+- Add measurable contrast assertions for hero copy and primary/secondary link states. Default, hover, focus-visible, and visited foreground/background pairs must each meet WCAG AA: at least 4.5:1 for normal text and 3:1 for large text and non-text control boundaries.
 
 ### Responsive visual review
 
 Review the settled page at minimum at:
 
 - desktop: 1280×800; and
+- tablet/breakpoint-adjacent: 768×1024; and
 - mobile: 390×844.
 
 For the homepage, confirm the seal, `MORALES` wordmark, and `LD34` remain recognizable; foreground copy and controls remain readable; the District Office image panel is not obscured; the editor region remains selectable; and there is no horizontal overflow.
