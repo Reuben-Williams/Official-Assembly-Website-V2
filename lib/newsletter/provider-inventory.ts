@@ -205,6 +205,14 @@ function canonicalResourceIdentity(
   snapshot: NewsletterProviderInventorySnapshot
 ) {
   const newsletterDomains = snapshot.domains.filter((item) => item.name === NEWSLETTER_DOMAIN);
+  const newsletterWebhooks = snapshot.webhooks.filter((item) =>
+    item.endpoint === configuration.webhookUrl
+  );
+  const newsletterApiKeys = snapshot.apiKeys.filter((item) =>
+    REQUIRED_NEWSLETTER_API_KEY_NAMES.includes(
+      item.name as (typeof REQUIRED_NEWSLETTER_API_KEY_NAMES)[number]
+    )
+  );
   return JSON.stringify({
     policyVersion: NEWSLETTER_INVENTORY_POLICY_VERSION,
     canonicalSiteUrl: configuration.canonicalSiteUrl,
@@ -213,10 +221,10 @@ function canonicalResourceIdentity(
     topic: snapshot.topics
       .map((item) => [item.id, item.name, item.defaultSubscription, item.visibility])
       .sort(),
-    webhook: snapshot.webhooks
+    webhook: newsletterWebhooks
       .map((item) => [item.id, item.endpoint, item.status, [...item.events].sort()])
       .sort(),
-    apiKeys: snapshot.apiKeys.map((item) => [item.id, item.name]).sort()
+    apiKeys: newsletterApiKeys.map((item) => [item.id, item.name]).sort()
   });
 }
 
@@ -295,11 +303,13 @@ export function evaluateNewsletterProviderInventory(input: {
     snapshot.topics[0]?.name === NEWSLETTER_RESOURCE_NAME &&
     snapshot.topics[0]?.defaultSubscription === "opt_out" &&
     snapshot.topics[0]?.visibility === "public";
+  const newsletterWebhooks = snapshot.webhooks.filter((webhook) =>
+    webhook.endpoint === configuration.webhookUrl
+  );
   const webhookReady =
-    snapshot.webhooks.length === 1 &&
-    snapshot.webhooks[0]?.endpoint === configuration.webhookUrl &&
-    snapshot.webhooks[0]?.status === "enabled" &&
-    exactStrings(snapshot.webhooks[0]?.events ?? [], REQUIRED_NEWSLETTER_WEBHOOK_EVENTS);
+    newsletterWebhooks.length === 1 &&
+    newsletterWebhooks[0]?.status === "enabled" &&
+    exactStrings(newsletterWebhooks[0]?.events ?? [], REQUIRED_NEWSLETTER_WEBHOOK_EVENTS);
 
   const configuredKeys = snapshot.apiKeys.filter((key) =>
     REQUIRED_NEWSLETTER_API_KEY_NAMES.includes(
@@ -312,17 +322,18 @@ export function evaluateNewsletterProviderInventory(input: {
     REQUIRED_NEWSLETTER_API_KEY_NAMES.every((name) =>
       configuredKeys.filter((key) => key.name === name).length === 1
     );
-  const extraKeys = snapshot.apiKeys.filter((key) =>
-    !REQUIRED_NEWSLETTER_API_KEY_NAMES.includes(
-      key.name as (typeof REQUIRED_NEWSLETTER_API_KEY_NAMES)[number]
-    )
+  const onboardingKeys = snapshot.apiKeys.filter((key) =>
+    key.name.trim().toLowerCase() === "onboarding"
   );
   const legacyMigrationAllowed =
     stage === "disabled_setup" &&
-    extraKeys.length === 1 &&
-    extraKeys[0]?.name.trim().toLowerCase() === "onboarding";
+    onboardingKeys.length === 1;
   const keysReady =
-    configuredKeysPresent && (extraKeys.length === 0 || legacyMigrationAllowed);
+    configuredKeysPresent && (onboardingKeys.length === 0 || legacyMigrationAllowed);
+
+  const newsletterEmails = snapshot.emails.filter((email) =>
+    mailbox(email.from).endsWith(`@${NEWSLETTER_DOMAIN}`)
+  );
 
   const contactsReady = snapshot.contacts.every((contact) =>
     evidence.providerContactIds.has(contact.id) ||
@@ -339,7 +350,7 @@ export function evaluateNewsletterProviderInventory(input: {
   const sentReady = sentBroadcasts.every((broadcast) =>
     evidence.allowedSentBroadcastIds.has(broadcast.id)
   );
-  const emailsReady = evidence.ownerLoginEvidenceValid && snapshot.emails.every((email) =>
+  const emailsReady = evidence.ownerLoginEvidenceValid && newsletterEmails.every((email) =>
     evidence.allowedProviderMessageIds.has(email.id)
   );
   const authSmtpReady =
@@ -362,11 +373,11 @@ export function evaluateNewsletterProviderInventory(input: {
     category("domains", domainReady, snapshot.domains.length, "domain_policy_mismatch"),
     category("segments", segmentReady, snapshot.segments.length, "segment_policy_mismatch"),
     category("topics", topicReady, snapshot.topics.length, "topic_policy_mismatch"),
-    category("webhooks", webhookReady, snapshot.webhooks.length, "webhook_policy_mismatch"),
+    category("webhooks", webhookReady, newsletterWebhooks.length, "webhook_policy_mismatch"),
     category(
       "api_keys",
       keysReady,
-      snapshot.apiKeys.length,
+      configuredKeys.length,
       "api_key_policy_mismatch",
       legacyMigrationAllowed ? "legacy_migration_allowed" : "policy_satisfied"
     ),
@@ -388,7 +399,7 @@ export function evaluateNewsletterProviderInventory(input: {
     category(
       "transactional_emails",
       emailsReady,
-      snapshot.emails.length,
+      newsletterEmails.length,
       "unmapped_email_history"
     ),
     category("imports", snapshot.imports.length === 0, snapshot.imports.length, "unexpected_resources"),
@@ -433,7 +444,7 @@ export function evaluateNewsletterProviderInventory(input: {
       suppressions: snapshot.suppressions.length,
       broadcasts: snapshot.broadcasts.length,
       sentBroadcasts: sentBroadcasts.length,
-      emails: snapshot.emails.length,
+      emails: newsletterEmails.length,
       localEligible: evidence.localEligibleCount
     }
   };

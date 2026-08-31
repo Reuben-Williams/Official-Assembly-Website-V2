@@ -292,6 +292,86 @@ describe("newsletter provider inventory policy", () => {
     }
   });
 
+  it("keeps unrelated webhooks and API keys outside the Morales activation boundary", () => {
+    const base = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot(),
+      evidence: evidence()
+    });
+    const withUnrelatedResources = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({
+        webhooks: [
+          ...snapshot().webhooks,
+          {
+            id: "other-webhook",
+            endpoint: "https://other-project.example/api/webhooks/resend",
+            status: "enabled",
+            events: []
+          }
+        ],
+        apiKeys: [
+          ...snapshot().apiKeys,
+          { id: "other-project-key", name: "Other Project Management" }
+        ]
+      }),
+      evidence: evidence()
+    });
+
+    expect(withUnrelatedResources.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "webhooks", status: "ready", count: 1 }),
+      expect.objectContaining({ category: "api_keys", status: "ready", count: 3 })
+    ]));
+    expect(withUnrelatedResources.resourceIdentityDigest).toBe(base.resourceIdentityDigest);
+  });
+
+  it("still rejects duplicate Morales webhooks and required API key purpose names", () => {
+    const result = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({
+        webhooks: [
+          ...snapshot().webhooks,
+          { ...snapshot().webhooks[0]!, id: "duplicate-webhook" }
+        ],
+        apiKeys: [
+          ...snapshot().apiKeys,
+          { id: "duplicate-send-key", name: "Official Assembly Newsletter Send" }
+        ]
+      }),
+      evidence: evidence()
+    });
+
+    expect(result.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "webhooks", status: "blocked", count: 2 }),
+      expect.objectContaining({ category: "api_keys", status: "blocked", count: 4 })
+    ]));
+  });
+
+  it("ignores unrelated transactional mail but still enforces Morales-domain evidence", () => {
+    const unrelated = {
+      id: "other-project-email",
+      status: "delivered",
+      createdAt: "2026-08-31T15:00:00.000Z",
+      from: "Other Project <updates@other-project.example>",
+      to: ["resident@example.com"],
+      subject: "Other project update"
+    };
+    const result = evaluateNewsletterProviderInventory({
+      stage: "steady",
+      configuration,
+      snapshot: snapshot({ emails: [unrelated] }),
+      evidence: evidence()
+    });
+
+    expect(result.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: "transactional_emails", status: "ready", count: 0 })
+    ]));
+    expect(result.counts.emails).toBe(0);
+  });
+
   it("still rejects any additional non-default segment", () => {
     const result = evaluateNewsletterProviderInventory({
       stage: "initial",
