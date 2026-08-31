@@ -60,7 +60,7 @@ Two non-destructive overlay layers protect readability:
 1. a moderate uniform navy veil preserves the artwork as a recognizable background rather than a competing foreground graphic; and
 2. a stronger left-to-right gradient sits behind the primary copy and controls, easing toward the artwork-facing side.
 
-Foreground hero text uses the existing white/high-contrast palette on the dark background. Primary and secondary actions must meet WCAG AA contrast in default, hover, focus, and visited states. The existing District Office image panel remains opaque and above the background layer.
+The homepage hero receives a dedicated modifier such as `.home-hero`. Overlay, white text, eyebrow, lead, primary-link, and secondary-link rules are scoped beneath that modifier. Shared `.hero`, `.eyebrow`, `.lead`, `.cta-link`, and `.secondary-link` defaults remain unchanged so generic `PageTemplate` routes retain their current light treatment. Primary and secondary homepage actions must meet WCAG AA contrast in default, hover, focus, and visited states. The existing District Office image panel remains opaque and above the background layer.
 
 ### 3.3 Responsive behavior
 
@@ -82,7 +82,9 @@ The newsletter page order becomes:
 2. existing newsletter resource cards and supporting explanatory content, without photography; and
 3. any configured secondary cards.
 
-The first section owns stable item ID `form` and renders the existing `newsletter.form.eyebrow`, `newsletter.form.title`, and `newsletter.form.body` regions as one compact heading block. `newsletter.form.title` is promoted from `h2` to the page’s single `h1`; `newsletter.form.eyebrow` remains its eyebrow; and `newsletter.form.body` is the optional one-sentence explanation. The `newsletter.form` managed-form region follows that block immediately in the same section. The dedicated page does not call the current two-column `NewsletterSignupSection`; it either adds a form-first presentation mode with exactly this markup or renders `ResidentForm` directly inside the bounded newsletter view. It must not render a second signup eyebrow, title, or body.
+The first section owns stable item ID `form` and renders the existing `newsletter.form.eyebrow`, `newsletter.form.title`, and `newsletter.form.body` regions as one compact heading block. `newsletter.form.title` is promoted from `h2` to the page’s single `h1`; `newsletter.form.eyebrow` remains its eyebrow; and `newsletter.form.body` is the optional one-sentence explanation. The `newsletter.form` managed-form region follows that block immediately in the same section. The dedicated page does not call the current two-column `NewsletterSignupSection`; it renders `ResidentForm` directly inside the bounded newsletter view using a dedicated `newsletter-page-first` presentation mode.
+
+That presentation mode suppresses `PublicFormCard`’s duplicate visual eyebrow and `<h3>` header for both the live form and the unavailable fallback. The first-section `h1` supplies page context; the managed form’s existing fieldset legend remains the form’s accessible name. The required-fields guidance remains adjacent to the controls. The unavailable fallback is contained by the same first section and associated with its heading, so it does not introduce an orphaned or skipped heading. No `h1 → h3` skip or second signup introduction is permitted.
 
 The former `newsletter.hero.*` and newsletter hero CTA regions are retired from the active `/newsletter` render and builder mapping. Their persisted versions and history remain intact, but they are no longer presented as editable live regions. A versioned builder-content migration records the layout transition and makes `newsletter.form.*` the authoritative compact heading contract. No runtime fallback reads both the old hero and form regions, avoiding ambiguous or duplicated copy.
 
@@ -108,8 +110,10 @@ The page must preserve one clear `h1`, correct heading order below it, keyboard 
 - Update the homepage structural test to prove the brand banner uses a non-landmark wrapper inside the hero and before the foreground grid, with no separate pre-hero banner strip.
 - Preserve responsive source, approved-manifest, locale-aware alt, and Site Editor region tests.
 - Add a newsletter-page composition test proving one first section contains `newsletter.form.title` as the single `h1`, followed immediately by `newsletter.form`, with no duplicate newsletter intro and no newsletter `ImagePanel`.
+- Add live and unavailable-state tests for `newsletter-page-first` presentation: no public-form-card eyebrow or `h3`, one accessible managed-form legend in the live state, and fallback content associated with the first-section heading.
 - Add builder mapping and migration tests proving the old newsletter hero regions are retired, `newsletter.form.*` remains authoritative, and `newsletter.sections` normalizes to the stable form-first order without losing retained item IDs.
 - Confirm other generic pages still render their hero and supporting images.
+- Add a scoped-style regression test proving the dark background and white interaction styles require the homepage modifier and do not match generic page heroes.
 - Run targeted Vitest tests, TypeScript, ESLint, the brand-asset verifier, and a production build.
 - Add measurable contrast assertions for hero copy and primary/secondary link states. Default, hover, focus-visible, and visited foreground/background pairs must each meet WCAG AA: at least 4.5:1 for normal text and 3:1 for large text and non-text control boundaries.
 
