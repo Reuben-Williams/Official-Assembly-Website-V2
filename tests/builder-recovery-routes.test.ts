@@ -51,7 +51,9 @@ describe("recovery media grants", () => {
       mediaDigest,
       nowEpochSeconds: 1_786_035_840
     })).toMatchObject({ route: "/", generationId: 4 });
-    expect(() => verifyRecoveryMediaGrant(`${token.slice(0, -1)}x`, secret, {
+    const tamperedIndex = 15;
+    const tamperedToken = `${token.slice(0, tamperedIndex)}${token[tamperedIndex] === "A" ? "B" : "A"}${token.slice(tamperedIndex + 1)}`;
+    expect(() => verifyRecoveryMediaGrant(tamperedToken, secret, {
       environment: "preview",
       siteKey: "official-assembly-website-v2",
       generationId: 4,
