@@ -57,7 +57,13 @@ Register `website.calendar` in the local editor `BuilderShellRegistration`, the 
 
 The workspace must preserve the current editor authentication, `owner | editor | contributor | viewer` roles, CSRF token flow, and session-revocation behavior. Viewers may read calendar records. Contributors may create and edit drafts. Editors and owners may publish, unpublish, and archive. No role may bypass validation.
 
-The workspace exposes three explicit lists: Drafts, Published, and Archived. It must not mix expired public events with active upcoming events without a visible status.
+The workspace exposes three explicit lists: Drafts, Published, and Archived. Each event entity appears in exactly one primary list:
+
+- Archived contains every entity whose lifecycle state is archived, regardless of retained revision pointers.
+- Published contains every active entity with a published revision pointer. When its draft pointer references a different revision, the row shows an `Unpublished changes` badge and opens the pending draft for editing while continuing to identify the live revision.
+- Drafts contains every active entity without a published revision pointer.
+
+Expired published events remain in Published with a visible `Past` status; they are not mixed into the public upcoming query. This single-list rule prevents duplicate rows and prevents pending work on a published event from being hidden.
 
 ## 4. Calendar data and behavior
 
@@ -120,6 +126,8 @@ All status changes use explicit commands with these transitions:
 - `unpublish`: clears the published pointer, preserves every revision, and leaves the event active as a draft;
 - `archive`: clears the published pointer and changes an active draft or published event to archived;
 - `restore_to_draft`: changes an archived event to active with its latest revision as the draft pointer and no published pointer.
+
+Only `create_draft` and `save_draft` append content revisions. `publish`, `unpublish`, `archive`, and `restore_to_draft` change entity pointers or lifecycle state without cloning unchanged content. Every command still appends a normalized History event.
 
 Only editors and owners may publish, unpublish, archive, or restore. Contributors may create and save drafts. Viewers are read-only. Archived events cannot be edited until restored. There is no hard-delete command.
 
@@ -210,7 +218,7 @@ Select supporting photographs from approved accessible albums using the followin
 4. no sensitive personal information or inappropriate bystander focus;
 5. no duplicate composition already used prominently on another page.
 
-Create a new `content/approved-professional-media.json` manifest; no general professional-photo manifest currently exists. Store approved originals or highest-quality authorized downloads outside the public derivative folder, and store optimized responsive derivatives in the project. Every imported public derivative must have one manifest entry containing:
+Create a new `content/approved-professional-media.json` manifest; no general professional-photo manifest currently exists. Copy each of the five selected highest-quality originals into a tracked non-public source directory at `content/media-source/professional/`, and exclude that directory from the Vercel deployment bundle. Store optimized responsive derivatives in `public/`. This makes clean-checkout checksum verification independent of the currently ignored source collections while keeping full-resolution sources off the public deployment. Every imported public derivative must have one manifest entry containing:
 
 - stable asset ID;
 - approved source collection label;
@@ -243,7 +251,16 @@ Write categorized site-level History events for runtime editor mutations:
 
 Extend the local History contract additively with source `calendar` and category `events`. The migration extends the latest `builder_history_events_v1` source/category checks and adds nullable calendar event/revision foreign keys. Extend `HISTORY_SOURCES`, `HISTORY_CATEGORIES`, query parsing, readers, filters, cursor tests, and editor labels in the same release.
 
-Every calendar command runs as one database transaction that appends its immutable revision, advances entity pointers/state, and inserts one normalized History event. A failed validation, stale version, or failed History insert rolls back the entire command. The calendar History reader reads normalized rows from `builder_history_events_v1`; it does not reconstruct events from unrelated tables.
+Every calendar command runs as one database transaction that performs its command-specific entity/revision work and inserts one normalized History event. A failed validation, stale version, or failed History insert rolls back the entire command. The calendar History reader reads normalized rows from `builder_history_events_v1`; it does not reconstruct events from unrelated tables.
+
+History version semantics are explicit:
+
+- `create_draft`: source revision is null and result revision is the new draft;
+- `save_draft`: source revision is the prior draft and result revision is the appended draft;
+- `publish`: source revision is the prior published revision or null and result revision is the selected current draft;
+- `unpublish`: source revision is the former published revision and result revision is null;
+- `archive`: source and result revision both identify the latest retained content revision because the content is unchanged while lifecycle state changes; and
+- `restore_to_draft`: source and result revision both identify the restored latest content revision because the content is unchanged while lifecycle state changes.
 
 Global History marks calendar restore as unavailable with the reason that event recovery is performed through the Calendar workspace's explicit `restore_to_draft` command. This avoids teaching the existing page-only restore endpoint a second mutation protocol.
 
@@ -263,7 +280,7 @@ Featured media remains recoverable through existing Media revision and page Hist
 - Require the existing CSRF token on mutations.
 - Enforce role and site scope on the server; client controls are not authorization.
 - Apply row-level policies or service-role-only repository access consistent with existing builder repositories.
-- Add one canonical `lib/public-links/safe-public-url.ts` contract and use it for calendar URLs and the new government/volunteer links. It accepts absolute HTTPS URLs only, rejects credentials, IP literals, non-default ports, overlong values, and hosts outside a checked-in allowlist, and returns the normalized URL. The initial allowlist contains `www.essexclerk.com`, `www.nj.gov`, `www.njleg.state.nj.us`, `docs.google.com`, and the existing Morales Fireside contact host. New event-registration hosts require a reviewed code change; editor roles cannot bypass the allowlist. The application does not follow or server-fetch submitted event URLs. Public anchors use `noopener noreferrer` where a new tab is used.
+- Add one canonical `lib/public-links/safe-public-url.ts` contract and use it for calendar URLs and the new government/volunteer links. It accepts absolute HTTPS URLs only, rejects credentials, IP literals, non-default ports, normalized serialized URLs longer than 2,048 characters, and hosts outside a checked-in allowlist, and returns the normalized URL. The database uses the same 2,048-character maximum. The initial allowlist contains `www.essexclerk.com`, `www.nj.gov`, `www.njleg.state.nj.us`, `docs.google.com`, and the existing Morales Fireside contact host. New event-registration hosts require a reviewed code change; editor roles cannot bypass the allowlist. The application does not follow or server-fetch submitted event URLs. Public anchors use `noopener noreferrer` where a new tab is used.
 - Validate normalized URLs, text lengths, timestamps, IDs, media ownership, and status transitions server-side.
 - Never expose Supabase service credentials or Resend credentials to the browser.
 - Do not alter unrelated provider resources or send outbound email as part of calendar operations.
@@ -299,15 +316,16 @@ This is one public launch, not one indivisible command. Safety steps may occur b
 
 1. Confirm the working tree and preserve unrelated user-owned files.
 2. Add failing tests for the approved contracts before implementation.
-3. Implement additive database, repository, API, editor, page, media, localization, and History changes.
-4. Verify production migration lineage and take a secure pre-change schema/data backup or provider-supported restore point. Do not commit backups or secrets.
-5. Apply additive migration changes that remain compatible with the current production deployment.
-6. Run mutating lifecycle tests against the repository's local Supabase stack after reset; its fixtures and records are isolated from production.
-7. Build one Vercel preview release candidate from the final commit. The preview must not receive production service-role credentials. If no dedicated preview Supabase project is configured, preview verification is read-only and the complete mutation lifecycle remains in the local production build against local Supabase.
-8. Run the full isolated verification, including calendar publish/unpublish flows.
-9. Promote that exact tested deployment once to production.
-10. Run the production verification below against settled content and logs.
-11. Report the deployment identifier, commit, tests, routes, and any truthfully unavailable check.
+3. Implement the additive migration file plus repository, API, editor, page, media, localization, and History changes.
+4. Reset the repository's local Supabase stack so it applies the new migration from a clean lineage, then run database and mutating lifecycle tests against those isolated fixtures.
+5. Run the full local production build and isolated verification, including calendar publish/unpublish flows.
+6. Build one Vercel preview release candidate from the final commit. The preview must not receive production service-role credentials. If no dedicated preview Supabase project is configured, preview verification is read-only and mutation coverage remains the tested local production build against local Supabase.
+7. Verify production migration lineage against the exact tested migration set and take a secure pre-change schema/data backup or provider-supported restore point. Do not commit backups or secrets.
+8. Apply the exact locally tested additive migration to production while the existing application remains compatible with both the old and extended schema.
+9. Verify the production migration version, constraints, functions, and permissions. Stop without promoting code if this verification fails.
+10. Promote the exact tested Vercel deployment once to production.
+11. Run the production verification below against settled content and logs.
+12. Report the deployment identifier, commit, migration evidence, tests, routes, and any truthfully unavailable check.
 
 Do not deploy a code path that requires a migration not yet present. Do not remove old schema in this release.
 
@@ -326,7 +344,7 @@ Do not deploy a code path that requires a migration not yet present. Do not remo
 - Voting tests: official Essex County Clerk destinations and separate statewide resources.
 - Newsletter regression tests: onsite form-first rendering, no external Fireside newsletter link, consent, Turnstile boundary, confirmation, and lead/customer ingestion unchanged.
 - Media tests: exact committed manifest membership and five page mappings, local paths, recomputed checksums, dimensions, alternative text, and no Google Photos hotlinks or sensitive URL parameters.
-- Public-link tests: HTTPS normalization, allowlisted hosts, credential/IP/port rejection, maximum length, no server fetch, and correct external-anchor attributes.
+- Public-link tests: HTTPS normalization, allowlisted hosts, credential/IP/port rejection, exactly 2,048 characters accepted, 2,049 characters rejected, no server fetch, and correct external-anchor attributes.
 - Localization tests: English/Spanish completeness and correct document metadata.
 - Run targeted Vitest suites, full `npm test`, `npm run lint`, production-readiness scripts, `npm run build`, database tests, migration checksum/lineage checks, and local E2E.
 
