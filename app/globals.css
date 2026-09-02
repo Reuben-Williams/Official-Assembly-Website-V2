@@ -1405,6 +1405,10 @@ h3 {
   object-fit: cover;
 }
 
+.image-card picture {
+  display: contents;
+}
+
 .hero-image {
   aspect-ratio: 4 / 5;
 }

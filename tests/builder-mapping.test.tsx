@@ -104,7 +104,12 @@ describe("approved builder mapping", () => {
       "media.business",
       "media.meeting",
       "media.outreach",
-      "media.capitol"
+      "media.capitol",
+      "media.professional.home-supporting",
+      "media.professional.about-primary",
+      "media.professional.news-supporting",
+      "media.professional.community-primary",
+      "media.professional.resources-supporting"
     ]);
   });
 
@@ -118,6 +123,24 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="home.connections.title"');
     expect(html).toContain('data-builder-region="home.latest.title"');
     expect(html).toContain('data-builder-region="media.hero"');
+    expect(html).toContain('data-builder-region="media.professional.home-supporting"');
+  });
+
+  it("places each approved professional photo in its assigned page region", async () => {
+    const assignments = [
+      ["about", "about-hero", "media.professional.about-primary"],
+      ["news", "news-supporting", "media.professional.news-supporting"],
+      ["community", "community-hero", "media.professional.community-primary"],
+      ["resources", "resources-supporting", "media.professional.resources-supporting"],
+    ] as const;
+
+    for (const [slug, instance, region] of assignments) {
+      const page = pages.find((candidate) => candidate.slug === slug);
+      expect(page).toBeDefined();
+      const html = renderToStaticMarkup(await PageTemplate({ page: page! }));
+      expect(html).toContain(`data-builder-instance="${instance}"`);
+      expect(html).toContain(`data-builder-region="${region}"`);
+    }
   });
 
   it("renders a managed contact surface and durable card item IDs", async () => {

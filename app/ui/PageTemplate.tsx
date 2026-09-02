@@ -37,7 +37,11 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         body: `${slug}.form.body`,
       }
     : null;
-  const supportingImage = slug === "community" ? "graduation" : "coverage";
+  const supportingImage = {
+    news: "professional-news-supporting",
+    resources: "professional-resources-supporting",
+    community: "graduation",
+  }[slug] ?? "coverage";
   const residentForm = formType && formType !== "newsletter"
     ? await ResidentForm({ type: formType, locale })
     : null;

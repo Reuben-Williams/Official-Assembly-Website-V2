@@ -154,6 +154,31 @@ export default {
       "label": "capitol media"
     },
     {
+      "id": "media.professional.home-supporting",
+      "kind": "image",
+      "label": "Home supporting professional photo"
+    },
+    {
+      "id": "media.professional.about-primary",
+      "kind": "image",
+      "label": "About primary professional photo"
+    },
+    {
+      "id": "media.professional.news-supporting",
+      "kind": "image",
+      "label": "News supporting professional photo"
+    },
+    {
+      "id": "media.professional.community-primary",
+      "kind": "image",
+      "label": "Community primary professional photo"
+    },
+    {
+      "id": "media.professional.resources-supporting",
+      "kind": "image",
+      "label": "Resources supporting professional photo"
+    },
+    {
       "id": "metadata.home.title",
       "kind": "text",
       "label": "home metadata title"

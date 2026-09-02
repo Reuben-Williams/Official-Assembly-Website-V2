@@ -27,6 +27,7 @@ export type ImageAsset = {
   key: string;
   regionId: string;
   src: string;
+  mobileSrc?: string;
   alt: string;
 };
 
@@ -144,6 +145,41 @@ export const imageAssets: ImageAsset[] = [
     regionId: "media.capitol",
     src: "/images/capitol-visit.jpg",
     alt: "Constituents and officials during a capitol visit"
+  },
+  {
+    key: "professional-home-supporting",
+    regionId: "media.professional.home-supporting",
+    src: "/images/professional/home-supporting-desktop.webp",
+    mobileSrc: "/images/professional/home-supporting-mobile.webp",
+    alt: "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room"
+  },
+  {
+    key: "professional-about-primary",
+    regionId: "media.professional.about-primary",
+    src: "/images/professional/about-primary-desktop.webp",
+    mobileSrc: "/images/professional/about-primary-mobile.webp",
+    alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room"
+  },
+  {
+    key: "professional-news-supporting",
+    regionId: "media.professional.news-supporting",
+    src: "/images/professional/news-supporting-desktop.webp",
+    mobileSrc: "/images/professional/news-supporting-mobile.webp",
+    alt: "Assemblywoman Carmen Morales presenting a State House recognition to a District 34 family"
+  },
+  {
+    key: "professional-community-primary",
+    regionId: "media.professional.community-primary",
+    src: "/images/professional/community-primary-desktop.webp",
+    mobileSrc: "/images/professional/community-primary-mobile.webp",
+    alt: "Assemblywoman Carmen Morales and a community member holding Puerto Rican flags outside Belleville Town Hall"
+  },
+  {
+    key: "professional-resources-supporting",
+    regionId: "media.professional.resources-supporting",
+    src: "/images/professional/resources-supporting-desktop.webp",
+    mobileSrc: "/images/professional/resources-supporting-mobile.webp",
+    alt: "Assemblywoman Carmen Morales gathered with Belleville residents at a Puerto Rican flag raising ceremony"
   }
 ];
 
@@ -194,7 +230,7 @@ export const pages: PageContent[] = [
     eyebrow: "Deputy Whip - District 34",
     description:
       "Assemblywoman Morales has served in the New Jersey General Assembly since 2024 and represents District 34 in Essex County.",
-    imageKey: "about",
+    imageKey: "professional-about-primary",
     cards: [
       {
         id: "district-leadership",
@@ -315,7 +351,7 @@ export const pages: PageContent[] = [
     eyebrow: "Community",
     description:
       "District 34 includes Belleville, Bloomfield, East Orange, Glen Ridge, Nutley, and Orange in Essex County.",
-    imageKey: "business",
+    imageKey: "professional-community-primary",
     cards: [
       {
         id: "small-business-roundtables",

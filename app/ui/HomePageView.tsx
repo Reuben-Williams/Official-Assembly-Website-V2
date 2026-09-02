@@ -184,7 +184,7 @@ export async function HomePageView({
       <section className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
         <div className="container split">
           <ImagePanel
-            asset={getImage("business")}
+            asset={getImage("professional-home-supporting")}
             caption="Community and small business engagement"
             instance="home-workflow"
             content={content}

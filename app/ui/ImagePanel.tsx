@@ -33,6 +33,9 @@ export function ImagePanel({
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const resolved = builderImage(content, asset.regionId, asset);
   const src = resolved.src.startsWith("/") ? `${basePath}${resolved.src}` : resolved.src;
+  const mobileSrc = resolved.src === asset.src && asset.mobileSrc
+    ? (asset.mobileSrc.startsWith("/") ? `${basePath}${asset.mobileSrc}` : asset.mobileSrc)
+    : null;
 
   return (
     <div
@@ -41,17 +44,20 @@ export function ImagePanel({
       data-builder-kind="image"
       data-builder-region={asset.regionId}
     >
-      <Image
-        src={src}
-        alt={localizedBuilderText(locale, `${asset.regionId}.alt`, resolved.alt)}
-        fill
-        priority={priority}
-        sizes={
-          variant === "hero"
-            ? "(max-width: 920px) 100vw, 44vw"
-            : "(max-width: 920px) 100vw, 52vw"
-        }
-      />
+      <picture>
+        {mobileSrc ? <source media="(max-width: 640px)" srcSet={mobileSrc} /> : null}
+        <Image
+          src={src}
+          alt={localizedBuilderText(locale, `${asset.regionId}.alt`, resolved.alt)}
+          fill
+          priority={priority}
+          sizes={
+            variant === "hero"
+              ? "(max-width: 920px) 100vw, 44vw"
+              : "(max-width: 920px) 100vw, 52vw"
+          }
+        />
+      </picture>
       <div className="image-caption">
         <Camera size={18} aria-hidden="true" />
         <span>{localizedBuilderText(locale, `${asset.regionId}.caption`, caption)}</span>

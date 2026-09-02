@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "media.professional.home-supporting",
+      "sourceCollection": "State House professional photo collection",
+      "acquiredOn": "2026-09-01",
+      "source": {
+        "path": "content/media-source/professional/home-supporting.jpg",
+        "sha256": "3472c8520d447593f305da78d338fe6430b70521b77f4a75a8bd004234c7e04d",
+        "width": 3633,
+        "height": 5450
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/home-supporting-desktop.webp",
+          "width": 1600,
+          "height": 1000
+        },
+        "mobile": {
+          "path": "/images/professional/home-supporting-mobile.webp",
+          "width": 800,
+          "height": 500
+        }
+      },
+      "placement": {
+        "page": "/",
+        "region": "home supporting"
+      },
+      "alt": {
+        "en": "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room",
+        "es": "La asambleísta Carmen Morales conversa con un colega legislativo en una sala de comités de la Casa del Estado"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "id": "media.professional.about-primary",
+      "sourceCollection": "State House professional photo collection",
+      "acquiredOn": "2026-09-01",
+      "source": {
+        "path": "content/media-source/professional/about-primary.jpg",
+        "sha256": "5dc3c710a9ea278a9ad8ee714cc28972f709a7b0a39a268a450c97de3fe034a8",
+        "width": 3423,
+        "height": 5134
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/about-primary-desktop.webp",
+          "width": 1200,
+          "height": 1500
+        },
+        "mobile": {
+          "path": "/images/professional/about-primary-mobile.webp",
+          "width": 800,
+          "height": 1000
+        }
+      },
+      "placement": {
+        "page": "/about",
+        "region": "about primary"
+      },
+      "alt": {
+        "en": "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
+        "es": "La asambleísta Carmen Morales habla desde su escritorio en una sala de comités de la Casa del Estado de Nueva Jersey"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "id": "media.professional.news-supporting",
+      "sourceCollection": "State House professional photo collection",
+      "acquiredOn": "2026-09-01",
+      "source": {
+        "path": "content/media-source/professional/news-supporting.jpg",
+        "sha256": "5bfadecd45f8b7aa35bbdd9818a46d14572f1c8b299fc4822876bb4bc911b7f5",
+        "width": 3633,
+        "height": 5450
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/news-supporting-desktop.webp",
+          "width": 1600,
+          "height": 1000
+        },
+        "mobile": {
+          "path": "/images/professional/news-supporting-mobile.webp",
+          "width": 800,
+          "height": 500
+        }
+      },
+      "placement": {
+        "page": "/news",
+        "region": "news supporting"
+      },
+      "alt": {
+        "en": "Assemblywoman Carmen Morales presenting a State House recognition to a District 34 family",
+        "es": "La asambleísta Carmen Morales entrega un reconocimiento de la Casa del Estado a una familia del Distrito 34"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "id": "media.professional.community-primary",
+      "sourceCollection": "2025 Puerto Rican Flag Raising in Belleville professional photo collection",
+      "acquiredOn": "2026-09-01",
+      "source": {
+        "path": "content/media-source/professional/community-primary.jpg",
+        "sha256": "c46f3e1fc5f92ce2f22fdfcf7d3a073717b7e15c36656637934236c6e9beb29b",
+        "width": 3455,
+        "height": 6138
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/community-primary-desktop.webp",
+          "width": 1200,
+          "height": 1500
+        },
+        "mobile": {
+          "path": "/images/professional/community-primary-mobile.webp",
+          "width": 800,
+          "height": 1000
+        }
+      },
+      "placement": {
+        "page": "/community",
+        "region": "community primary"
+      },
+      "alt": {
+        "en": "Assemblywoman Carmen Morales and a community member holding Puerto Rican flags outside Belleville Town Hall",
+        "es": "La asambleísta Carmen Morales y una integrante de la comunidad sostienen banderas de Puerto Rico frente al ayuntamiento de Belleville"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "id": "media.professional.resources-supporting",
+      "sourceCollection": "2025 Puerto Rican Flag Raising in Belleville professional photo collection",
+      "acquiredOn": "2026-09-01",
+      "source": {
+        "path": "content/media-source/professional/resources-supporting.jpg",
+        "sha256": "e6416fd172bdb5c7f8f8013306569cff428ca889b7d58008d1c7150d69d8601e",
+        "width": 6140,
+        "height": 3457
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/resources-supporting-desktop.webp",
+          "width": 1600,
+          "height": 1000
+        },
+        "mobile": {
+          "path": "/images/professional/resources-supporting-mobile.webp",
+          "width": 800,
+          "height": 500
+        }
+      },
+      "placement": {
+        "page": "/resources",
+        "region": "resources supporting"
+      },
+      "alt": {
+        "en": "Assemblywoman Carmen Morales gathered with Belleville residents at a Puerto Rican flag raising ceremony",
+        "es": "La asambleísta Carmen Morales junto a residentes de Belleville durante una ceremonia de izamiento de la bandera de Puerto Rico"
+      },
+      "approvalState": "approved"
+    }
+  ]
+}
