@@ -782,6 +782,31 @@ export default {
           "label": "resources secondary call to action"
         },
         {
+          "id": "media.current-resource-flyer",
+          "kind": "image",
+          "label": "current district resource flyer"
+        },
+        {
+          "id": "resources.current-resource.eyebrow",
+          "kind": "text",
+          "label": "current resource eyebrow"
+        },
+        {
+          "id": "resources.current-resource.title",
+          "kind": "text",
+          "label": "current resource title"
+        },
+        {
+          "id": "resources.current-resource.body",
+          "kind": "text",
+          "label": "current resource description"
+        },
+        {
+          "id": "resources.current-resource.destination",
+          "kind": "link",
+          "label": "current resource official destination"
+        },
+        {
           "id": "resources.features.eyebrow",
           "kind": "text",
           "label": "resources feature eyebrow"
@@ -1004,6 +1029,21 @@ export default {
           "label": "community secondary call to action"
         },
         {
+          "id": "community.volunteer.eyebrow",
+          "kind": "text",
+          "label": "volunteer portal eyebrow"
+        },
+        {
+          "id": "community.volunteer.title",
+          "kind": "text",
+          "label": "volunteer portal title"
+        },
+        {
+          "id": "community.volunteer.body",
+          "kind": "text",
+          "label": "volunteer portal description"
+        },
+        {
           "id": "community.features.eyebrow",
           "kind": "text",
           "label": "community feature eyebrow"
@@ -1123,6 +1163,81 @@ export default {
           "id": "voting.cards",
           "kind": "sections",
           "label": "voting cards"
+        },
+        {
+          "id": "voting.cards.essex-election-hub.title",
+          "kind": "text",
+          "label": "Essex election hub title"
+        },
+        {
+          "id": "voting.cards.essex-election-hub.body",
+          "kind": "text",
+          "label": "Essex election hub body"
+        },
+        {
+          "id": "voting.cards.essex-election-hub.link",
+          "kind": "link",
+          "label": "Essex election hub link"
+        },
+        {
+          "id": "voting.cards.essex-election-forms.title",
+          "kind": "text",
+          "label": "Essex election forms title"
+        },
+        {
+          "id": "voting.cards.essex-election-forms.body",
+          "kind": "text",
+          "label": "Essex election forms body"
+        },
+        {
+          "id": "voting.cards.essex-election-forms.link",
+          "kind": "link",
+          "label": "Essex election forms link"
+        },
+        {
+          "id": "voting.cards.essex-voter-registration.title",
+          "kind": "text",
+          "label": "Essex voter registration title"
+        },
+        {
+          "id": "voting.cards.essex-voter-registration.body",
+          "kind": "text",
+          "label": "Essex voter registration body"
+        },
+        {
+          "id": "voting.cards.essex-voter-registration.link",
+          "kind": "link",
+          "label": "Essex voter registration link"
+        },
+        {
+          "id": "voting.cards.essex-vote-by-mail.title",
+          "kind": "text",
+          "label": "Essex vote by mail title"
+        },
+        {
+          "id": "voting.cards.essex-vote-by-mail.body",
+          "kind": "text",
+          "label": "Essex vote by mail body"
+        },
+        {
+          "id": "voting.cards.essex-vote-by-mail.link",
+          "kind": "link",
+          "label": "Essex vote by mail link"
+        },
+        {
+          "id": "voting.cards.essex-sample-ballots.title",
+          "kind": "text",
+          "label": "Essex sample ballots title"
+        },
+        {
+          "id": "voting.cards.essex-sample-ballots.body",
+          "kind": "text",
+          "label": "Essex sample ballots body"
+        },
+        {
+          "id": "voting.cards.essex-sample-ballots.link",
+          "kind": "link",
+          "label": "Essex sample ballots link"
         },
         {
           "id": "voting.cards.register-update.title",

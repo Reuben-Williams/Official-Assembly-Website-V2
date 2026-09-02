@@ -7,6 +7,7 @@ import {
   builderText,
   type BuilderServerContent,
 } from "../../lib/builder/server-content";
+import { parseSafePublicUrl } from "../../lib/public-links/safe-public-url";
 import type { Card } from "../data/site";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
@@ -17,6 +18,8 @@ type CardsProps = {
   itemRegionPrefix?: string;
   instance?: string;
   featuredFirst?: boolean;
+  fixedOrder?: boolean;
+  safePublicLinks?: boolean;
   columns?: "two" | "three";
   content?: BuilderServerContent;
   locale?: PublicLocale;
@@ -30,12 +33,16 @@ export function Cards({
   itemRegionPrefix = regionId,
   instance = "primary",
   featuredFirst = false,
+  fixedOrder = false,
+  safePublicLinks = false,
   columns = "three",
   content = EMPTY_CONTENT,
   locale = "en",
 }: CardsProps) {
   const cardsById = new Map(cards.map((card) => [card.id, card]));
-  const orderedCards = builderSectionIds(content, regionId, cards.map((card) => card.id))
+  const orderedCards = (fixedOrder
+    ? cards.map((card) => card.id)
+    : builderSectionIds(content, regionId, cards.map((card) => card.id)))
     .flatMap((id) => cardsById.get(id) ?? []);
   return (
     <div
@@ -49,10 +56,19 @@ export function Cards({
         const className = featuredFirst && index === 0 ? "info-card featured" : "info-card";
         const prefix = `${itemRegionPrefix}.${card.id}`;
         const hasLink = Boolean(card.href) || content.regions[`${prefix}.link`]?.type === "link";
-        const link = hasLink ? builderLink(content, `${prefix}.link`, {
+        const fallbackLink = {
           href: card.href ?? "#",
           label: "Open",
-        }) : null;
+        };
+        const candidateLink = hasLink ? builderLink(content, `${prefix}.link`, fallbackLink) : null;
+        let link = candidateLink;
+        if (candidateLink && safePublicLinks && !candidateLink.disabled) {
+          try {
+            link = { ...candidateLink, href: parseSafePublicUrl(candidateLink.href) };
+          } catch {
+            link = { ...fallbackLink, href: parseSafePublicUrl(fallbackLink.href), disabled: false };
+          }
+        }
         return (
           <article className={className} data-builder-item-id={card.id} key={card.id}>
             <div className="icon-box">

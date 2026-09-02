@@ -6,6 +6,7 @@ import { Cards } from "./Cards";
 import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
 import { NewsletterPageView } from "./NewsletterPageView";
+import { CurrentResourceSection, VolunteerPortalSection } from "./ConstituentActionSections";
 import {
   builderLink,
   builderText,
@@ -109,6 +110,9 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         </div>
       </section>
 
+      {slug === "resources" ? <CurrentResourceSection content={content} locale={locale} /> : null}
+      {slug === "community" ? <VolunteerPortalSection content={content} locale={locale} /> : null}
+
       <section className="section" data-builder-item-id="features">
         <div className="container">
           <div className="section-heading">
@@ -146,6 +150,8 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
             cards={page.cards}
             content={content}
             featuredFirst={slug === "contact"}
+            fixedOrder={slug === "voting"}
+            safePublicLinks={slug === "voting"}
             regionId={`${slug}.cards`}
             locale={locale}
           />
@@ -238,6 +244,8 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
               regionId={`${slug}.cards`}
               content={content}
               locale={locale}
+              fixedOrder={slug === "voting"}
+              safePublicLinks={slug === "voting"}
             />
           </div>
         </section>

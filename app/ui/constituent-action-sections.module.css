@@ -1,0 +1,226 @@
+.resourceSection,
+.volunteerSection {
+  position: relative;
+}
+
+.resourceSection {
+  background:
+    linear-gradient(135deg, rgb(0 32 70 / 4%), transparent 58%),
+    var(--surface);
+  border-block: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  padding: clamp(3.5rem, 7vw, 6rem) 0;
+}
+
+.resourceShell {
+  align-items: center;
+  display: grid;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr);
+}
+
+.resourceCopy,
+.volunteerShell > div {
+  display: grid;
+  gap: 1rem;
+}
+
+.resourceCopy h2,
+.volunteerShell h2 {
+  color: var(--primary);
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 1.02;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.resourceCopy > p:not(.eyebrow),
+.volunteerShell > div > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 1.06rem;
+  line-height: 1.75;
+  margin: 0;
+}
+
+.sectionIcon {
+  align-items: center;
+  background: var(--primary);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  height: 3rem;
+  justify-content: center;
+  width: 3rem;
+}
+
+.sectionIcon svg {
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.flyer,
+.emptyResource {
+  aspect-ratio: 16 / 10;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: calc(var(--radius) + 0.35rem);
+  box-shadow: var(--shadow);
+  min-height: 22rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.flyer img {
+  background: var(--surface-soft);
+  object-fit: contain;
+}
+
+.emptyResource {
+  align-content: center;
+  background:
+    linear-gradient(145deg, rgb(214 227 255 / 82%), rgb(247 250 252 / 96%)),
+    var(--surface-soft);
+  color: var(--primary);
+  display: grid;
+  gap: 0.9rem;
+  justify-items: start;
+  padding: clamp(2rem, 5vw, 4rem);
+}
+
+.emptyResource::after {
+  border: 1px solid rgb(0 32 70 / 14%);
+  border-radius: 50%;
+  content: "";
+  height: 14rem;
+  position: absolute;
+  right: -5rem;
+  top: -5rem;
+  width: 14rem;
+}
+
+.emptyResource svg {
+  height: 2rem;
+  width: 2rem;
+}
+
+.emptyResource strong {
+  font-size: clamp(1.25rem, 2.5vw, 1.8rem);
+  max-width: 24ch;
+}
+
+.emptyResource p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 42ch;
+}
+
+.volunteerSection {
+  background: var(--primary);
+  color: white;
+  overflow: hidden;
+  padding: clamp(3.5rem, 7vw, 5.5rem) 0;
+}
+
+.volunteerSection::before {
+  background: var(--secondary);
+  content: "";
+  height: 0.35rem;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.volunteerSection::after {
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 50%;
+  content: "";
+  height: 28rem;
+  position: absolute;
+  right: -12rem;
+  top: -16rem;
+  width: 28rem;
+}
+
+.volunteerShell {
+  align-items: center;
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  position: relative;
+  z-index: 1;
+}
+
+.volunteerShell .sectionIcon {
+  background: white;
+  color: var(--primary);
+}
+
+.volunteerShell h2,
+.volunteerShell > div > p:not(.eyebrow) {
+  color: white;
+}
+
+.volunteerShell :global(.eyebrow) {
+  color: #f2c96d;
+}
+
+.externalNote {
+  font-size: 0.9rem !important;
+  opacity: 0.82;
+}
+
+.primaryAction {
+  align-items: center;
+  background: var(--secondary);
+  border: 2px solid transparent;
+  border-radius: 0.75rem;
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 0.65rem;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.85rem 1.15rem;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.primaryAction:hover {
+  background: #941c1f;
+  transform: translateY(-2px);
+}
+
+.primaryAction:focus-visible {
+  outline: 3px solid #f2c96d;
+  outline-offset: 3px;
+}
+
+.primaryAction svg {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+@media (max-width: 800px) {
+  .resourceShell,
+  .volunteerShell {
+    grid-template-columns: 1fr;
+  }
+
+  .flyer,
+  .emptyResource {
+    min-height: 18rem;
+  }
+
+  .volunteerShell .primaryAction {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryAction {
+    transition: none;
+  }
+
+  .primaryAction:hover {
+    transform: none;
+  }
+}

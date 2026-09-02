@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { parseSafePublicUrl } from "../../lib/public-links/safe-public-url";
 import {
   BadgeCheck,
   Bell,
@@ -338,25 +339,62 @@ export const pages: PageContent[] = [
     imageKey: "outreach",
     cards: [
       {
-        id: "register-update",
-        title: "Register or Update Your Record",
-        text: "Visit the New Jersey Division of Elections for registration and voter information.",
+        id: "essex-election-hub",
+        title: "Essex County Elections",
+        text: "Start with the Essex County Clerk election hub for current county election information.",
         icon: Vote,
-        href: "https://www.nj.gov/state/elections/voter-registration.shtml"
+        href: parseSafePublicUrl("https://www.essexclerk.com/Election")
+      },
+      {
+        id: "essex-election-forms",
+        title: "Election Forms",
+        text: "Open the Essex County Clerk forms directory for official election documents.",
+        icon: FileText,
+        href: parseSafePublicUrl("https://www.essexclerk.com/Forms")
+      },
+      {
+        id: "essex-voter-registration",
+        title: "Voter Registration",
+        text: "Use the Essex County Clerk voter registration service for county-specific guidance.",
+        icon: BadgeCheck,
+        href: parseSafePublicUrl("https://www.essexclerk.com/Services/5")
+      },
+      {
+        id: "essex-vote-by-mail",
+        title: "Vote by Mail",
+        text: "Review the Essex County Clerk vote-by-mail service and official forms.",
+        icon: Mail,
+        href: parseSafePublicUrl("https://www.essexclerk.com/Services/6")
+      },
+      {
+        id: "essex-sample-ballots",
+        title: "Sample Ballots",
+        text: "Find available sample-ballot information through the Essex County Clerk.",
+        icon: ShieldCheck,
+        href: parseSafePublicUrl("https://www.essexclerk.com/Services/30")
+      }
+    ],
+    secondaryCards: [
+      {
+        id: "register-update",
+        title: "State Voter Registration",
+        text: "Visit the New Jersey Division of Elections for statewide registration and voter information.",
+        icon: Vote,
+        href: parseSafePublicUrl("https://www.nj.gov/state/elections/voter-registration.shtml")
       },
       {
         id: "polling-information",
-        title: "Find Polling Information",
+        title: "State Voter Information",
         text: "Use the state's voter information portal for polling places and election resources.",
         icon: MapPin,
-        href: "https://www.nj.gov/state/elections/vote.shtml"
+        href: parseSafePublicUrl("https://www.nj.gov/state/elections/vote.shtml")
       },
       {
         id: "voter-rights",
-        title: "Voting Questions",
-        text: "For authoritative election guidance, use the Division of Elections contact and help resources.",
+        title: "New Jersey Election Guidance",
+        text: "For statewide election guidance, use the Division of Elections contact and help resources.",
         icon: ShieldCheck,
-        href: "https://www.nj.gov/state/elections/index.shtml"
+        href: parseSafePublicUrl("https://www.nj.gov/state/elections/index.shtml")
       }
     ]
   },
