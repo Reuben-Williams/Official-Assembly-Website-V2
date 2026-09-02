@@ -207,7 +207,10 @@
 
   .flyer,
   .emptyResource {
+    aspect-ratio: auto;
     min-height: 18rem;
+    min-width: 0;
+    width: 100%;
   }
 
   .volunteerShell .primaryAction {

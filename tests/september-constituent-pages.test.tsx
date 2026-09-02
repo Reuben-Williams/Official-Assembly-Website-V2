@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -29,6 +31,15 @@ function page(path: string) {
 }
 
 describe("September constituent page updates", () => {
+  it("removes the resource preview aspect ratio on narrow screens", () => {
+    const css = readFileSync(resolve("app/ui/constituent-action-sections.module.css"), "utf8");
+    const mobileRules = css.slice(css.indexOf("@media (max-width: 800px)"));
+
+    expect(mobileRules).toMatch(/\.flyer,\s*\.emptyResource\s*\{[\s\S]*?aspect-ratio:\s*auto/);
+    expect(mobileRules).toMatch(/\.flyer,\s*\.emptyResource\s*\{[\s\S]*?min-width:\s*0/);
+    expect(mobileRules).toMatch(/\.flyer,\s*\.emptyResource\s*\{[\s\S]*?width:\s*100%/);
+  });
+
   it("places an editor-managed current-resource block immediately after the Resources introduction", async () => {
     const registered = builderConfig.pages.find((candidate) => candidate.path === "/resources");
     expect(registered?.regions.map((region) => region.id)).toEqual(expect.arrayContaining([
