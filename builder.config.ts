@@ -234,6 +234,16 @@ export default {
       "label": "news navigation link"
     },
     {
+      "id": "metadata.events.title",
+      "kind": "text",
+      "label": "events metadata title"
+    },
+    {
+      "id": "metadata.events.description",
+      "kind": "text",
+      "label": "events metadata description"
+    },
+    {
       "id": "metadata.community.title",
       "kind": "text",
       "label": "community metadata title"
@@ -583,6 +593,41 @@ export default {
           "id": "home.latest.title",
           "kind": "text",
           "label": "Latest updates title"
+        },
+        {
+          "id": "home.events.eyebrow",
+          "kind": "text",
+          "label": "Homepage events eyebrow"
+        },
+        {
+          "id": "home.events.title",
+          "kind": "text",
+          "label": "Homepage events title"
+        },
+        {
+          "id": "home.events.body",
+          "kind": "text",
+          "label": "Homepage events introduction"
+        },
+        {
+          "id": "home.events.empty.title",
+          "kind": "text",
+          "label": "Homepage empty calendar title"
+        },
+        {
+          "id": "home.events.empty.body",
+          "kind": "text",
+          "label": "Homepage empty calendar description"
+        },
+        {
+          "id": "home.events.unavailable.title",
+          "kind": "text",
+          "label": "Homepage unavailable calendar title"
+        },
+        {
+          "id": "home.events.unavailable.body",
+          "kind": "text",
+          "label": "Homepage unavailable calendar description"
         },
         {
           "id": "home.workflow.eyebrow",
@@ -995,6 +1040,67 @@ export default {
       ]
     },
     {
+      "path": "/events",
+      "label": "Events",
+      "regions": [
+        {
+          "id": "events.sections",
+          "kind": "sections",
+          "label": "events page sections"
+        },
+        {
+          "id": "events.hero.eyebrow",
+          "kind": "text",
+          "label": "events hero eyebrow"
+        },
+        {
+          "id": "events.hero.title",
+          "kind": "text",
+          "label": "events hero title"
+        },
+        {
+          "id": "events.hero.body",
+          "kind": "text",
+          "label": "events hero description"
+        },
+        {
+          "id": "events.agenda.eyebrow",
+          "kind": "text",
+          "label": "events agenda eyebrow"
+        },
+        {
+          "id": "events.agenda.title",
+          "kind": "text",
+          "label": "events agenda title"
+        },
+        {
+          "id": "events.agenda.body",
+          "kind": "text",
+          "label": "events agenda introduction"
+        },
+        {
+          "id": "events.empty.title",
+          "kind": "text",
+          "label": "events empty state title"
+        },
+        {
+          "id": "events.empty.body",
+          "kind": "text",
+          "label": "events empty state description"
+        },
+        {
+          "id": "events.unavailable.title",
+          "kind": "text",
+          "label": "events unavailable state title"
+        },
+        {
+          "id": "events.unavailable.body",
+          "kind": "text",
+          "label": "events unavailable state description"
+        }
+      ]
+    },
+    {
       "path": "/community",
       "label": "Community",
       "regions": [
@@ -1107,6 +1213,21 @@ export default {
           "id": "community.cards.constituent-conversations.link",
           "kind": "link",
           "label": "constituent-conversations link"
+        },
+        {
+          "id": "community.cards.community-events.title",
+          "kind": "text",
+          "label": "community-events title"
+        },
+        {
+          "id": "community.cards.community-events.body",
+          "kind": "text",
+          "label": "community-events body"
+        },
+        {
+          "id": "community.cards.community-events.link",
+          "kind": "link",
+          "label": "community-events link"
         }
       ]
     },

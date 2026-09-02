@@ -1,0 +1,242 @@
+.section {
+  padding: clamp(4rem, 7vw, 6.75rem) 0;
+  background:
+    radial-gradient(circle at 92% 10%, rgb(191 219 254 / 32%), transparent 25rem),
+    #f7f9fc;
+}
+
+.full {
+  padding-top: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr) auto;
+  align-items: end;
+  gap: 1.5rem 2.25rem;
+  margin-bottom: 2rem;
+}
+
+.heading h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+}
+
+.heading > p {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.viewAll,
+.eventAction,
+.stateActions a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.viewAll {
+  padding: 0.7rem 0.95rem;
+  border: 1px solid rgb(7 40 79 / 22%);
+  color: var(--navy);
+  background: #fff;
+  white-space: nowrap;
+}
+
+.agenda {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.full .agenda {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eventCard {
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgb(7 40 79 / 14%);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 18px 45px rgb(7 40 79 / 8%);
+}
+
+.eventImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.eventBody {
+  padding: clamp(1.2rem, 3vw, 1.65rem);
+}
+
+.eventBody h3 {
+  margin: 0.75rem 0 0.65rem;
+  color: var(--navy);
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.eventBody > p:not(.schedule, .location) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.schedule,
+.location {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.schedule {
+  margin: 0;
+  color: #b4232b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.schedule svg,
+.location svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.location {
+  margin: 1rem 0 0;
+  color: var(--navy);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.eventAction {
+  margin-top: 1.15rem;
+  padding: 0.72rem 0.95rem;
+  color: #fff;
+  background: var(--navy);
+}
+
+.state {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: clamp(1.4rem, 4vw, 2rem);
+  border: 1px solid rgb(7 40 79 / 14%);
+  border-radius: 1.25rem;
+  background: #fff;
+}
+
+.state > svg {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  color: #b4232b;
+}
+
+.state h3 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.state p {
+  max-width: 48rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.stateActions a {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgb(7 40 79 / 18%);
+  color: var(--navy);
+}
+
+.viewAll:hover,
+.viewAll:focus-visible,
+.stateActions a:hover,
+.stateActions a:focus-visible {
+  background: #e8eff9;
+}
+
+.eventAction:hover,
+.eventAction:focus-visible {
+  background: #123d70;
+}
+
+.viewAll:focus-visible,
+.eventAction:focus-visible,
+.stateActions a:focus-visible {
+  outline: 3px solid #f8b4b8;
+  outline-offset: 3px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .heading {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .viewAll {
+    width: fit-content;
+  }
+
+  .agenda,
+  .full .agenda {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .section {
+    padding: 3.25rem 0;
+  }
+
+  .heading h2 {
+    font-size: clamp(1.85rem, 10vw, 2.55rem);
+  }
+
+  .state {
+    flex-direction: column;
+  }
+
+  .stateActions,
+  .stateActions a,
+  .viewAll,
+  .eventAction {
+    width: 100%;
+  }
+}

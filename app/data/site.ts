@@ -55,6 +55,7 @@ export type PageContent = {
   imageKey: string;
   cards: Card[];
   secondaryCards?: Card[];
+  includeInNavigation?: boolean;
 };
 
 export const siteConfig = {
@@ -287,13 +288,24 @@ export const pages: PageContent[] = [
       },
       {
         id: "district-events",
-        title: "District Notices",
-        text: "For current office hours and district event information, call the district office.",
+        title: "Community Events",
+        text: "View upcoming public events hosted by the District 34 office.",
         icon: CalendarDays,
         tag: "District",
-        href: `tel:${siteConfig.phoneE164}`
+        href: "/events"
       }
     ]
+  },
+  {
+    href: "/events",
+    slug: "events",
+    navLabel: "Events",
+    title: "Community Events",
+    eyebrow: "District 34 Calendar",
+    description: "Find upcoming public events hosted by the District 34 office. Event details are published only after office review.",
+    imageKey: "eventGroup",
+    includeInNavigation: false,
+    cards: []
   },
   {
     href: "/community",
@@ -325,6 +337,13 @@ export const pages: PageContent[] = [
         text: "Contact the district office to share a concern, ask a question, or request help with a state matter.",
         icon: MessageSquareText,
         href: "/contact"
+      },
+      {
+        id: "community-events",
+        title: "Community Events",
+        text: "View upcoming public events hosted by the District 34 office.",
+        icon: CalendarDays,
+        href: "/events"
       }
     ]
   },

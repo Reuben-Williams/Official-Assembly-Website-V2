@@ -19,7 +19,7 @@ export const dynamicParams = false;
 
 export function generateStaticParams() {
   return pages
-    .filter((page) => page.slug)
+    .filter((page) => page.slug && page.slug !== "events")
     .map((page) => ({
       slug: page.slug
     }));

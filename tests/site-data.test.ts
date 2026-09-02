@@ -14,6 +14,7 @@ describe("site data", () => {
       "/about",
       "/resources",
       "/news",
+      "/events",
       "/community",
       "/voting",
       "/contact",

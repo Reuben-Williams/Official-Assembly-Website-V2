@@ -65,7 +65,7 @@ function navigationEntries({
   content: BuilderServerContent;
   locale: PublicLocale;
 }): MobileNavigationItem[] {
-  const fallbackEntries = all ? pages : navPages;
+  const fallbackEntries = all ? pages.filter((page) => page.includeInNavigation !== false) : navPages;
   const entriesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
   return builderSectionIds(
     content,
@@ -73,7 +73,7 @@ function navigationEntries({
     fallbackEntries.map((page) => page.slug ?? "home"),
   ).flatMap((slug) => {
     const page = entriesBySlug.get(slug);
-    if (!page) return [];
+    if (!page || page.includeInNavigation === false) return [];
     const link = builderLink(content, `global.navigation.${slug}.link`, {
       href: page.href,
       label: page.navLabel,

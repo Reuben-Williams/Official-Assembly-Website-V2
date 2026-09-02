@@ -11,11 +11,14 @@ vi.mock("../app/ui/ResidentForms", () => ({
 }));
 
 import { HomePageView } from "../app/ui/HomePageView";
+import type { PublicCalendarLoad } from "../lib/calendar/repository";
+
+const emptyCalendar: PublicCalendarLoad = { status: "ready", events: [] };
 
 describe("District 34 homepage", () => {
   it("renders the approved section order and three distinct hero actions", async () => {
-    const html = renderToStaticMarkup(await HomePageView({ content: { regions: {} }, posts: [] }));
-    const orderedSections = ["hero", "access", "official", "connections", "latest", "guidance"];
+    const html = renderToStaticMarkup(await HomePageView({ calendar: emptyCalendar, content: { regions: {} }, posts: [] }));
+    const orderedSections = ["hero", "access", "official", "connections", "latest", "events", "guidance"];
     const positions = orderedSections.map((section) => html.indexOf(`data-home-section="${section}"`));
 
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -26,12 +29,13 @@ describe("District 34 homepage", () => {
   });
 
   it("renders exactly one first-party newsletter form and no fabricated latest posts", async () => {
-    const html = renderToStaticMarkup(await HomePageView({ content: { regions: {} }, posts: [] }));
+    const html = renderToStaticMarkup(await HomePageView({ calendar: emptyCalendar, content: { regions: {} }, posts: [] }));
 
     expect(html.match(/action="\/api\/forms\/newsletter-signup"/g)).toHaveLength(1);
     expect(html).toContain("No district posts have been published yet");
     expect(html).toContain("Official NJ Legislature profile");
     expect(html).toContain("Contact the District Office");
     expect(html).not.toMatch(/sample post|placeholder post|lorem ipsum/i);
+    expect(html).toContain("No upcoming public events are posted");
   });
 });

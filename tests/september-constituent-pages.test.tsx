@@ -91,6 +91,16 @@ describe("September constituent page updates", () => {
     expect(html).toContain("Updated volunteer invitation.");
     expect(html.indexOf('data-builder-item-id="volunteer-portal"'))
       .toBeLessThan(html.indexOf('data-builder-item-id="features"'));
+    expect(html).toContain('href="/events"');
+  });
+
+  it("links the News and Community pages to the onsite events agenda", async () => {
+    const newsHtml = renderToStaticMarkup(await PageTemplate({ page: page("/news") }));
+    const communityHtml = renderToStaticMarkup(await PageTemplate({ page: page("/community") }));
+
+    expect(newsHtml).toContain('href="/events"');
+    expect(newsHtml).toContain("Community Events");
+    expect(communityHtml).toContain('href="/events"');
   });
 
   it("prioritizes all five Essex County Clerk paths and retains state resources secondarily", async () => {

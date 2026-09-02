@@ -41,6 +41,82 @@ export const spanishTranslationsByKey: Readonly<Record<string, StableTranslation
     "home.workflow.title": {
       en: "Built for clear constituent service",
       es: "Diseñado para un servicio claro a residentes"
+    },
+    "metadata.events.title": {
+      en: "Community Events",
+      es: "Eventos comunitarios"
+    },
+    "metadata.events.description": {
+      en: "Upcoming public events hosted by the District 34 office.",
+      es: "Próximos eventos públicos organizados por la oficina del Distrito 34."
+    },
+    "events.hero.eyebrow": {
+      en: "District 34 Calendar",
+      es: "Calendario del Distrito 34"
+    },
+    "events.hero.title": {
+      en: "Community Events",
+      es: "Eventos comunitarios"
+    },
+    "events.hero.body": {
+      en: "Find upcoming public events hosted by the District 34 office. Event details are published only after office review.",
+      es: "Encuentre próximos eventos públicos organizados por la oficina del Distrito 34. Los detalles se publican solo después de la revisión de la oficina."
+    },
+    "events.agenda.eyebrow": {
+      en: "District 34 Calendar",
+      es: "Calendario del Distrito 34"
+    },
+    "events.agenda.title": {
+      en: "Upcoming Community Events",
+      es: "Próximos eventos comunitarios"
+    },
+    "events.agenda.body": {
+      en: "Find upcoming public events hosted by the District 34 office.",
+      es: "Encuentre próximos eventos públicos organizados por la oficina del Distrito 34."
+    },
+    "events.empty.title": {
+      en: "No upcoming public events are posted",
+      es: "No hay próximos eventos públicos publicados"
+    },
+    "events.empty.body": {
+      en: "Check News & Updates or contact the District 34 office for current public information.",
+      es: "Consulte Noticias y novedades o comuníquese con la oficina del Distrito 34 para obtener información pública vigente."
+    },
+    "events.unavailable.title": {
+      en: "The event calendar is temporarily unavailable",
+      es: "El calendario de eventos no está disponible temporalmente"
+    },
+    "events.unavailable.body": {
+      en: "Please check again later or contact the District 34 office for current event information.",
+      es: "Vuelva a consultar más tarde o comuníquese con la oficina del Distrito 34 para obtener información actualizada sobre eventos."
+    },
+    "home.events.eyebrow": {
+      en: "District 34 Calendar",
+      es: "Calendario del Distrito 34"
+    },
+    "home.events.title": {
+      en: "Upcoming Community Events",
+      es: "Próximos eventos comunitarios"
+    },
+    "home.events.body": {
+      en: "Find upcoming public events hosted by the District 34 office.",
+      es: "Encuentre próximos eventos públicos organizados por la oficina del Distrito 34."
+    },
+    "home.events.empty.title": {
+      en: "No upcoming public events are posted",
+      es: "No hay próximos eventos públicos publicados"
+    },
+    "home.events.empty.body": {
+      en: "Check News & Updates or contact the District 34 office for current public information.",
+      es: "Consulte Noticias y novedades o comuníquese con la oficina del Distrito 34 para obtener información pública vigente."
+    },
+    "home.events.unavailable.title": {
+      en: "The event calendar is temporarily unavailable",
+      es: "El calendario de eventos no está disponible temporalmente"
+    },
+    "home.events.unavailable.body": {
+      en: "Please check again later or contact the District 34 office for current event information.",
+      es: "Vuelva a consultar más tarde o comuníquese con la oficina del Distrito 34 para obtener información actualizada sobre eventos."
     }
   });
 
@@ -143,6 +219,17 @@ Object.assign(spanishTranslations, {
   "District Notices": "Avisos del distrito",
   "For current office hours and district event information, call the district office.": "Para conocer los horarios de atención y los eventos actuales del distrito, llame a la oficina del distrito.",
   "District": "Distrito",
+  "Events": "Eventos",
+  "Community Events": "Eventos comunitarios",
+  "District 34 Calendar": "Calendario del Distrito 34",
+  "Upcoming Community Events": "Próximos eventos comunitarios",
+  "View upcoming public events hosted by the District 34 office.": "Vea los próximos eventos públicos organizados por la oficina del Distrito 34.",
+  "Find upcoming public events hosted by the District 34 office.": "Encuentre próximos eventos públicos organizados por la oficina del Distrito 34.",
+  "Find upcoming public events hosted by the District 34 office. Event details are published only after office review.": "Encuentre próximos eventos públicos organizados por la oficina del Distrito 34. Los detalles se publican solo después de la revisión de la oficina.",
+  "No upcoming public events are posted": "No hay próximos eventos públicos publicados",
+  "Check News & Updates or contact the District 34 office for current public information.": "Consulte Noticias y novedades o comuníquese con la oficina del Distrito 34 para obtener información pública vigente.",
+  "The event calendar is temporarily unavailable": "El calendario de eventos no está disponible temporalmente",
+  "Please check again later or contact the District 34 office for current event information.": "Vuelva a consultar más tarde o comuníquese con la oficina del Distrito 34 para obtener información actualizada sobre eventos.",
   "Community": "Comunidad",
   "Around District 34": "En el Distrito 34",
   "District 34 includes Belleville, Bloomfield, East Orange, Glen Ridge, Nutley, and Orange in Essex County.": "El Distrito 34 incluye Belleville, Bloomfield, East Orange, Glen Ridge, Nutley y Orange en el condado de Essex.",

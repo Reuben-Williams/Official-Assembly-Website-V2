@@ -99,6 +99,7 @@ describe("homepage official brand banner", () => {
   it("renders as the first layer inside the homepage hero instead of a separate strip", async () => {
     const html = renderToStaticMarkup(await HomePageView({
       assets,
+      calendar: { status: "ready", events: [] },
       content: { regions: {} },
       posts: [],
     }));

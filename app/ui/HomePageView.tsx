@@ -15,9 +15,11 @@ import { LatestUpdatesSection } from "./LatestUpdatesSection";
 import { OfficialProfileSection } from "./OfficialProfileSection";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
+import type { PublicCalendarLoad } from "../../lib/calendar/repository";
 import { approvedBrandAssets } from "../../lib/brand/approved-assets";
 import type { VerifiedApprovedBrandAssets } from "../../lib/brand/assets";
 import { HomepageBrandBanner } from "./HomepageBrandBanner";
+import { PublicEventsSection } from "./PublicEventsSection";
 
 // Checked-in values are used only when an authoritative server read confirms that
 // a registered region has no kind-correct published override.
@@ -42,6 +44,7 @@ const workflowSteps = [
 
 type HomePageViewProps = {
   assets?: VerifiedApprovedBrandAssets | null;
+  calendar: PublicCalendarLoad;
   content: BuilderServerContent;
   posts: readonly PublishedPost[];
   locale?: PublicLocale;
@@ -49,6 +52,7 @@ type HomePageViewProps = {
 
 export async function HomePageView({
   assets = approvedBrandAssets,
+  calendar,
   content,
   posts,
   locale = "en",
@@ -175,6 +179,7 @@ export async function HomePageView({
       <OfficialProfileSection content={content} locale={locale} />
       {connections}
       <LatestUpdatesSection content={content} locale={locale} posts={posts} />
+      <PublicEventsSection calendar={calendar} content={content} locale={locale} variant="home" />
 
       <section className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
         <div className="container split">

@@ -98,6 +98,8 @@ export type PublicCalendarEvent = {
   actionLabelEn: string;
   actionLabelEs: string;
   mediaAssetId: string | null;
+  /** Short-lived server-resolved URL for an optional managed-media image. */
+  mediaUrl?: string;
 };
 
 export type CalendarMediaAsset = {

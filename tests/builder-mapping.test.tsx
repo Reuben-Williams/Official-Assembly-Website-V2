@@ -17,6 +17,7 @@ const expectedRoutes = [
   "/about",
   "/resources",
   "/news",
+  "/events",
   "/community",
   "/voting",
   "/contact",
