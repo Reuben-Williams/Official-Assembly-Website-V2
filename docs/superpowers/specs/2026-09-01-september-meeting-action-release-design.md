@@ -2,7 +2,7 @@
 
 Date: 2026-09-01
 
-Status: Approved in conversation; awaiting independent specification review
+Status: Approved in conversation; independent review revision 1
 
 Website: `official-assembly-website-v2`
 
@@ -65,10 +65,21 @@ The workspace exposes three explicit lists: Drafts, Published, and Archived. It 
 
 Use an additive, site-scoped calendar table compatible with the deployed schema after lineage verification. If the existing `builder_calendar_items` table is present and contract-compatible, extend it additively; otherwise add a bounded site-specific table. Never drop, rename, or reinterpret a production column in this release.
 
-Each canonical event includes:
+The storage contract separates a stable event entity from immutable revisions. The event entity includes:
 
 - immutable event ID;
 - `site_id`;
+- lifecycle state `active | archived`;
+- optional draft revision pointer;
+- optional published revision pointer;
+- creator/updater identity;
+- created, updated, published, and archived timestamps; and
+- monotonic command version used for optimistic concurrency.
+
+Each immutable event revision includes:
+
+- immutable revision ID and parent revision ID;
+- event ID and `site_id`;
 - English title and Spanish title;
 - English description and Spanish description;
 - start timestamp;
@@ -79,11 +90,9 @@ Each canonical event includes:
 - optional safe HTTPS information or registration URL;
 - English and Spanish link labels when a URL exists;
 - optional managed-media asset reference;
+- explicit `public_approved` confirmation;
 - explicit `hosted_by_office` confirmation;
-- `draft | published | archived` status;
-- creator/updater identity;
-- created, updated, published, and archived timestamps;
-- monotonic version or revision reference used for concurrency and History.
+- author identity and creation timestamp.
 
 An end timestamp must be later than its start. The public projection never returns member IDs, draft content, internal notes, or revision metadata.
 
@@ -91,11 +100,11 @@ An end timestamp must be later than its start. The public projection never retur
 
 Publishing is rejected unless:
 
-- the event is explicitly confirmed as public and hosted by the Assemblywoman's office;
+- the draft revision separately confirms `public_approved = true` and `hosted_by_office = true`;
 - English and Spanish titles and descriptions are present;
 - start date/time, location name, and location address are present;
 - the end date/time, when supplied, is valid;
-- any external URL is HTTPS and passes the site's existing safe-link policy;
+- any external URL is HTTPS and passes the canonical public-link contract in Section 7.1;
 - both link labels are present when a URL is supplied;
 - any selected media asset is ready and belongs to this site;
 - the actor has editor or owner permission; and
@@ -103,7 +112,20 @@ Publishing is rejected unless:
 
 Proper names and addresses may be identical in both locales. The system must not invent translations; staff explicitly supplies or approves each translatable value.
 
-Drafts never appear publicly. Published events are eligible for the homepage until their end time, or start time when no end exists, has passed. Past events remain visible to authorized staff and in History. Archiving removes an event from public queries without deleting its audit trail.
+All status changes use explicit commands with these transitions:
+
+- `create_draft`: creates an active event and its first draft revision;
+- `save_draft`: appends an immutable draft revision and advances the draft pointer. When an event is already published, the existing published pointer remains unchanged until a later publish;
+- `publish`: validates the current draft and atomically advances the published pointer to it. The draft pointer may continue to reference that revision until another draft edit is saved;
+- `unpublish`: clears the published pointer, preserves every revision, and leaves the event active as a draft;
+- `archive`: clears the published pointer and changes an active draft or published event to archived;
+- `restore_to_draft`: changes an archived event to active with its latest revision as the draft pointer and no published pointer.
+
+Only editors and owners may publish, unpublish, archive, or restore. Contributors may create and save drafts. Viewers are read-only. Archived events cannot be edited until restored. There is no hard-delete command.
+
+Draft revisions never appear publicly. A public event is eligible only when its entity is active, it has a published revision, that revision has both approval confirmations, and its computed `effective_end` is strictly later than the query instant. `effective_end` is the supplied end timestamp or, when no end exists, the end of the start date in `America/New_York`. This keeps a no-end event visible throughout its local event day and removes it immediately after that day.
+
+Public queries include both future and currently occurring events. They sort deterministically by start timestamp ascending and event ID ascending. Past events remain visible to authorized staff and in History. Archiving removes an event from public queries without deleting its revisions or audit trail.
 
 ### 4.3 Public calendar
 
@@ -119,9 +141,9 @@ Render distinct states:
 
 - empty: no upcoming public events, with a neutral message and district-office/news path;
 - unavailable: the event service could not be read, with a truthful temporary-unavailability message;
-- populated: eligible future events only.
+- populated: eligible future and currently occurring events only.
 
-An unavailable read must never be converted to the empty state. Public event content is server-rendered so visitors do not see checked-in or stale event content flash before the authoritative read resolves.
+An unavailable read must never be converted to the empty state. Public event content is server-rendered so visitors do not see checked-in or stale event content flash before the authoritative read resolves. Homepage and `/events` calendar reads use the existing dynamic server-rendering posture and an explicit no-store repository read; publication never depends on a static build or delayed client hydration.
 
 ## 5. Page-by-page changes
 
@@ -188,24 +210,48 @@ Select supporting photographs from approved accessible albums using the followin
 4. no sensitive personal information or inappropriate bystander focus;
 5. no duplicate composition already used prominently on another page.
 
-Store approved originals or highest-quality authorized downloads outside the public derivative folder, and store optimized responsive derivatives in the project. Extend the existing brand/media provenance manifest with source album label, acquisition date, local source checksum, public derivative paths, intended page, and approved alternative text. Do not record personal email parameters, opaque share tokens, or individual Google Photos delivery URLs.
+Create a new `content/approved-professional-media.json` manifest; no general professional-photo manifest currently exists. Store approved originals or highest-quality authorized downloads outside the public derivative folder, and store optimized responsive derivatives in the project. Every imported public derivative must have one manifest entry containing:
+
+- stable asset ID;
+- approved source collection label;
+- sanitized local source path;
+- acquisition date;
+- SHA-256 checksum of the local source;
+- public desktop and mobile derivative paths;
+- intrinsic dimensions;
+- intended page and region;
+- English and Spanish alternative text; and
+- approval state.
+
+Candidate sources are limited to the already supplied local `asw_carmenmorales/` and `morales4assembly/` collections plus highest-quality authorized downloads from the approved accessible `Statehouse` and `2025 PR Flag Raising Belleville` shared albums. A third shared album may be used only if its files become accessible without transmitting or storing the personal email and opaque URL parameters present in the earlier share URL.
+
+The release manifest must resolve these five bounded placements before deployment: Home supporting image, About primary image, News supporting image, Community primary image, and Resources supporting image. Statehouse imagery is preferred for Home, About, and News; Puerto Rican flag-raising/community imagery is preferred for Community and Resources. Each exact selected source file, checksum, derivative, crop, and page mapping is committed in the manifest. Tests read that committed inventory, recompute checksums, and fail on unmanifested or missing derivatives. If all five placements cannot be populated with suitable approved images, the release gate fails rather than substituting an unapproved image.
+
+Do not record personal email parameters, opaque share tokens, or individual Google Photos delivery URLs.
 
 Refresh supporting imagery on Home, About, Resources, News, and Community without replacing the official homepage brand art or social cover. Use meaningful locale-aware alternative text. Decorative crops use empty alternative text only when the same image conveys no additional information.
 
 ## 6. History, concurrency, and recovery
 
-Write categorized site-level History events for:
+Write categorized site-level History events for runtime editor mutations:
 
 - calendar draft creation and edits;
 - event publication, unpublication, and archival;
 - featured flyer replacement and restoration;
 - supporting image replacement;
-- profile education update and birth-field removal;
-- volunteer and voting destination changes.
+- volunteer and voting destination changes made through registered editor regions.
+
+Extend the local History contract additively with source `calendar` and category `events`. The migration extends the latest `builder_history_events_v1` source/category checks and adds nullable calendar event/revision foreign keys. Extend `HISTORY_SOURCES`, `HISTORY_CATEGORIES`, query parsing, readers, filters, cursor tests, and editor labels in the same release.
+
+Every calendar command runs as one database transaction that appends its immutable revision, advances entity pointers/state, and inserts one normalized History event. A failed validation, stale version, or failed History insert rolls back the entire command. The calendar History reader reads normalized rows from `builder_history_events_v1`; it does not reconstruct events from unrelated tables.
+
+Global History marks calendar restore as unavailable with the reason that event recovery is performed through the Calendar workspace's explicit `restore_to_draft` command. This avoids teaching the existing page-only restore endpoint a second mutation protocol.
 
 Calendar mutations use optimistic concurrency. A stale editor version receives a conflict response and must refresh before overwriting a newer record.
 
 History records must identify the event or region, action, actor, timestamp, source/result version, and page/workspace. They must not contain user session tokens, private form responses, provider secrets, or unnecessary external asset identifiers.
+
+The initial profile, volunteer, voting, and checked-in media changes are deployment-time code/content changes, not editor mutations. Their immutable source is the Git commit and production deployment evidence; the release does not fabricate a staff actor or insert retrospective History events. Subsequent edits through registered regions use the existing page/media History paths.
 
 Featured media remains recoverable through existing Media revision and page History behavior. Calendar rows are archived rather than hard-deleted from the UI.
 
@@ -217,7 +263,8 @@ Featured media remains recoverable through existing Media revision and page Hist
 - Require the existing CSRF token on mutations.
 - Enforce role and site scope on the server; client controls are not authorization.
 - Apply row-level policies or service-role-only repository access consistent with existing builder repositories.
-- Validate URL protocol and length, text lengths, timestamps, IDs, media ownership, and status transitions server-side.
+- Add one canonical `lib/public-links/safe-public-url.ts` contract and use it for calendar URLs and the new government/volunteer links. It accepts absolute HTTPS URLs only, rejects credentials, IP literals, non-default ports, overlong values, and hosts outside a checked-in allowlist, and returns the normalized URL. The initial allowlist contains `www.essexclerk.com`, `www.nj.gov`, `www.njleg.state.nj.us`, `docs.google.com`, and the existing Morales Fireside contact host. New event-registration hosts require a reviewed code change; editor roles cannot bypass the allowlist. The application does not follow or server-fetch submitted event URLs. Public anchors use `noopener noreferrer` where a new tab is used.
+- Validate normalized URLs, text lengths, timestamps, IDs, media ownership, and status transitions server-side.
 - Never expose Supabase service credentials or Resend credentials to the browser.
 - Do not alter unrelated provider resources or send outbound email as part of calendar operations.
 
@@ -255,11 +302,12 @@ This is one public launch, not one indivisible command. Safety steps may occur b
 3. Implement additive database, repository, API, editor, page, media, localization, and History changes.
 4. Verify production migration lineage and take a secure pre-change schema/data backup or provider-supported restore point. Do not commit backups or secrets.
 5. Apply additive migration changes that remain compatible with the current production deployment.
-6. Build one Vercel preview release candidate from the final commit.
-7. Run the full isolated preview verification, including calendar publish/unpublish flows.
-8. Promote that exact tested deployment once to production.
-9. Run the production verification below against settled content and logs.
-10. Report the deployment identifier, commit, tests, routes, and any truthfully unavailable check.
+6. Run mutating lifecycle tests against the repository's local Supabase stack after reset; its fixtures and records are isolated from production.
+7. Build one Vercel preview release candidate from the final commit. The preview must not receive production service-role credentials. If no dedicated preview Supabase project is configured, preview verification is read-only and the complete mutation lifecycle remains in the local production build against local Supabase.
+8. Run the full isolated verification, including calendar publish/unpublish flows.
+9. Promote that exact tested deployment once to production.
+10. Run the production verification below against settled content and logs.
+11. Report the deployment identifier, commit, tests, routes, and any truthfully unavailable check.
 
 Do not deploy a code path that requires a migration not yet present. Do not remove old schema in this release.
 
@@ -268,7 +316,7 @@ Do not deploy a code path that requires a migration not yet present. Do not remo
 ### 9.1 Automated gates
 
 - Calendar contract tests: normalization, timezone, end-after-start, URL safety, bilingual requirements, hosted/public confirmation, status transitions, and public projection.
-- Repository tests: site isolation, published-only public queries, expiration, ordering, unavailable read, version conflicts, and archive retention.
+- Repository tests: site isolation, published-only public queries, ongoing/future eligibility, exact cutoff behavior, end-of-local-day fallback, deterministic tie ordering, unavailable read, no-store freshness, version conflicts, and archive retention.
 - API tests: authentication, CSRF, roles, validation, site scope, safe errors, and no secret/private-field leakage.
 - Editor tests: registration/deep link, role-dependent controls, required/optional indicators, validation messaging, save draft, publish, unpublish, archive, History, and media selection.
 - Public component tests: next-three homepage list, `/events` agenda, empty state, unavailable state, semantic time values, heading order, and locale output.
@@ -277,13 +325,14 @@ Do not deploy a code path that requires a migration not yet present. Do not remo
 - Community tests: approved volunteer destination and explicit external-form language.
 - Voting tests: official Essex County Clerk destinations and separate statewide resources.
 - Newsletter regression tests: onsite form-first rendering, no external Fireside newsletter link, consent, Turnstile boundary, confirmation, and lead/customer ingestion unchanged.
-- Media tests: approved manifest membership, local paths, checksums, dimensions, alternative text, and no Google Photos hotlinks or sensitive URL parameters.
+- Media tests: exact committed manifest membership and five page mappings, local paths, recomputed checksums, dimensions, alternative text, and no Google Photos hotlinks or sensitive URL parameters.
+- Public-link tests: HTTPS normalization, allowlisted hosts, credential/IP/port rejection, maximum length, no server fetch, and correct external-anchor attributes.
 - Localization tests: English/Spanish completeness and correct document metadata.
 - Run targeted Vitest suites, full `npm test`, `npm run lint`, production-readiness scripts, `npm run build`, database tests, migration checksum/lineage checks, and local E2E.
 
 ### 9.2 Preview verification
 
-Use the isolated preview environment to exercise a complete event draft -> publish -> public render -> unpublish -> archive lifecycle. Test editor flyer replacement and restoration. Test English/Spanish, authorization boundaries, and failure states without writing synthetic records to production.
+Use the reset local Supabase environment to exercise a complete event draft -> publish -> public render -> edit-while-published -> republish -> unpublish -> archive -> restore-to-draft lifecycle. Test editor flyer replacement and restoration, History atomicity, English/Spanish, authorization boundaries, URL rejection, and failure states without writing synthetic records to production. Repeat read-only rendering and routing checks on the exact Vercel preview deployment; use a dedicated preview Supabase project for remote mutation tests only when it is demonstrably isolated from production.
 
 Review settled layouts at minimum at:
 
@@ -301,16 +350,16 @@ After promotion:
 
 - request `/`, `/events`, `/about`, `/resources`, `/community`, `/voting`, `/newsletter`, and editor deep links directly;
 - require successful HTTP responses, canonical metadata, social metadata, and required image assets;
-- confirm calendar empty/unavailable semantics and that no draft appears publicly;
-- create one unpublished production event draft, verify validation and History, then archive it without public exposure;
-- replace and restore the featured flyer through the editor without losing the approved live revision;
+- confirm calendar empty/unavailable semantics and that the public query returns no draft revisions;
+- open the production Calendar workspace, verify authenticated read access and client-side required-field guidance, and leave without saving a record;
+- verify the current featured-flyer region, Media revision evidence, and History read paths without replacing production content;
 - verify English/Spanish navigation, page content, calendar states, forms, document titles, and editor-managed strings;
-- verify newsletter rendering and one bounded confirmation only when an existing approved staff test recipient is available through production configuration; never invent or expose an address;
-- verify contact/newsletter submissions still create the expected submission, lead, and customer records using a bounded approved test path, then reconcile any test record according to the existing operations runbook;
+- verify newsletter rendering, configuration, health endpoints, and existing delivery evidence. Perform a live confirmation only when an already approved staff member intentionally submits their real address during the launch check; otherwise report live-send verification as unavailable rather than inventing an address;
+- verify contact/newsletter ingestion through existing authentic production records and read-only dashboard/API evidence. Do not create synthetic production submissions, leads, or customers;
 - inspect settled Vercel runtime logs and Supabase errors for first-party failures;
 - repeat responsive and accessibility checks against the production domain.
 
-No synthetic event is published to production. The first public event lifecycle is completed only when staff supplies a real, fully approved event.
+No synthetic event, submission, lead, or customer record is written to production. The first public event lifecycle is completed only when staff supplies a real, fully approved event.
 
 ## 10. Rollback and failure policy
 
@@ -318,7 +367,7 @@ Rollback triggers include first-party 5xx responses, broken editor authenticatio
 
 Rollback uses Vercel's prior production deployment. Database changes remain additive and compatible with that prior deployment. Disable public calendar reads through the bounded integration or revert the application deployment; do not destructively roll back data migrations or delete History.
 
-If a production verification step cannot be performed because an approved staff recipient, provider feature, or real event is unavailable, report the check as unavailable. Do not replace it with synthetic production data or claim success.
+If a production verification step cannot be performed because an approved staff recipient, authentic existing record, provider feature, or real event is unavailable, report the check as unavailable. Do not replace it with synthetic production data or claim success.
 
 ## 11. Out of scope
 
@@ -345,6 +394,6 @@ The release is accepted only when:
 - Voting prioritizes official Essex County Clerk resources;
 - the onsite newsletter remains functional with no external Fireside newsletter link;
 - refreshed photographs are locally hosted, approved, optimized, translated where required, and provenance-recorded;
-- History and authorization cover every new mutation;
+- History and authorization cover every new runtime editor mutation, while the initial checked-in changes are traceable to the Git commit and deployment;
 - all automated, preview, responsive, accessibility, localization, and production gates pass or are explicitly reported as unavailable under this specification; and
 - the production deployment, commit, verification evidence, and rollback posture are reported to the user.
