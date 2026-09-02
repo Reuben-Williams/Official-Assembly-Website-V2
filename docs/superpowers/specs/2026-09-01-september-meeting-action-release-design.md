@@ -2,7 +2,7 @@
 
 Date: 2026-09-01
 
-Status: Approved in conversation; independent review revision 1
+Status: Approved in conversation and independent specification review
 
 Website: `official-assembly-website-v2`
 
