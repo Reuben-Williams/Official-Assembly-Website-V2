@@ -18,7 +18,7 @@ function event(source: HistorySource, sourceEventId: string, createdAt: string, 
     siteId,
     source,
     sourceEventId,
-    category: source === "post" ? "posts" : source === "form" ? "forms" : source === "media" ? "media" : "text",
+    category: source === "calendar" ? "events" : source === "post" ? "posts" : source === "form" ? "forms" : source === "media" ? "media" : "text",
     action: `${source}.changed`,
     workspace: `website.${source}`,
     pagePath: source === "page" ? "/about" : undefined,
@@ -41,11 +41,12 @@ function readers(values: Partial<Record<HistorySource, readonly HistoryEventV1[]
     media: async () => values.media ?? [],
     post: async () => values.post ?? [],
     form: async () => values.form ?? [],
+    calendar: async () => values.calendar ?? [],
   };
 }
 
 describe("unified website history", () => {
-  it("returns page, media, post, and form events in one site-level page", async () => {
+  it("returns page, media, post, form, and calendar events in one site-level page", async () => {
     const result = await collectHistoryPageV1({
       query: { limit: 20 },
       readers: readers({
@@ -53,10 +54,11 @@ describe("unified website history", () => {
         media: [event("media", "media-1", "2026-08-07T04:00:03.000Z")],
         post: [event("post", "post-1", "2026-08-07T04:00:02.000Z")],
         form: [event("form", "form-1", "2026-08-07T04:00:01.000Z")],
+        calendar: [event("calendar", "calendar-1", "2026-08-07T04:00:00.000Z")],
       }),
     });
 
-    expect(result.items.map((item) => item.source)).toEqual(["page", "media", "post", "form"]);
+    expect(result.items.map((item) => item.source)).toEqual(["page", "media", "post", "form", "calendar"]);
     expect(result).toMatchObject({ partial: false, unavailableSources: [], nextCursor: null });
   });
 
@@ -91,8 +93,8 @@ describe("unified website history", () => {
   });
 
   it("validates bounded URL filters and rejects unknown parameters", () => {
-    expect(parseHistoryRequestQueryV1(new URL("https://site.test/api/builder?resource=history&limit=25&category=media&source=post&search=town")))
-      .toMatchObject({ limit: 25, categories: ["media"], sources: ["post"], search: "town" });
+    expect(parseHistoryRequestQueryV1(new URL("https://site.test/api/builder?resource=history&limit=25&category=events&source=calendar&search=town")))
+      .toMatchObject({ limit: 25, categories: ["events"], sources: ["calendar"], search: "town" });
     expect(() => parseHistoryRequestQueryV1(new URL("https://site.test/api/builder?resource=history&limit=1000"))).toThrow("between 1 and 100");
     expect(() => parseHistoryRequestQueryV1(new URL("https://site.test/api/builder?resource=history&secret=value"))).toThrow("unknown");
   });
@@ -120,5 +122,49 @@ describe("unified website history", () => {
 
     expect(JSON.stringify(result)).not.toMatch(/email@example|phone|message body/i);
     expect(result.items[0]?.provenance.redactedFields).toEqual(["submission", "lead", "customer"]);
+  });
+
+  it("preserves calendar command revision semantics and disables global restore", async () => {
+    const publishedRevisionId = "60dca582-43fe-4f31-b3cf-820e2498082d";
+    const calendar = event("calendar", "calendar-publish-1", "2026-08-07T04:00:00.000Z", {
+      category: "events",
+      action: "calendar.publish",
+      workspace: "website.calendar",
+      targetId: "0bb3a51c-3c88-4d4e-a5b1-4a8d2192f34b",
+      targetLabel: "District meeting",
+      versions: {
+        parentVersionId: null,
+        sourceVersionId: null,
+        resultVersionId: publishedRevisionId
+      }
+    });
+    const result = await collectHistoryPageV1({
+      query: { limit: 20, categories: ["events"], sources: ["calendar"] },
+      readers: readers({ calendar: [calendar] }),
+      role: "owner"
+    });
+
+    expect(result.items[0]).toMatchObject({
+      source: "calendar",
+      category: "events",
+      versions: { sourceVersionId: null, resultVersionId: publishedRevisionId },
+      restore: {
+        allowed: false,
+        operation: null,
+        reason: "Event recovery is performed in the Calendar workspace."
+      }
+    });
+  });
+
+  it("reports the calendar source independently when its reader is unavailable", async () => {
+    const sourceReaders = readers({ page: [event("page", "page-1", "2026-08-07T04:00:00.000Z")] });
+    sourceReaders.calendar = async () => { throw new Error("private database detail"); };
+
+    const result = await collectHistoryPageV1({ query: { limit: 20 }, readers: sourceReaders });
+    expect(result.unavailableSources).toContainEqual({
+      source: "calendar",
+      code: "HISTORY_SOURCE_UNAVAILABLE"
+    });
+    expect(JSON.stringify(result)).not.toContain("private database detail");
   });
 });

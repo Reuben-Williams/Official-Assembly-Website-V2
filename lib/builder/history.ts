@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const HISTORY_SOURCES = ["page", "media", "post", "form"] as const;
-export const HISTORY_CATEGORIES = ["text", "media", "links", "sections", "posts", "forms", "publishing"] as const;
+export const HISTORY_SOURCES = ["page", "media", "post", "form", "calendar"] as const;
+export const HISTORY_CATEGORIES = ["text", "media", "links", "sections", "posts", "forms", "events", "publishing"] as const;
 export type HistorySource = typeof HISTORY_SOURCES[number];
 export type HistoryCategory = typeof HISTORY_CATEGORIES[number];
 
@@ -149,6 +149,13 @@ function matches(event: HistoryEventV1, query: HistoryQueryV1) {
 }
 
 function currentRestore(event: HistoryEventV1, role: HistoryBuilderRole): HistoryEventV1["restore"] {
+  if (event.source === "calendar") {
+    return {
+      allowed: false,
+      operation: null,
+      reason: "Event recovery is performed in the Calendar workspace."
+    };
+  }
   if (event.source !== "page") return { allowed: false, operation: null, reason: "This event is not restorable from website History." };
   if (event.provenance.limited) return { allowed: false, operation: null, reason: "This legacy event does not contain a verified version reference." };
   if (role !== "owner" && role !== "editor") return { allowed: false, operation: null, reason: "Your current role cannot restore page versions." };
@@ -421,5 +428,6 @@ export function createSupabaseHistoryReadersV1(client: SupabaseClient, siteId: s
       ...(await currentEvents(client, siteId, "form", query)),
       ...(await formEvents(client, siteId, query)),
     ],
+    calendar: async (query) => currentEvents(client, siteId, "calendar", query),
   };
 }

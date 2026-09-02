@@ -29,6 +29,7 @@ function historyReaders(values: Partial<Record<HistorySource, readonly HistoryEv
     media: async () => values.media ?? [],
     post: async () => values.post ?? [],
     form: async () => values.form ?? [],
+    calendar: async () => values.calendar ?? [],
   };
 }
 
