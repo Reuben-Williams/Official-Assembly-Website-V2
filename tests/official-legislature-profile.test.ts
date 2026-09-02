@@ -36,8 +36,9 @@ describe("reviewed official Legislature profile snapshot", () => {
     expect(officialLegislatureProfile.education).toEqual([
       "B.A. Montclair State University (Speech Communications)",
       "M.A.S. Fairleigh Dickinson University (Administration)",
-      "Ed.S., Completed Doctoral Studies ABD Seton Hall University (Education, Leadership, Management and Policy)",
+      "EDS / EDD",
     ]);
+    expect("born" in officialLegislatureProfile).toBe(false);
     expect(officialLegislatureProfile.occupation).toBe(
       "Director of Curriculum and Instruction, Essex County Schools of Technology",
     );

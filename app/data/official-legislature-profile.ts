@@ -17,7 +17,6 @@ export type OfficialLegislatureProfileSnapshot = Readonly<{
     phoneHref: string;
     fax: string;
   }>;
-  born: string;
   education: readonly string[];
   occupation: string;
   publicService: readonly string[];
@@ -58,11 +57,12 @@ export const officialLegislatureProfile = Object.freeze({
     phoneHref: "tel:+19734500484",
     fax: "(973) 450-0487",
   }),
-  born: "October 13, 1977",
+  // The user-approved September 2026 Morales Meeting Action Sheet overrides
+  // the external roster presentation for these education/biography fields.
   education: Object.freeze([
     "B.A. Montclair State University (Speech Communications)",
     "M.A.S. Fairleigh Dickinson University (Administration)",
-    "Ed.S., Completed Doctoral Studies ABD Seton Hall University (Education, Leadership, Management and Policy)",
+    "EDS / EDD",
   ]),
   occupation: "Director of Curriculum and Instruction, Essex County Schools of Technology",
   publicService: Object.freeze([

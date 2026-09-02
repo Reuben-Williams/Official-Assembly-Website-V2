@@ -80,7 +80,6 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
             <BookOpenCheck aria-hidden="true" />
             <div>
               <h3>{localizedBuilderText(locale, "home.official.biography.title", "Biography and service")}</h3>
-              <p><strong>{localizedBuilderText(locale, "home.official.born", "Born:")}</strong> {profile.born}</p>
               <p><strong>{localizedBuilderText(locale, "home.official.occupation", "Occupation:")}</strong> {profile.occupation}</p>
               {profile.publicService.map((item) => <p key={item}>{item}</p>)}
               {profile.legislativeService.map((item) => <p key={item}>{item}</p>)}

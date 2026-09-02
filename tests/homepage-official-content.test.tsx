@@ -20,6 +20,7 @@ describe("source-governed homepage content", () => {
       "District 34",
       "152 Franklin Street, Belleville, NJ 07109",
       "B.A. Montclair State University (Speech Communications)",
+      "EDS / EDD",
       "General Assembly 2024-present, Deputy Majority Whip 2026-present",
       "Higher Education",
       "Appropriations",
@@ -34,6 +35,9 @@ describe("source-governed homepage content", () => {
     expect(html).toContain("Official Legislative Contact Form");
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).not.toContain("Born:");
+    expect(html).not.toContain("October 13, 1977");
+    expect(html).not.toContain("Completed Doctoral Studies");
     expect(html).not.toContain("l.instagram.com");
   });
 
