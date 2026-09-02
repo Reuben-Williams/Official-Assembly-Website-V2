@@ -287,6 +287,8 @@ const localDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23"
 });
 
+const editorLocalDateTimePattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
 function formatterNumbers(formatter: Intl.DateTimeFormat, value: Date): Record<string, number> {
   return Object.fromEntries(
     formatter.formatToParts(value)
@@ -326,6 +328,46 @@ function localMidnightToUtc(parts: LocalDateParts): Date {
   }
 
   return new Date(candidate);
+}
+
+export function calendarLocalDateTimeToIso(value: string): string {
+  const match = editorLocalDateTimePattern.exec(value);
+  if (!match) throw new TypeError("The event date and time are invalid.");
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const targetAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  let candidate = targetAsUtc;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const rendered = formatterNumbers(localDateTimeFormatter, new Date(candidate));
+    const renderedAsUtc = Date.UTC(
+      rendered.year,
+      rendered.month - 1,
+      rendered.day,
+      rendered.hour,
+      rendered.minute,
+      rendered.second,
+      0
+    );
+    const difference = renderedAsUtc - targetAsUtc;
+    if (difference === 0) break;
+    candidate -= difference;
+  }
+
+  const rendered = formatterNumbers(localDateTimeFormatter, new Date(candidate));
+  if (rendered.year !== year || rendered.month !== month || rendered.day !== day ||
+      rendered.hour !== hour || rendered.minute !== minute) {
+    throw new TypeError("The selected local time does not exist in America/New_York.");
+  }
+  return new Date(candidate).toISOString();
+}
+
+export function calendarIsoToLocalInput(value: string | null): string {
+  if (!value) return "";
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) throw new TypeError("The event timestamp is invalid.");
+  const parts = formatterNumbers(localDateTimeFormatter, instant);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
 export function getEffectiveCalendarEnd(revision: CalendarEventRevision): string {

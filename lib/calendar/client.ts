@@ -58,3 +58,5 @@ export function createHttpCalendarClient(input: {
     }
   });
 }
+
+export type CalendarClient = ReturnType<typeof createHttpCalendarClient>;

@@ -24,6 +24,7 @@ describe("production editor workspace registration", () => {
     expect(html).toContain("Leads");
     expect(html).toContain("Customers");
     expect(html).toContain("Alerts");
+    expect(html).toContain("Calendar");
     expect(html).toContain("Bilingual readiness");
     expect(html).toContain("data-growth-live-workspace");
     expect(html).toContain("Live production data");

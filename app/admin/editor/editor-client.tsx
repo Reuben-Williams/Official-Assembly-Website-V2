@@ -20,11 +20,13 @@ import { useCallback, useEffect, useMemo, useState, type ComponentProps, type Co
 import site from "../../../builder.config";
 import { createHttpPostsClient } from "../../../lib/builder/posts-client";
 import { createHttpMediaUploadClient } from "../../../lib/builder/media-client";
+import { createHttpCalendarClient } from "../../../lib/calendar/client";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
 import { BilingualReadinessWorkspace } from "./bilingual-readiness-workspace";
+import { CalendarWorkspace } from "./calendar-workspace";
 import { FormsGuidanceWorkspace } from "./forms-guidance-workspace";
 import { NewsletterOperationsWorkspace } from "./newsletter-operations-workspace";
 import { resolveEditorPagePath } from "./editor-path";
@@ -101,6 +103,7 @@ export function editorPageNavigation(currentPath: string, onPageChange: (path: s
 }
 
 const LOCALIZATION_WORKSPACE_ID = "website.localization" as BuilderWorkspaceId;
+const CALENDAR_WORKSPACE_ID = "website.calendar" as BuilderWorkspaceId;
 
 export function EditorClient({
   initialAlertCollection,
@@ -168,6 +171,17 @@ export function EditorClient({
       setMediaError("The current private media gallery could not be loaded. Try again.");
     }
   }, [client]);
+  useEffect(() => {
+    let active = true;
+    void client.listMedia().then((assets) => {
+      if (!active) return;
+      setMediaAssets(assets.map(managedMediaChoice).filter((asset): asset is ManagedMediaChoice => Boolean(asset)));
+      setMediaError("");
+    }).catch(() => {
+      if (active) setMediaError("The current private media gallery could not be loaded. Try again.");
+    });
+    return () => { active = false; };
+  }, [client]);
   const growth = useMemo(() => createLiveGrowthClient(site.siteId, {
     getCsrfToken: csrfCookie,
     onAuthenticationRequired: () => {
@@ -184,6 +198,11 @@ export function EditorClient({
     baseUrl: "/api/builder",
     getCsrfToken: csrfCookie,
   }), []);
+  const calendar = useMemo(() => createHttpCalendarClient({ getCsrfToken: csrfCookie }), []);
+  const calendarMediaAssets = useMemo(
+    () => mediaAssets.map((asset) => ({ mediaId: asset.mediaId, label: asset.label })),
+    [mediaAssets]
+  );
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
     const workspaces: readonly RegisteredWorkspace[] = [
@@ -214,8 +233,18 @@ export function EditorClient({
         )
       },
       {
-        id: LOCALIZATION_WORKSPACE_ID, label: "Bilingual readiness", group: "website", icon: "languages",
+        id: CALENDAR_WORKSPACE_ID, label: "Calendar", group: "website", icon: "calendar-days",
         mobilePriority: 6, status: "active", render: () => (
+          <CalendarWorkspace
+            client={calendar}
+            mediaAssets={calendarMediaAssets}
+            role={role}
+          />
+        )
+      },
+      {
+        id: LOCALIZATION_WORKSPACE_ID, label: "Bilingual readiness", group: "website", icon: "languages",
+        mobilePriority: 7, status: "active", render: () => (
           <BilingualReadinessWorkspace
             currentPath={currentPath}
             onOpenPage={editorPageNavigation(currentPath, setCurrentPath).onPageChange}
@@ -230,7 +259,7 @@ export function EditorClient({
       workspaces,
       globalHeader: <EditorOperationalHeader />
     };
-  }, [alerts, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role]);
+  }, [alerts, calendar, calendarMediaAssets, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role]);
   const initialWorkspace = (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;

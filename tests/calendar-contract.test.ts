@@ -6,6 +6,8 @@ import {
   CALENDAR_FIELD_LIMITS,
   assertCalendarCommandTransition,
   assertCalendarPublishable,
+  calendarIsoToLocalInput,
+  calendarLocalDateTimeToIso,
   canRunCalendarCommand,
   getEffectiveCalendarEnd,
   isPublicCalendarEventEligible,
@@ -73,6 +75,13 @@ function entity(overrides: Partial<CalendarEventEntity> = {}): CalendarEventEnti
 }
 
 describe("calendar draft normalization", () => {
+  it("converts editor wall-clock values using the fixed New York timezone across DST", () => {
+    expect(calendarLocalDateTimeToIso("2026-03-08T09:30")).toBe("2026-03-08T13:30:00.000Z");
+    expect(calendarLocalDateTimeToIso("2026-11-01T09:30")).toBe("2026-11-01T14:30:00.000Z");
+    expect(calendarIsoToLocalInput("2026-09-20T18:00:00.000Z")).toBe("2026-09-20T14:00");
+    expect(() => calendarLocalDateTimeToIso("2026-03-08T02:30")).toThrow(/does not exist/i);
+  });
+
   it("normalizes bilingual content, timestamps, links, and the fixed timezone", () => {
     expect(normalizeCalendarDraft(completeDraft())).toEqual({
       titleEn: "District 34 Community Meeting",
