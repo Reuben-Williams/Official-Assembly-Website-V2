@@ -20,16 +20,42 @@ try {
     const context = await browser.newContext({ viewport: profile.viewport });
     const page = await context.newPage();
     const consoleErrors = [];
+    const ignoredTurnstileMessages = [];
     const failedFirstPartyRequests = [];
+    const ignoredRoutePrefetchAborts = [];
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      if (message.type() === "error") {
+        const entry = {
+          text: message.text(),
+          location: message.location(),
+        };
+        if (
+          entry.text === "%c%d font-size:0;color:transparent NaN"
+          && entry.location.url.startsWith("https://challenges.cloudflare.com/")
+        ) {
+          ignoredTurnstileMessages.push(entry);
+        } else {
+          consoleErrors.push(entry);
+        }
+      }
     });
     page.on("requestfailed", (request) => {
       if (request.url().startsWith(baseUrl)) {
-        failedFirstPartyRequests.push({
+        const entry = {
           url: request.url(),
           error: request.failure()?.errorText,
-        });
+          resourceType: request.resourceType(),
+        };
+        const requestUrl = new URL(entry.url);
+        if (
+          entry.error === "net::ERR_ABORTED"
+          && entry.resourceType === "fetch"
+          && requestUrl.searchParams.has("_rsc")
+        ) {
+          ignoredRoutePrefetchAborts.push(entry);
+        } else {
+          failedFirstPartyRequests.push(entry);
+        }
       }
     });
 
@@ -104,7 +130,9 @@ try {
       viewport: profile.viewport,
       status: response?.status(),
       consoleErrors,
+      ignoredTurnstileMessages,
       failedFirstPartyRequests,
+      ignoredRoutePrefetchAborts,
       ...state,
     };
     results.push(result);
