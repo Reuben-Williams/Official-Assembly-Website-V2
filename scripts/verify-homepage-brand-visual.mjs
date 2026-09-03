@@ -6,6 +6,24 @@ import { chromium } from "@playwright/test";
 const baseUrl = process.argv[2] || "http://127.0.0.1:3110";
 const evidenceDir = resolve(process.cwd(), "artifacts/brand-banner-verification");
 await mkdir(evidenceDir, { recursive: true });
+const requiredImagePaths = [
+  "/brand/morales-ld34-banner-desktop.avif",
+  "/brand/morales-ld34-banner-desktop.webp",
+  "/brand/morales-ld34-banner-mobile.avif",
+  "/brand/morales-ld34-banner-mobile.webp",
+  "/images/professional/home-official-portrait-desktop.webp",
+  "/images/professional/home-official-portrait-mobile.webp",
+];
+const assetChecks = await Promise.all(requiredImagePaths.map(async (path) => {
+  const response = await fetch(new URL(path, baseUrl));
+  await response.body?.cancel();
+  return {
+    path,
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    ok: response.ok && response.headers.get("content-type")?.startsWith("image/") === true,
+  };
+}));
 
 const browser = await chromium.launch({ headless: true });
 const results = [];
@@ -23,6 +41,7 @@ try {
     const ignoredTurnstileMessages = [];
     const failedFirstPartyRequests = [];
     const ignoredRoutePrefetchAborts = [];
+    const ignoredResponsiveImageAborts = [];
     page.on("console", (message) => {
       if (message.type() === "error") {
         const entry = {
@@ -53,6 +72,12 @@ try {
           && requestUrl.searchParams.has("_rsc")
         ) {
           ignoredRoutePrefetchAborts.push(entry);
+        } else if (
+          entry.error === "net::ERR_ABORTED"
+          && entry.resourceType === "image"
+          && requestUrl.pathname.startsWith("/brand/morales-ld34-banner-")
+        ) {
+          ignoredResponsiveImageAborts.push(entry);
         } else {
           failedFirstPartyRequests.push(entry);
         }
@@ -142,6 +167,7 @@ try {
       ignoredTurnstileMessages,
       failedFirstPartyRequests,
       ignoredRoutePrefetchAborts,
+      ignoredResponsiveImageAborts,
       ...state,
     };
     results.push(result);
@@ -156,6 +182,7 @@ try {
 }
 
 for (const result of results) {
+  const decodedPortraitSource = decodeURIComponent(result.portraitSource ?? "");
   if (
     result.status !== 200
     || !result.hasContent
@@ -176,7 +203,7 @@ for (const result of results) {
     || result.imageNaturalWidth < (result.viewport.width <= 620 ? 1920 : 2580)
     || !result.imageSource?.includes("?v=")
     || !result.portraitLoaded
-    || !result.portraitSource?.includes("/images/professional/home-official-portrait-")
+    || !decodedPortraitSource.includes("/images/professional/home-official-portrait-")
     || result.portraitAlt !== "Official portrait of Assemblywoman Carmen Theresa Morales"
     || result.horizontalOverflow
     || result.consoleErrors.length > 0
@@ -188,4 +215,8 @@ for (const result of results) {
   }
 }
 
-process.stdout.write(`${JSON.stringify({ verified: results }, null, 2)}\n`);
+if (assetChecks.some((asset) => !asset.ok)) {
+  throw new TypeError(`Homepage asset verification failed: ${JSON.stringify(assetChecks)}`);
+}
+
+process.stdout.write(`${JSON.stringify({ assets: assetChecks, verified: results }, null, 2)}\n`);
