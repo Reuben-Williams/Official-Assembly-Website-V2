@@ -34,6 +34,17 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(`${profile.provenance.checkedAt}T00:00:00.000Z`));
+  const portraitAsset = getImage("professional-home-official");
+  const portraitContent: BuilderServerContent = {
+    regions: {
+      ...content.regions,
+      [portraitAsset.regionId]: {
+        type: "image",
+        src: portraitAsset.src,
+        alt: portraitAsset.alt,
+      },
+    },
+  };
 
   return (
     <section className={styles.section} data-home-section="official" data-builder-item-id="official-profile">
@@ -71,9 +82,9 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
 
         <div className={styles.portrait} data-profile-portrait="true">
           <ImagePanel
-            asset={getImage("professional-home-official")}
-            caption="Assemblywoman Carmen Morales at the New Jersey State House"
-            content={content}
+            asset={portraitAsset}
+            caption="Official portrait of Assemblywoman Carmen Theresa Morales"
+            content={portraitContent}
             instance="home-official-portrait"
             locale={locale}
           />

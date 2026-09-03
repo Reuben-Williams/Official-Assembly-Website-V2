@@ -43,10 +43,8 @@ const workspaceRoot = process.cwd();
 const manifestPath = path.join(workspaceRoot, "content", "approved-professional-media.json");
 const expectedPlacements = {
   "media.professional.home-supporting": [["/", "home supporting"]],
-  "media.professional.about-primary": [
-    ["/about", "about primary"],
-    ["/", "official profile portrait"],
-  ],
+  "media.professional.home-official-portrait": [["/", "official profile portrait"]],
+  "media.professional.about-primary": [["/about", "about primary"]],
   "media.professional.news-supporting": [["/news", "news supporting"]],
   "media.professional.community-primary": [["/community", "community primary"]],
   "media.professional.resources-supporting": [["/resources", "resources supporting"]],
@@ -63,7 +61,7 @@ function localPath(publicOrRepoPath: string) {
 }
 
 describe("approved professional media", () => {
-  it("pins five approved bilingual assets and records both portrait consumers", async () => {
+  it("pins six approved bilingual assets and gives the homepage portrait its own verified source", async () => {
     const manifest = await loadManifest();
 
     expect(manifest.version).toBe(2);
@@ -71,15 +69,15 @@ describe("approved professional media", () => {
       id,
       placements.map(({ page, region }) => [page, region]),
     ]))).toEqual(expectedPlacements);
-    expect(new Set(manifest.assets.map(({ source }) => source.path)).size).toBe(5);
+    expect(new Set(manifest.assets.map(({ source }) => source.path)).size).toBe(6);
     expect(new Set(manifest.assets.flatMap(({ derivatives }) => [
       derivatives.desktop.path,
       derivatives.mobile.path,
-    ])).size).toBe(10);
+    ])).size).toBe(12);
 
     for (const asset of manifest.assets) {
       expect(asset.approvalState).toBe("approved");
-      expect(asset.sourceCollection).toMatch(/State House|Puerto Rican Flag Raising/);
+      expect(asset.sourceCollection).toMatch(/State House|Puerto Rican Flag Raising|New Jersey Legislature official roster/);
       expect(asset.acquiredOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(asset.alt.en.trim().length).toBeGreaterThan(20);
       expect(asset.alt.es.trim().length).toBeGreaterThan(20);
@@ -116,7 +114,10 @@ describe("approved professional media", () => {
 
     for (const asset of manifest.assets) {
       expect(configuredRegions).toContain(asset.id);
-      const siteAsset = getImage(asset.id.replace("media.professional.", "professional-"));
+      const imageKey = asset.id === "media.professional.home-official-portrait"
+        ? "professional-home-official"
+        : asset.id.replace("media.professional.", "professional-");
+      const siteAsset = getImage(imageKey);
       expect(siteAsset.regionId).toBe(asset.id);
       expect(siteAsset.src).toBe(asset.derivatives.desktop.path);
       expect(siteAsset.mobileSrc).toBe(asset.derivatives.mobile.path);
@@ -126,8 +127,9 @@ describe("approved professional media", () => {
     const homePortrait = getImage("professional-home-official");
     expect(homePortrait).toMatchObject({
       regionId: "media.professional.home-official-portrait",
-      src: "/images/professional/about-primary-desktop.webp",
-      mobileSrc: "/images/professional/about-primary-mobile.webp",
+      src: "/images/professional/home-official-portrait-desktop.webp",
+      mobileSrc: "/images/professional/home-official-portrait-mobile.webp",
+      alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
     });
   });
 });

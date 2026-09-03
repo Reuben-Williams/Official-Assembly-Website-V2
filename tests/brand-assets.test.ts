@@ -218,8 +218,8 @@ describe("approved brand asset contract", () => {
       },
     }, verified)).toEqual({
       type: "image",
-      src: "/images/professional/about-primary-desktop.webp",
-      alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
+      src: "/images/professional/home-official-portrait-desktop.webp",
+      alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
     });
 
     expect(() => validateProtectedBrandSnapshot({

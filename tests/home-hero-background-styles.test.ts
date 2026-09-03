@@ -33,6 +33,13 @@ describe("homepage hero centerpiece styles", () => {
     expect(css).toMatch(/\.home-hero\s+\.secondary-link:(?:hover|focus-visible)/);
     expect(css).not.toMatch(/--home-brand-zone:\s*clamp\(/);
     expect(css).not.toMatch(/\.home-hero\s+\.hero-image\s*\{/);
+
+    const actionRules = [...css.matchAll(/\.home-hero-actions\s*\{([^}]*)\}/g)];
+    expect(actionRules.length).toBeGreaterThan(0);
+    for (const [, declarations] of actionRules) {
+      expect(declarations).not.toMatch(/margin-bottom:\s*-/);
+    }
+    expect(css).toMatch(/\.home-hero-actions\s*\{[^}]*margin:\s*-?[\d.]+rem\s+auto\s+0/);
   });
 
   it("preserves the generic light hero as a separate style contract", () => {

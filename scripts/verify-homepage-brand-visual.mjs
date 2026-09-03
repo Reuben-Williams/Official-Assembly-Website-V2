@@ -73,6 +73,7 @@ try {
       const image = banner?.querySelector("img");
       const bannerRect = banner?.getBoundingClientRect();
       const heroRect = hero?.getBoundingClientRect();
+      const actionRect = actions?.getBoundingClientRect();
       const heroStyle = hero ? getComputedStyle(hero) : null;
       const bannerPosition = banner ? getComputedStyle(banner).position : null;
       const follows = (before, after) => Boolean(
@@ -103,6 +104,12 @@ try {
         bannerInDocumentFlow: bannerPosition !== "absolute" && bannerPosition !== "fixed",
         copyBeforeBanner: follows(copy, banner),
         bannerBeforeActions: follows(banner, actions),
+        actionDockFullyVisible: Boolean(
+          heroRect
+            && actionRect
+            && actionRect.top >= heroRect.top
+            && actionRect.bottom <= heroRect.bottom + 0.5,
+        ),
         heroBeforeOfficial: follows(hero, official),
         officialBeforeStats: follows(official, stats),
         heroHasReadableBackground: Boolean(
@@ -118,6 +125,8 @@ try {
         imageSource: image instanceof HTMLImageElement ? image.currentSrc : undefined,
         imageAlt: image?.getAttribute("alt"),
         portraitLoaded: portrait instanceof HTMLImageElement && portrait.complete && portrait.naturalWidth > 0,
+        portraitSource: portrait instanceof HTMLImageElement ? portrait.currentSrc : undefined,
+        portraitAlt: portrait?.getAttribute("alt"),
         horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
         ogImage: document.querySelector('meta[property="og:image"]')?.getAttribute("content"),
         twitterCard: document.querySelector('meta[name="twitter:card"]')?.getAttribute("content"),
@@ -157,6 +166,7 @@ for (const result of results) {
     || !result.bannerInDocumentFlow
     || !result.copyBeforeBanner
     || !result.bannerBeforeActions
+    || !result.actionDockFullyVisible
     || !result.heroBeforeOfficial
     || !result.officialBeforeStats
     || !result.heroHasReadableBackground
@@ -166,6 +176,8 @@ for (const result of results) {
     || result.imageNaturalWidth < (result.viewport.width <= 620 ? 1920 : 2580)
     || !result.imageSource?.includes("?v=")
     || !result.portraitLoaded
+    || !result.portraitSource?.includes("/images/professional/home-official-portrait-")
+    || result.portraitAlt !== "Official portrait of Assemblywoman Carmen Theresa Morales"
     || result.horizontalOverflow
     || result.consoleErrors.length > 0
     || result.failedFirstPartyRequests.length > 0

@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { register } from "node:module";
 import { basename, extname, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
@@ -34,6 +34,11 @@ const OUTPUT_ROOT = resolve(
   process.argv[2] || resolve(tmpdir(), `morales-layout-review-${Date.now()}`),
 );
 const EMPTY_CONTENT = { regions: {} };
+const moduleCss = (await Promise.all(
+  (await readdir(resolve(ROOT, "app"), { recursive: true }))
+    .filter((file) => file.endsWith(".module.css"))
+    .map((file) => readFile(resolve(ROOT, "app", file), "utf8")),
+)).join("\n");
 const viewports = [
   { name: "desktop", width: 1280, height: 800 },
   { name: "tablet", width: 768, height: 1024 },
@@ -71,7 +76,7 @@ function shell(title, content) {
     React.createElement(AppFooter, { content: EMPTY_CONTENT, locale: "en" }),
   );
 
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><link href="/globals.css" rel="stylesheet"><style>html,body{margin:0}body{font-family:Arial,Helvetica,sans-serif}</style></head><body>${header}${main}${footer}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><link href="/globals.css" rel="stylesheet"><link href="/modules.css" rel="stylesheet"><style>html,body{margin:0}body{font-family:Arial,Helvetica,sans-serif}</style></head><body>${header}${main}${footer}</body></html>`;
 }
 
 async function renderPages() {
@@ -130,6 +135,14 @@ async function startServer(renderedPages) {
         await sendFile(response, resolve(ROOT, "app", "globals.css"));
         return;
       }
+      if (url.pathname === "/modules.css") {
+        response.writeHead(200, {
+          "cache-control": "no-store",
+          "content-type": "text/css; charset=utf-8",
+        });
+        response.end(moduleCss);
+        return;
+      }
 
       const requestedAsset = url.pathname === "/_next/image"
         ? url.searchParams.get("url")
@@ -182,11 +195,13 @@ function assertLayout(route, viewport, state) {
       || !state.bannerInDocumentFlow
       || !state.copyBeforeBanner
       || !state.bannerBeforeActions
+      || !state.actionDockFullyVisible
       || !state.heroBeforeOfficial
       || !state.officialBeforeStats
       || state.homeActionCount !== 4
       || !state.bannerImageLoaded
       || !state.portraitImageLoaded
+      || !state.portraitImageSource?.includes("/images/professional/home-official-portrait-")
     ) {
       throw new Error(`${route} ${viewport.name} failed the banner/hero relationship check.`);
     }
@@ -239,6 +254,7 @@ try {
         const bannerImage = banner?.querySelector("img");
         const heroRect = hero?.getBoundingClientRect();
         const bannerRect = banner?.getBoundingClientRect();
+        const actionRect = homeActions?.getBoundingClientRect();
         const bannerPosition = banner ? getComputedStyle(banner).position : null;
         const newsletter = document.querySelector('[data-newsletter-page-view="true"]');
         const firstNewsletterItem = newsletter?.querySelector(":scope > [data-builder-item-id]");
@@ -266,6 +282,12 @@ try {
           bannerInDocumentFlow: bannerPosition !== "absolute" && bannerPosition !== "fixed",
           copyBeforeBanner: follows(heroCopy, banner),
           bannerBeforeActions: follows(banner, homeActions),
+          actionDockFullyVisible: Boolean(
+            heroRect
+              && actionRect
+              && actionRect.top >= heroRect.top
+              && actionRect.bottom <= heroRect.bottom + 0.5
+          ),
           heroBeforeOfficial: follows(hero, official),
           officialBeforeStats: follows(official, stats),
           homeActionCount: homeActions?.querySelectorAll("a").length || 0,
@@ -273,6 +295,7 @@ try {
           portraitImageLoaded: Boolean(
             portraitImage && portraitImage.complete && portraitImage.naturalWidth > 0
           ),
+          portraitImageSource: portraitImage?.currentSrc || null,
           newsletterFirstItem: firstNewsletterItem?.getAttribute("data-builder-item-id") || null,
           newsletterHeadingCount: newsletter?.querySelectorAll("h1").length || 0,
           newsletterImageCount: newsletter?.querySelectorAll("img").length || 0,

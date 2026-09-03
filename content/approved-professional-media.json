@@ -61,10 +61,6 @@
         {
           "page": "/about",
           "region": "about primary"
-        },
-        {
-          "page": "/",
-          "region": "official profile portrait"
         }
       ],
       "alt": {
@@ -172,6 +168,40 @@
       "alt": {
         "en": "Assemblywoman Carmen Morales gathered with Belleville residents at a Puerto Rican flag raising ceremony",
         "es": "La asambleísta Carmen Morales junto a residentes de Belleville durante una ceremonia de izamiento de la bandera de Puerto Rico"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "id": "media.professional.home-official-portrait",
+      "sourceCollection": "New Jersey Legislature official roster",
+      "acquiredOn": "2026-09-02",
+      "source": {
+        "path": "content/media-source/professional/home-official-portrait.jpg",
+        "sha256": "c1ecd9734f7a9ff59c1a8a8b9a3a620aeb194ff59ee32abe6c33ef4304180047",
+        "width": 250,
+        "height": 364
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/professional/home-official-portrait-desktop.webp",
+          "width": 500,
+          "height": 728
+        },
+        "mobile": {
+          "path": "/images/professional/home-official-portrait-mobile.webp",
+          "width": 250,
+          "height": 364
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "official profile portrait"
+        }
+      ],
+      "alt": {
+        "en": "Official portrait of Assemblywoman Carmen Theresa Morales",
+        "es": "Retrato oficial de la asambleísta Carmen Theresa Morales"
       },
       "approvalState": "approved"
     }

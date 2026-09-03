@@ -4,8 +4,10 @@ import path from "node:path";
 
 import sharp from "sharp";
 
-const [stateHouseHtml, communityHtml] = process.argv.slice(2);
-if (!stateHouseHtml || !communityHtml) {
+const args = process.argv.slice(2);
+const officialOnly = args.includes("--official-only");
+const [stateHouseHtml, communityHtml] = args.filter((argument) => argument !== "--official-only");
+if (!officialOnly && (!stateHouseHtml || !communityHtml)) {
   throw new Error("Provide the exported State House and community album HTML files.");
 }
 
@@ -40,6 +42,23 @@ const selections = [
     alt: {
       en: "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room",
       es: "La asambleísta Carmen Morales conversa con un colega legislativo en una sala de comités de la Casa del Estado",
+    },
+  },
+  {
+    id: "media.professional.home-official-portrait",
+    key: "home-official-portrait",
+    sourceUrl: "https://pub.njleg.state.nj.us/publications/members/morales_carmen_2024.jpg",
+    sourceCollection: "New Jersey Legislature official roster",
+    acquiredOn: "2026-09-02",
+    page: "/",
+    region: "official profile portrait",
+    width: 500,
+    height: 728,
+    mobileWidth: 250,
+    mobileHeight: 364,
+    alt: {
+      en: "Official portrait of Assemblywoman Carmen Theresa Morales",
+      es: "Retrato oficial de la asambleísta Carmen Theresa Morales",
     },
   },
   {
@@ -122,17 +141,23 @@ await mkdir(sourceDirectory, { recursive: true });
 await mkdir(publicDirectory, { recursive: true });
 
 const albumUrls = {};
-for (const [key, album] of Object.entries(albums)) {
-  albumUrls[key] = albumImageUrls(await readFile(album.html, "utf8"));
+if (!officialOnly) {
+  for (const [key, album] of Object.entries(albums)) {
+    albumUrls[key] = albumImageUrls(await readFile(album.html, "utf8"));
+  }
 }
 
-const assets = [];
-for (const selection of selections) {
-  const album = albums[selection.album];
-  const sourceUrl = albumUrls[selection.album][selection.index - 1];
+const importedAssets = [];
+const selectedAssets = officialOnly
+  ? selections.filter((selection) => selection.sourceUrl)
+  : selections;
+for (const selection of selectedAssets) {
+  const album = selection.album ? albums[selection.album] : null;
+  const sourceUrl = selection.sourceUrl ?? albumUrls[selection.album]?.[selection.index - 1];
   if (!sourceUrl) throw new Error(`Approved source ${selection.album} #${selection.index} is missing.`);
 
-  const response = await fetch(`${sourceUrl}=d`);
+  const downloadUrl = selection.sourceUrl ? sourceUrl : `${sourceUrl}=d`;
+  const response = await fetch(downloadUrl);
   if (!response.ok) throw new Error(`Approved source download failed with ${response.status}.`);
   const sourceBuffer = Buffer.from(await response.arrayBuffer());
   const sourcePath = path.join(sourceDirectory, `${selection.key}.jpg`);
@@ -154,10 +179,10 @@ for (const selection of selections) {
   const sourceDimensions = await metadataFor(sourcePath);
   const desktopDimensions = await metadataFor(desktopPath);
   const mobileDimensions = await metadataFor(mobilePath);
-  assets.push({
+  importedAssets.push({
     id: selection.id,
-    sourceCollection: album.label,
-    acquiredOn: "2026-09-01",
+    sourceCollection: selection.sourceCollection ?? album.label,
+    acquiredOn: selection.acquiredOn ?? "2026-09-01",
     source: {
       path: `content/media-source/professional/${selection.key}.jpg`,
       sha256: createHash("sha256").update(sourceBuffer).digest("hex"),
@@ -173,16 +198,19 @@ for (const selection of selections) {
         ...mobileDimensions,
       },
     },
-    placements: [
-      { page: selection.page, region: selection.region },
-      ...(selection.id === "media.professional.about-primary"
-        ? [{ page: "/", region: "official profile portrait" }]
-        : []),
-    ],
+    placements: [{ page: selection.page, region: selection.region }],
     alt: selection.alt,
     approvalState: "approved",
   });
 }
 
+const assets = officialOnly
+  ? [
+      ...JSON.parse(await readFile(manifestPath, "utf8")).assets.filter(
+        (asset) => !importedAssets.some((imported) => imported.id === asset.id),
+      ),
+      ...importedAssets,
+    ]
+  : importedAssets;
 await writeFile(manifestPath, `${JSON.stringify({ version: 2, assets }, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ imported: assets.length, manifest: path.relative(workspaceRoot, manifestPath) }));
+console.log(JSON.stringify({ imported: importedAssets.length, manifest: path.relative(workspaceRoot, manifestPath) }));

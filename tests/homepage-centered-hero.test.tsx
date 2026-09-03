@@ -10,12 +10,16 @@ vi.mock("../app/ui/ResidentForms", () => ({
 import { districtConnections } from "../app/data/district-connections";
 import { approvedBrandAssets } from "../lib/brand/approved-assets";
 import { HomePageView } from "../app/ui/HomePageView";
+import type { BuilderServerContent } from "../lib/builder/server-content";
 
-async function renderHome(locale: "en" | "es" = "en") {
+async function renderHome(
+  locale: "en" | "es" = "en",
+  content: BuilderServerContent = { regions: {} },
+) {
   return renderToStaticMarkup(await HomePageView({
     assets: approvedBrandAssets,
     calendar: { status: "ready", events: [] },
-    content: { regions: {} },
+    content,
     posts: [],
     locale,
   }));
@@ -78,13 +82,29 @@ describe("centered homepage banner release", () => {
     expect(portrait).toBeLessThan(facts);
     expect(facts).toBeLessThan(stats);
     expect(html).toContain('data-builder-region="media.professional.home-official-portrait"');
-    expect(html).toContain("Assemblywoman Carmen Morales at the New Jersey State House");
+    expect(html).toContain("Official portrait of Assemblywoman Carmen Theresa Morales");
   });
 
   it("localizes the Volunteer action and portrait caption in Spanish", async () => {
     const html = await renderHome("es");
 
     expect(html).toContain(">Voluntariado<");
-    expect(html).toContain("La asambleísta Carmen Morales en la Casa del Estado de Nueva Jersey");
+    expect(html).toContain("Retrato oficial de la asambleísta Carmen Theresa Morales");
+  });
+
+  it("replaces a previously published incorrect portrait with the protected official image", async () => {
+    const html = await renderHome("en", {
+      regions: {
+        "media.professional.home-official-portrait": {
+          type: "image",
+          src: "/images/professional/about-primary-desktop.webp",
+          alt: "Previously published incorrect portrait",
+        },
+      },
+    });
+
+    expect(html).toContain("home-official-portrait-mobile.webp");
+    expect(html).not.toContain("about-primary-desktop.webp");
+    expect(html).not.toContain("Previously published incorrect portrait");
   });
 });

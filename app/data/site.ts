@@ -156,9 +156,9 @@ export const imageAssets: ImageAsset[] = [
   {
     key: "professional-home-official",
     regionId: "media.professional.home-official-portrait",
-    src: "/images/professional/about-primary-desktop.webp",
-    mobileSrc: "/images/professional/about-primary-mobile.webp",
-    alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room"
+    src: "/images/professional/home-official-portrait-desktop.webp",
+    mobileSrc: "/images/professional/home-official-portrait-mobile.webp",
+    alt: "Official portrait of Assemblywoman Carmen Theresa Morales"
   },
   {
     key: "professional-about-primary",

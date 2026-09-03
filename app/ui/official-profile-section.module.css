@@ -96,10 +96,12 @@
 
 .portrait {
   position: relative;
+  width: min(100%, 22rem);
+  margin-inline: auto;
 }
 
 .portrait :global(.image-card) {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 250 / 364;
   border-color: rgb(0 32 70 / 14%);
   border-radius: 1.25rem;
   box-shadow: 0 28px 64px rgb(0 32 70 / 18%);
@@ -242,12 +244,8 @@
     justify-content: center;
   }
 
-  .portrait :global(.image-card) {
-    aspect-ratio: 4 / 5;
-  }
-
   .portrait :global(.image-card img) {
-    object-position: center 42%;
+    object-position: center;
   }
 
   .action {

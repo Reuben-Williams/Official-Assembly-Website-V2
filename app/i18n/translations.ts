@@ -35,8 +35,8 @@ export const spanishTranslationsByKey: Readonly<Record<string, StableTranslation
       es: "Voluntariado"
     },
     "media.professional.home-official-portrait.caption": {
-      en: "Assemblywoman Carmen Morales at the New Jersey State House",
-      es: "La asambleísta Carmen Morales en la Casa del Estado de Nueva Jersey"
+      en: "Official portrait of Assemblywoman Carmen Theresa Morales",
+      es: "Retrato oficial de la asambleísta Carmen Theresa Morales"
     },
     "global.external.new-tab": {
       en: "opens in a new tab",
@@ -331,6 +331,7 @@ Object.assign(spanishTranslations, {
   "District outreach event with community members": "Evento de alcance del distrito con miembros de la comunidad",
   "Constituents and officials during a capitol visit": "Residentes y funcionarios durante una visita al capitolio",
   "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room": "La asambleísta Carmen Morales conversa con un colega legislativo en una sala de comités de la Casa del Estado",
+  "Official portrait of Assemblywoman Carmen Theresa Morales": "Retrato oficial de la asambleísta Carmen Theresa Morales",
   "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room": "La asambleísta Carmen Morales habla desde su escritorio en una sala de comités de la Casa del Estado de Nueva Jersey",
   "Assemblywoman Carmen Morales presenting a State House recognition to a District 34 family": "La asambleísta Carmen Morales entrega un reconocimiento de la Casa del Estado a una familia del Distrito 34",
   "Assemblywoman Carmen Morales and a community member holding Puerto Rican flags outside Belleville Town Hall": "La asambleísta Carmen Morales y una integrante de la comunidad sostienen banderas de Puerto Rico frente al ayuntamiento de Belleville",

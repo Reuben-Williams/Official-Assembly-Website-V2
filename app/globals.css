@@ -1280,7 +1280,7 @@ img {
   z-index: 1;
   display: grid;
   gap: clamp(1.75rem, 4vw, 3rem);
-  padding: clamp(4rem, 7vw, 6.25rem) 0 0;
+  padding: clamp(4rem, 7vw, 6.25rem) 0 clamp(2rem, 4vw, 3rem);
   text-align: center;
 }
 
@@ -1315,7 +1315,7 @@ img {
   z-index: 2;
   justify-content: center;
   width: min(66rem, calc(100% - 2rem));
-  margin: -1.5rem auto -1.75rem;
+  margin: -2rem auto 0;
   border: 1px solid rgb(255 255 255 / 20%);
   border-radius: 1.1rem;
   background: rgb(0 23 51 / 92%);
@@ -2312,7 +2312,7 @@ h3 {
 
   .home-hero-shell {
     gap: 1.5rem;
-    padding-top: 3rem;
+    padding: 3rem 0 1.5rem;
   }
 
   .home-brand-banner-picture {
@@ -2322,8 +2322,8 @@ h3 {
   .home-hero-actions {
     display: grid;
     width: calc(100% - 1rem);
-    margin-top: -0.75rem;
-    margin-bottom: -1.25rem;
+    margin-top: -1rem;
+    margin-bottom: 0;
     padding: 0.75rem;
   }
 

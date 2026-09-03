@@ -9,8 +9,8 @@ export const HOME_VOLUNTEER_REGION_ID = "home.hero.volunteer-cta";
 export const HOME_OFFICIAL_PORTRAIT_REGION_ID = "media.professional.home-official-portrait";
 export const HOME_OFFICIAL_PORTRAIT_VALUE = Object.freeze({
   type: "image" as const,
-  src: "/images/professional/about-primary-desktop.webp",
-  alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
+  src: "/images/professional/home-official-portrait-desktop.webp",
+  alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
 });
 export const SOCIAL_COVER_ALT_EN = "Official logo of Assemblywoman Carmen T. Morales, Legislative District 34";
 export const SOCIAL_COVER_ALT_ES = "Logotipo oficial de la asambleísta Carmen T. Morales, Distrito Legislativo 34";
