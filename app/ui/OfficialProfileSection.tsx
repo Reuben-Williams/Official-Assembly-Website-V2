@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 
 import { officialLegislatureProfile as profile } from "../data/official-legislature-profile";
+import { getImage } from "../data/site";
 import { builderText, type BuilderServerContent } from "../../lib/builder/server-content";
+import { ImagePanel } from "./ImagePanel";
 import styles from "./official-profile-section.module.css";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
@@ -54,7 +56,7 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
           </p>
         </header>
 
-        <div className={styles.identityBand}>
+        <div className={styles.identityBand} data-profile-identity="true">
           <div className={styles.seal}><Landmark aria-hidden="true" /></div>
           <div>
             <p>{profile.identity.title} · {profile.identity.party}</p>
@@ -67,7 +69,17 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
           </a>
         </div>
 
-        <div className={styles.factGrid}>
+        <div className={styles.portrait} data-profile-portrait="true">
+          <ImagePanel
+            asset={getImage("professional-home-official")}
+            caption="Assemblywoman Carmen Morales at the New Jersey State House"
+            content={content}
+            instance="home-official-portrait"
+            locale={locale}
+          />
+        </div>
+
+        <div className={styles.factGrid} data-profile-facts="true">
           <article className={styles.factCard}>
             <Building2 aria-hidden="true" />
             <div>

@@ -1,8 +1,9 @@
 import type { PublishedPost } from "@reuben-williams/content";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 import { getImage, pages, stats } from "../data/site";
+import { districtConnections } from "../data/district-connections";
 import {
   builderLink,
   builderSectionIds,
@@ -69,6 +70,10 @@ export async function HomePageView({
     href: "/newsletter",
     label: "Get the Newsletter",
   });
+  const volunteerCta = builderLink(content, "home.hero.volunteer-cta", {
+    href: districtConnections.volunteer.href,
+    label: "Volunteer",
+  });
   const statsById = new Map(stats.map((stat) => [stat.id, stat]));
   const orderedStats = builderSectionIds(content, "home.stats", stats.map((stat) => stat.id))
     .flatMap((id) => statsById.get(id) ?? []);
@@ -83,9 +88,8 @@ export async function HomePageView({
   return (
     <div data-builder-region="home.sections" data-builder-kind="sections">
       <section className="hero home-hero" data-builder-item-id="hero" data-home-section="hero">
-        <HomepageBrandBanner assets={assets} content={content} locale={locale} />
-        <div className="container hero-grid">
-          <div>
+        <div className="container home-hero-shell">
+          <div className="home-hero-copy">
             <p
               className="eyebrow"
               data-builder-region="home.hero.eyebrow"
@@ -109,46 +113,57 @@ export async function HomePageView({
             >
               {localizedBuilderText(locale, "home.hero.body", builderText(content, "home.hero.body", homeFallback.description))}
             </p>
-            <div className="hero-actions" aria-label="Primary District 34 actions">
-              <Link
-                className="cta-link"
-                data-builder-region="home.hero.primary-cta"
-                data-builder-kind="link"
-                href={contactCta.href}
-              >
-                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.primary-cta.label", contactCta.label)}</span>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <Link
-                className="secondary-link"
-                data-builder-region="home.hero.news-cta"
-                data-builder-kind="link"
-                href={newsCta.href}
-              >
-                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.news-cta.label", newsCta.label)}</span>
-              </Link>
-              <Link
-                className="secondary-link"
-                data-builder-region="home.hero.newsletter-cta"
-                data-builder-kind="link"
-                href={newsletterCta.href}
-              >
-                <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.newsletter-cta.label", newsletterCta.label)}</span>
-              </Link>
-            </div>
           </div>
-          <ImagePanel
-            asset={getImage(homeFallback.imageKey)}
-            caption="District office media"
-            instance="home-hero"
-            priority={!assets}
-            variant="hero"
-            content={content}
-            locale={locale}
-          />
+          <HomepageBrandBanner assets={assets} content={content} locale={locale} />
+          <div
+            className="hero-actions home-hero-actions"
+            aria-label={localizedBuilderText(locale, "home.hero.actions", "Primary District 34 actions")}
+            data-home-hero-actions="true"
+          >
+            <Link
+              className="cta-link"
+              data-builder-region="home.hero.primary-cta"
+              data-builder-kind="link"
+              href={contactCta.href}
+            >
+              <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.primary-cta.label", contactCta.label)}</span>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <Link
+              className="secondary-link"
+              data-builder-region="home.hero.news-cta"
+              data-builder-kind="link"
+              href={newsCta.href}
+            >
+              <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.news-cta.label", newsCta.label)}</span>
+            </Link>
+            <Link
+              className="secondary-link"
+              data-builder-region="home.hero.newsletter-cta"
+              data-builder-kind="link"
+              href={newsletterCta.href}
+            >
+              <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.newsletter-cta.label", newsletterCta.label)}</span>
+            </Link>
+            <a
+              className="secondary-link home-hero-volunteer"
+              data-builder-region="home.hero.volunteer-cta"
+              data-builder-kind="link"
+              href={districtConnections.volunteer.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.volunteer-cta.label", volunteerCta.label)}</span>
+              <ArrowUpRight size={18} aria-hidden="true" />
+              <span className="home-hero-sr-only">
+                {localizedBuilderText(locale, "global.external.new-tab", "opens in a new tab")}
+              </span>
+            </a>
+          </div>
         </div>
       </section>
 
+      <OfficialProfileSection content={content} locale={locale} />
       <section className="stats-band" data-builder-item-id="stats" data-home-section="access">
         <div
           className="container stats-grid"
@@ -175,8 +190,6 @@ export async function HomePageView({
           ))}
         </div>
       </section>
-
-      <OfficialProfileSection content={content} locale={locale} />
       {connections}
       <LatestUpdatesSection content={content} locale={locale} posts={posts} />
       <PublicEventsSection calendar={calendar} content={content} locale={locale} variant="home" />

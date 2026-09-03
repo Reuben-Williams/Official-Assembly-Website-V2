@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   brandBannerSeedAssets,
+  normalizeProtectedBrandValue,
+  validateProtectedBrandSnapshot,
   validateHomeBrandBannerValue,
   verifyApprovedBrandAssets,
   type ApprovedBrandAssetDefinition,
 } from "../lib/brand/assets";
+import { districtConnections } from "../app/data/district-connections";
 import { withBrandSocialMetadata } from "../lib/brand/metadata";
 
 const digest = (character: string) => character.repeat(64);
@@ -175,5 +178,59 @@ describe("approved brand asset contract", () => {
       site: "@district34",
       title: "Example update",
     });
+  });
+
+  it("keeps the Volunteer label editable while forcing the canonical form destination", () => {
+    const verified = verifyApprovedBrandAssets(definition());
+
+    expect(normalizeProtectedBrandValue({
+      pagePath: "/",
+      regionId: "home.hero.volunteer-cta",
+      value: { type: "link", href: "https://example.com/wrong", label: "Join the team" },
+    }, verified)).toEqual({
+      type: "link",
+      href: districtConnections.volunteer.href,
+      label: "Join the team",
+    });
+
+    expect(() => validateProtectedBrandSnapshot({
+      pagePath: "/",
+      regions: {
+        "home.hero.volunteer-cta": {
+          type: "link",
+          href: "https://example.com/wrong",
+          label: "Volunteer",
+        },
+      },
+    }, verified)).toThrow(/canonical volunteer form/i);
+  });
+
+  it("restricts the homepage official portrait to the approved single-person asset", () => {
+    const verified = verifyApprovedBrandAssets(definition());
+
+    expect(normalizeProtectedBrandValue({
+      pagePath: "/",
+      regionId: "media.professional.home-official-portrait",
+      value: {
+        type: "image",
+        src: "/images/professional/home-supporting-desktop.webp",
+        alt: "Wrong multi-person image",
+      },
+    }, verified)).toEqual({
+      type: "image",
+      src: "/images/professional/about-primary-desktop.webp",
+      alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
+    });
+
+    expect(() => validateProtectedBrandSnapshot({
+      pagePath: "/",
+      regions: {
+        "media.professional.home-official-portrait": {
+          type: "image",
+          src: "/images/professional/home-supporting-desktop.webp",
+          alt: "Wrong multi-person image",
+        },
+      },
+    }, verified)).toThrow(/approved single-person portrait/i);
   });
 });

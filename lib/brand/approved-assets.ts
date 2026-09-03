@@ -5,19 +5,19 @@ import {
 
 const sourceSha256 =
   "a4a00633ffae3280ab81b26856660c4b0a055e787fa2a15e28a47fc64592cc09";
-const approvedBy = "Project owner (approved recommended restoration workflow)";
-const approvedAt = "2026-08-27T16:39:02.756Z";
+const approvedBy = "Project owner (approved centered banner high-density release)";
+const approvedAt = "2026-09-03T02:07:41.708Z";
 
 const definition = {
   entries: [
     {
       id: "morales.ld34.banner.desktop.avif",
       sourceSha256,
-      publicSha256: "af73914e97e28d90c5bded5dd6447d07f4301f47c86b86e92a0ee1d961890dbd",
+      publicSha256: "1517a3d9cdaed61c8fc9bf49e36f5a3144d690dcc054ddc88bf611e9814e57c5",
       publicPath: "/brand/morales-ld34-banner-desktop.avif",
       mimeType: "image/avif",
-      width: 1290,
-      height: 402,
+      width: 2580,
+      height: 804,
       purpose: "homepage_banner",
       variant: "banner_desktop_avif",
       approvedBy,
@@ -26,11 +26,11 @@ const definition = {
     {
       id: "morales.ld34.banner.desktop.webp",
       sourceSha256,
-      publicSha256: "88453a842413fadee5b9d95dad20620750b3fd2376359950c1649441f533a42b",
+      publicSha256: "48ce700f77c74675256219a97fe43ba6bfdbcd5112c0b4e5bcf4aa13f53c497f",
       publicPath: "/brand/morales-ld34-banner-desktop.webp",
       mimeType: "image/webp",
-      width: 1290,
-      height: 402,
+      width: 2580,
+      height: 804,
       purpose: "homepage_banner",
       variant: "banner_desktop_webp",
       approvedBy,
@@ -39,11 +39,11 @@ const definition = {
     {
       id: "morales.ld34.banner.mobile.avif",
       sourceSha256,
-      publicSha256: "07fd2b01dfc0c6fe675e1cc82b1670087c122ddf5dc378d8b81fbca20fabada2",
+      publicSha256: "b0f6f48f6826ca1b7fc5f6e34d4367f76e9e785612934dd97b8cff3f989243f4",
       publicPath: "/brand/morales-ld34-banner-mobile.avif",
       mimeType: "image/avif",
-      width: 960,
-      height: 299,
+      width: 1920,
+      height: 598,
       purpose: "homepage_banner",
       variant: "banner_mobile_avif",
       approvedBy,
@@ -52,11 +52,11 @@ const definition = {
     {
       id: "morales.ld34.banner.mobile.webp",
       sourceSha256,
-      publicSha256: "721a1cbb5e7d64fdbd02292eaf0424411613e1064522ac1ff5cf2afd1d3103f1",
+      publicSha256: "b65e3fd35e9ba29dd5479777f3bb4603783302b4b8e1524e435042863022046a",
       publicPath: "/brand/morales-ld34-banner-mobile.webp",
       mimeType: "image/webp",
-      width: 960,
-      height: 299,
+      width: 1920,
+      height: 598,
       purpose: "homepage_banner",
       variant: "banner_mobile_webp",
       approvedBy,

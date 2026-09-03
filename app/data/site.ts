@@ -154,6 +154,13 @@ export const imageAssets: ImageAsset[] = [
     alt: "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room"
   },
   {
+    key: "professional-home-official",
+    regionId: "media.professional.home-official-portrait",
+    src: "/images/professional/about-primary-desktop.webp",
+    mobileSrc: "/images/professional/about-primary-mobile.webp",
+    alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room"
+  },
+  {
     key: "professional-about-primary",
     regionId: "media.professional.about-primary",
     src: "/images/professional/about-primary-desktop.webp",

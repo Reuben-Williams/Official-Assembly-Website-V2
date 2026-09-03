@@ -1,8 +1,17 @@
 import type { EditableValue, MediaAsset } from "@reuben-williams/core";
 
+import { districtConnections } from "../../app/data/district-connections";
+
 export const HOME_BRAND_BANNER_REGION_ID = "media.home-brand-banner";
 export const HOME_BRAND_BANNER_ALT_EN = "Assemblywoman Carmen T. Morales — Legislative District 34";
 export const HOME_BRAND_BANNER_ALT_ES = "Asambleísta Carmen T. Morales — Distrito Legislativo 34";
+export const HOME_VOLUNTEER_REGION_ID = "home.hero.volunteer-cta";
+export const HOME_OFFICIAL_PORTRAIT_REGION_ID = "media.professional.home-official-portrait";
+export const HOME_OFFICIAL_PORTRAIT_VALUE = Object.freeze({
+  type: "image" as const,
+  src: "/images/professional/about-primary-desktop.webp",
+  alt: "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
+});
 export const SOCIAL_COVER_ALT_EN = "Official logo of Assemblywoman Carmen T. Morales, Legislative District 34";
 export const SOCIAL_COVER_ALT_ES = "Logotipo oficial de la asambleísta Carmen T. Morales, Distrito Legislativo 34";
 
@@ -175,9 +184,27 @@ export function normalizeProtectedBrandValue(
   }>,
   assets: VerifiedApprovedBrandAssets | null,
 ): EditableValue {
-  if (input.regionId !== HOME_BRAND_BANNER_REGION_ID) return input.value;
-  if (input.pagePath !== "/" || !assets) invalid("the homepage brand banner is not active.");
-  return validateHomeBrandBannerValue(input.value, assets);
+  if (input.regionId === HOME_VOLUNTEER_REGION_ID) {
+    if (input.pagePath !== "/" || input.value.type !== "link") {
+      invalid("the canonical Volunteer action is not active.");
+    }
+    return {
+      type: "link",
+      href: districtConnections.volunteer.href,
+      label: input.value.label,
+    };
+  }
+  if (input.regionId === HOME_OFFICIAL_PORTRAIT_REGION_ID) {
+    if (input.pagePath !== "/" || input.value.type !== "image") {
+      invalid("the homepage official portrait is not active.");
+    }
+    return HOME_OFFICIAL_PORTRAIT_VALUE;
+  }
+  if (input.regionId === HOME_BRAND_BANNER_REGION_ID) {
+    if (input.pagePath !== "/" || !assets) invalid("the homepage brand banner is not active.");
+    return validateHomeBrandBannerValue(input.value, assets);
+  }
+  return input.value;
 }
 
 export function validateProtectedBrandSnapshot(
@@ -187,10 +214,33 @@ export function validateProtectedBrandSnapshot(
   }>,
   assets: VerifiedApprovedBrandAssets | null,
 ): void {
-  const value = input.regions[HOME_BRAND_BANNER_REGION_ID];
-  if (value === undefined) return;
-  if (input.pagePath !== "/" || !assets) invalid("the homepage brand banner is not active.");
-  validateHomeBrandBannerValue(value, assets);
+  const banner = input.regions[HOME_BRAND_BANNER_REGION_ID];
+  if (banner !== undefined) {
+    if (input.pagePath !== "/" || !assets) invalid("the homepage brand banner is not active.");
+    validateHomeBrandBannerValue(banner, assets);
+  }
+
+  const volunteer = input.regions[HOME_VOLUNTEER_REGION_ID];
+  if (volunteer !== undefined) {
+    if (
+      input.pagePath !== "/"
+      || volunteer.type !== "link"
+      || volunteer.href !== districtConnections.volunteer.href
+    ) {
+      invalid("use the canonical Volunteer form destination.");
+    }
+  }
+
+  const portrait = input.regions[HOME_OFFICIAL_PORTRAIT_REGION_ID];
+  if (portrait !== undefined) {
+    if (
+      input.pagePath !== "/"
+      || portrait.type !== "image"
+      || portrait.src !== HOME_OFFICIAL_PORTRAIT_VALUE.src
+    ) {
+      invalid("select the approved single-person portrait.");
+    }
+  }
 }
 
 export function resolveHomeBrandBannerSet(

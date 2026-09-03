@@ -94,6 +94,28 @@
   outline-offset: 2px;
 }
 
+.portrait {
+  position: relative;
+}
+
+.portrait :global(.image-card) {
+  aspect-ratio: 16 / 9;
+  border-color: rgb(0 32 70 / 14%);
+  border-radius: 1.25rem;
+  box-shadow: 0 28px 64px rgb(0 32 70 / 18%);
+}
+
+.portrait :global(.image-card img) {
+  object-position: center 43%;
+}
+
+.portrait :global(.image-caption) {
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  border-color: rgb(255 255 255 / 72%);
+  background: rgb(255 255 255 / 92%);
+}
+
 .factGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -218,6 +240,14 @@
   .phone {
     grid-column: 1 / -1;
     justify-content: center;
+  }
+
+  .portrait :global(.image-card) {
+    aspect-ratio: 4 / 5;
+  }
+
+  .portrait :global(.image-card img) {
+    object-position: center 42%;
   }
 
   .action {

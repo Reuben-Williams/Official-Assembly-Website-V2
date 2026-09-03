@@ -38,6 +38,7 @@ const viewports = [
   { name: "desktop", width: 1280, height: 800 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "mobile", width: 390, height: 844 },
+  { name: "constrained-mobile", width: 320, height: 700 },
 ];
 
 const MIME_TYPES = new Map([
@@ -84,6 +85,7 @@ async function renderPages() {
         "Homepage layout review",
         await HomePageView({
           assets: approvedBrandAssets,
+          calendar: { status: "ready", events: [] },
           content: EMPTY_CONTENT,
           posts: [],
           locale: "en",
@@ -174,7 +176,18 @@ function assertLayout(route, viewport, state) {
   }
 
   if (route === "/") {
-    if (!state.bannerInsideHero || !state.bannerFillsHero || !state.bannerImageLoaded) {
+    if (
+      !state.bannerInsideHero
+      || !state.bannerCenteredInHero
+      || !state.bannerInDocumentFlow
+      || !state.copyBeforeBanner
+      || !state.bannerBeforeActions
+      || !state.heroBeforeOfficial
+      || !state.officialBeforeStats
+      || state.homeActionCount !== 4
+      || !state.bannerImageLoaded
+      || !state.portraitImageLoaded
+    ) {
       throw new Error(`${route} ${viewport.name} failed the banner/hero relationship check.`);
     }
     return;
@@ -213,32 +226,53 @@ try {
     page.on("requestfailed", (request) => failedRequests.push(request.url()));
 
     for (const route of ["/", "/newsletter"]) {
-      await page.goto(`${origin}${route}`, { waitUntil: "networkidle" });
+      await page.goto(`${origin}${route}`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(400);
       const state = await page.evaluate(() => {
         const hero = document.querySelector('[data-home-section="hero"]');
         const banner = document.querySelector('[data-home-brand-banner="true"]');
+        const heroCopy = document.querySelector(".home-hero-copy");
+        const homeActions = document.querySelector('[data-home-hero-actions="true"]');
+        const official = document.querySelector('[data-home-section="official"]');
+        const portraitImage = document.querySelector('[data-profile-portrait="true"] img');
+        const stats = document.querySelector('[data-home-section="access"]');
         const bannerImage = banner?.querySelector("img");
         const heroRect = hero?.getBoundingClientRect();
         const bannerRect = banner?.getBoundingClientRect();
+        const bannerPosition = banner ? getComputedStyle(banner).position : null;
         const newsletter = document.querySelector('[data-newsletter-page-view="true"]');
         const firstNewsletterItem = newsletter?.querySelector(":scope > [data-builder-item-id]");
         const newsletterFormArea = newsletter?.querySelector('[data-builder-region="newsletter.form"]');
         const heading = document.querySelector("main h1");
         const headingRect = heading?.getBoundingClientRect();
+        const follows = (before, after) => Boolean(
+          before
+            && after
+            && (before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING),
+        );
 
         return {
           horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
           headingVisible: Boolean(headingRect && headingRect.width > 0 && headingRect.height > 0),
-          bannerInsideHero: Boolean(hero && banner && banner.parentElement === hero),
-          bannerFillsHero: Boolean(
+          bannerInsideHero: Boolean(hero && banner && hero.contains(banner)),
+          bannerCenteredInHero: Boolean(
             heroRect
             && bannerRect
-            && Math.abs(heroRect.left - bannerRect.left) <= 2
-            && Math.abs(heroRect.right - bannerRect.right) <= 2
-            && Math.abs(heroRect.top - bannerRect.top) <= 2
-            && Math.abs(heroRect.bottom - bannerRect.bottom) <= 2
+            && Math.abs(
+              (heroRect.left + heroRect.width / 2) - (bannerRect.left + bannerRect.width / 2),
+            ) <= 3
+            && bannerRect.width < heroRect.width
           ),
+          bannerInDocumentFlow: bannerPosition !== "absolute" && bannerPosition !== "fixed",
+          copyBeforeBanner: follows(heroCopy, banner),
+          bannerBeforeActions: follows(banner, homeActions),
+          heroBeforeOfficial: follows(hero, official),
+          officialBeforeStats: follows(official, stats),
+          homeActionCount: homeActions?.querySelectorAll("a").length || 0,
           bannerImageLoaded: Boolean(bannerImage && bannerImage.complete && bannerImage.naturalWidth > 0),
+          portraitImageLoaded: Boolean(
+            portraitImage && portraitImage.complete && portraitImage.naturalWidth > 0
+          ),
           newsletterFirstItem: firstNewsletterItem?.getAttribute("data-builder-item-id") || null,
           newsletterHeadingCount: newsletter?.querySelectorAll("h1").length || 0,
           newsletterImageCount: newsletter?.querySelectorAll("img").length || 0,

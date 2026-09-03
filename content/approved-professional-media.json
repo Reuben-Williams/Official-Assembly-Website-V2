@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "assets": [
     {
       "id": "media.professional.home-supporting",
@@ -23,10 +23,12 @@
           "height": 500
         }
       },
-      "placement": {
-        "page": "/",
-        "region": "home supporting"
-      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "home supporting"
+        }
+      ],
       "alt": {
         "en": "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room",
         "es": "La asambleísta Carmen Morales conversa con un colega legislativo en una sala de comités de la Casa del Estado"
@@ -55,10 +57,16 @@
           "height": 1000
         }
       },
-      "placement": {
-        "page": "/about",
-        "region": "about primary"
-      },
+      "placements": [
+        {
+          "page": "/about",
+          "region": "about primary"
+        },
+        {
+          "page": "/",
+          "region": "official profile portrait"
+        }
+      ],
       "alt": {
         "en": "Assemblywoman Carmen Morales speaking from her desk in a New Jersey State House committee room",
         "es": "La asambleísta Carmen Morales habla desde su escritorio en una sala de comités de la Casa del Estado de Nueva Jersey"
@@ -87,10 +95,12 @@
           "height": 500
         }
       },
-      "placement": {
-        "page": "/news",
-        "region": "news supporting"
-      },
+      "placements": [
+        {
+          "page": "/news",
+          "region": "news supporting"
+        }
+      ],
       "alt": {
         "en": "Assemblywoman Carmen Morales presenting a State House recognition to a District 34 family",
         "es": "La asambleísta Carmen Morales entrega un reconocimiento de la Casa del Estado a una familia del Distrito 34"
@@ -119,10 +129,12 @@
           "height": 1000
         }
       },
-      "placement": {
-        "page": "/community",
-        "region": "community primary"
-      },
+      "placements": [
+        {
+          "page": "/community",
+          "region": "community primary"
+        }
+      ],
       "alt": {
         "en": "Assemblywoman Carmen Morales and a community member holding Puerto Rican flags outside Belleville Town Hall",
         "es": "La asambleísta Carmen Morales y una integrante de la comunidad sostienen banderas de Puerto Rico frente al ayuntamiento de Belleville"
@@ -151,10 +163,12 @@
           "height": 500
         }
       },
-      "placement": {
-        "page": "/resources",
-        "region": "resources supporting"
-      },
+      "placements": [
+        {
+          "page": "/resources",
+          "region": "resources supporting"
+        }
+      ],
       "alt": {
         "en": "Assemblywoman Carmen Morales gathered with Belleville residents at a Puerto Rican flag raising ceremony",
         "es": "La asambleísta Carmen Morales junto a residentes de Belleville durante una ceremonia de izamiento de la bandera de Puerto Rico"

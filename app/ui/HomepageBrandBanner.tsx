@@ -22,6 +22,10 @@ function publicPath(path: string) {
   return path.startsWith("/") ? `${basePath}${path}` : path;
 }
 
+function versionedPublicPath(path: string, digest: string) {
+  return `${publicPath(path)}?v=${digest.slice(0, 12)}`;
+}
+
 export function HomepageBrandBanner({
   assets,
   content,
@@ -51,22 +55,37 @@ export function HomepageBrandBanner({
       >
         <source
           media={`(max-width: ${assets.mobileMaxWidthPx}px)`}
-          srcSet={publicPath(selected.mobile.avif.publicPath)}
+          srcSet={versionedPublicPath(
+            selected.mobile.avif.publicPath,
+            selected.mobile.avif.publicSha256,
+          )}
           type="image/avif"
         />
         <source
           media={`(max-width: ${assets.mobileMaxWidthPx}px)`}
-          srcSet={publicPath(selected.mobile.webp.publicPath)}
+          srcSet={versionedPublicPath(
+            selected.mobile.webp.publicPath,
+            selected.mobile.webp.publicSha256,
+          )}
           type="image/webp"
         />
-        <source srcSet={publicPath(selected.desktop.avif.publicPath)} type="image/avif" />
+        <source
+          srcSet={versionedPublicPath(
+            selected.desktop.avif.publicPath,
+            selected.desktop.avif.publicSha256,
+          )}
+          type="image/avif"
+        />
         <Image
           alt={alt}
           className="home-brand-banner-image"
           height={selected.desktop.webp.height}
           priority
           sizes="100vw"
-          src={publicPath(selected.desktop.webp.publicPath)}
+          src={versionedPublicPath(
+            selected.desktop.webp.publicPath,
+            selected.desktop.webp.publicSha256,
+          )}
           unoptimized
           width={selected.desktop.webp.width}
         />

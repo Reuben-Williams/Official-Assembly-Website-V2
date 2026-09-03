@@ -23,10 +23,10 @@ type ApprovedMediaRecord = {
     desktop: MediaFile;
     mobile: MediaFile;
   };
-  placement: {
+  placements: Array<{
     page: string;
     region: string;
-  };
+  }>;
   alt: {
     en: string;
     es: string;
@@ -35,19 +35,22 @@ type ApprovedMediaRecord = {
 };
 
 type ApprovedMediaManifest = {
-  version: 1;
+  version: 2;
   assets: ApprovedMediaRecord[];
 };
 
 const workspaceRoot = process.cwd();
 const manifestPath = path.join(workspaceRoot, "content", "approved-professional-media.json");
-const expectedPlacements = [
-  ["media.professional.home-supporting", "/", "home supporting"],
-  ["media.professional.about-primary", "/about", "about primary"],
-  ["media.professional.news-supporting", "/news", "news supporting"],
-  ["media.professional.community-primary", "/community", "community primary"],
-  ["media.professional.resources-supporting", "/resources", "resources supporting"],
-] as const;
+const expectedPlacements = {
+  "media.professional.home-supporting": [["/", "home supporting"]],
+  "media.professional.about-primary": [
+    ["/about", "about primary"],
+    ["/", "official profile portrait"],
+  ],
+  "media.professional.news-supporting": [["/news", "news supporting"]],
+  "media.professional.community-primary": [["/community", "community primary"]],
+  "media.professional.resources-supporting": [["/resources", "resources supporting"]],
+} as const;
 
 async function loadManifest() {
   return JSON.parse(await readFile(manifestPath, "utf8")) as ApprovedMediaManifest;
@@ -60,13 +63,14 @@ function localPath(publicOrRepoPath: string) {
 }
 
 describe("approved professional media", () => {
-  it("pins exactly five approved, bilingual, stable page placements", async () => {
+  it("pins five approved bilingual assets and records both portrait consumers", async () => {
     const manifest = await loadManifest();
 
-    expect(manifest.version).toBe(1);
-    expect(manifest.assets.map(({ id, placement }) => [id, placement.page, placement.region])).toEqual(
-      expectedPlacements,
-    );
+    expect(manifest.version).toBe(2);
+    expect(Object.fromEntries(manifest.assets.map(({ id, placements }) => [
+      id,
+      placements.map(({ page, region }) => [page, region]),
+    ]))).toEqual(expectedPlacements);
     expect(new Set(manifest.assets.map(({ source }) => source.path)).size).toBe(5);
     expect(new Set(manifest.assets.flatMap(({ derivatives }) => [
       derivatives.desktop.path,
@@ -118,5 +122,12 @@ describe("approved professional media", () => {
       expect(siteAsset.mobileSrc).toBe(asset.derivatives.mobile.path);
       expect(siteAsset.alt).toBe(asset.alt.en);
     }
+
+    const homePortrait = getImage("professional-home-official");
+    expect(homePortrait).toMatchObject({
+      regionId: "media.professional.home-official-portrait",
+      src: "/images/professional/about-primary-desktop.webp",
+      mobileSrc: "/images/professional/about-primary-mobile.webp",
+    });
   });
 });

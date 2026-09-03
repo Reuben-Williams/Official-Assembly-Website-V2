@@ -84,10 +84,10 @@ describe("homepage official brand banner", () => {
     expect(html).toContain('data-builder-region="media.home-brand-banner"');
     expect(html).toContain('data-brand-banner-set="primary"');
     expect(html).toContain('media="(max-width: 620px)"');
-    expect(html).toContain('srcSet="/brand/mobile.avif"');
-    expect(html).toContain('srcSet="/brand/mobile.webp"');
-    expect(html).toContain('srcSet="/brand/desktop.avif"');
-    expect(html).toContain('src="/brand/desktop.webp"');
+    expect(html).toContain('srcSet="/brand/mobile.avif?v=333333333333"');
+    expect(html).toContain('srcSet="/brand/mobile.webp?v=444444444444"');
+    expect(html).toContain('srcSet="/brand/desktop.avif?v=111111111111"');
+    expect(html).toContain('src="/brand/desktop.webp?v=222222222222"');
     expect(html).toContain('--brand-banner-desktop-aspect:1800 / 560');
     expect(html).toContain('--brand-banner-mobile-aspect:900 / 420');
     expect(html).toContain('alt="Asambleísta Carmen T. Morales — Distrito Legislativo 34"');
@@ -96,7 +96,7 @@ describe("homepage official brand banner", () => {
     expect(html).not.toContain("<section");
   });
 
-  it("renders as the first layer inside the homepage hero instead of a separate strip", async () => {
+  it("renders in document flow between the homepage introduction and action dock", async () => {
     const html = renderToStaticMarkup(await HomePageView({
       assets,
       calendar: { status: "ready", events: [] },
@@ -107,21 +107,24 @@ describe("homepage official brand banner", () => {
     const bannerPosition = html.indexOf('data-home-brand-banner="true"');
     const sectionsPosition = html.indexOf('data-builder-region="home.sections"');
     const heroPosition = html.indexOf('data-builder-item-id="hero"');
-    const gridPosition = html.indexOf('class="container hero-grid"');
+    const titlePosition = html.indexOf('data-builder-region="home.hero.title"');
+    const actionsPosition = html.indexOf('data-home-hero-actions="true"');
     expect(bannerPosition).toBeGreaterThanOrEqual(0);
     expect(sectionsPosition).toBeLessThan(heroPosition);
-    expect(heroPosition).toBeLessThan(bannerPosition);
-    expect(bannerPosition).toBeLessThan(gridPosition);
+    expect(heroPosition).toBeLessThan(titlePosition);
+    expect(titlePosition).toBeLessThan(bannerPosition);
+    expect(bannerPosition).toBeLessThan(actionsPosition);
     expect(html).toContain('class="hero home-hero"');
   });
 
-  it("verifies the settled desktop, tablet, and mobile background relationship", () => {
+  it("verifies the settled desktop, tablet, and mobile centerpiece relationship", () => {
     const verifier = readFileSync(new URL("../scripts/verify-homepage-brand-visual.mjs", import.meta.url), "utf8");
     expect(verifier).toContain('{ name: "desktop", viewport: { width: 1280, height: 800 } }');
     expect(verifier).toContain('{ name: "tablet", viewport: { width: 768, height: 1024 } }');
     expect(verifier).toContain('{ name: "mobile", viewport: { width: 390, height: 844 } }');
-    expect(verifier).toContain("bannerInsideHero");
-    expect(verifier).not.toContain("bannerBeforeHero");
+    expect(verifier).toContain('{ name: "constrained-mobile", viewport: { width: 320, height: 700 } }');
+    expect(verifier).toContain("bannerCenteredInHero");
+    expect(verifier).toContain("bannerBeforeActions");
   });
 
   it("provides a credential-free visual-review harness for the approved layouts", () => {

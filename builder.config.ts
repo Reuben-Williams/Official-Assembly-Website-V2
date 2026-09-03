@@ -159,6 +159,11 @@ export default {
       "label": "Home supporting professional photo"
     },
     {
+      "id": "media.professional.home-official-portrait",
+      "kind": "image",
+      "label": "Homepage official profile portrait (approved single-person image)"
+    },
+    {
       "id": "media.professional.about-primary",
       "kind": "image",
       "label": "About primary professional photo"
@@ -438,6 +443,11 @@ export default {
           "id": "home.hero.newsletter-cta",
           "kind": "link",
           "label": "home newsletter call to action"
+        },
+        {
+          "id": "home.hero.volunteer-cta",
+          "kind": "link",
+          "label": "home Volunteer label (destination protected)"
         },
         {
           "id": "home.features.eyebrow",

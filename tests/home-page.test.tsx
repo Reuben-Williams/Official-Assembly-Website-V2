@@ -16,9 +16,9 @@ import type { PublicCalendarLoad } from "../lib/calendar/repository";
 const emptyCalendar: PublicCalendarLoad = { status: "ready", events: [] };
 
 describe("District 34 homepage", () => {
-  it("renders the approved section order and three distinct hero actions", async () => {
+  it("renders the approved section order and four distinct hero actions", async () => {
     const html = renderToStaticMarkup(await HomePageView({ calendar: emptyCalendar, content: { regions: {} }, posts: [] }));
-    const orderedSections = ["hero", "access", "official", "connections", "latest", "events", "guidance"];
+    const orderedSections = ["hero", "official", "access", "connections", "latest", "events", "guidance"];
     const positions = orderedSections.map((section) => html.indexOf(`data-home-section="${section}"`));
 
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -26,6 +26,7 @@ describe("District 34 homepage", () => {
     expect(html).toContain('href="/contact"');
     expect(html).toContain('href="/news"');
     expect(html).toContain('href="/newsletter"');
+    expect(html).toContain('data-builder-region="home.hero.volunteer-cta"');
   });
 
   it("renders exactly one first-party newsletter form and no fabricated latest posts", async () => {

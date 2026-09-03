@@ -1208,24 +1208,28 @@ img {
 }
 
 .home-brand-banner {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  position: relative;
+  z-index: 1;
   overflow: hidden;
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: clamp(1rem, 2vw, 1.5rem);
   background: #203a5e;
+  box-shadow: 0 30px 80px rgb(0 12 29 / 36%);
 }
 
 .home-brand-banner-picture {
   display: block;
   width: 100%;
-  height: 100%;
+  aspect-ratio: var(--brand-banner-desktop-aspect);
 }
 
 .home-brand-banner-image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: 50% 0;
+  object-position: center;
 }
 
 .hero {
@@ -1237,8 +1241,7 @@ img {
 }
 
 .home-hero {
-  --home-brand-zone: clamp(16rem, 28vw, 21.25rem);
-  --home-hero-readable-background: #001a39;
+  --home-hero-readable-background: #00172f;
   --home-hero-copy: #ffffff;
   --home-hero-body: #edf3f8;
   --home-hero-eyebrow: #f3cf71;
@@ -1249,44 +1252,49 @@ img {
   --home-hero-secondary-hover-background: #15466f;
   --home-hero-secondary-foreground: #ffffff;
   isolation: isolate;
-  background: #16395e;
+  background:
+    radial-gradient(circle at 10% 8%, rgb(47 111 94 / 26%), transparent 25rem),
+    radial-gradient(circle at 90% 5%, rgb(181 36 38 / 19%), transparent 22rem),
+    linear-gradient(150deg, #00172f 0%, #002046 56%, #0a3158 100%);
   color: var(--home-hero-copy);
 }
 
-.home-hero .home-brand-banner {
-  background: #16395e;
-}
-
-.home-hero::before,
 .home-hero::after {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 0;
   content: "";
   pointer-events: none;
 }
 
-.home-hero::before {
-  background: rgb(0 26 57 / 20%);
-}
-
 .home-hero::after {
-  top: calc(var(--home-brand-zone) - 5rem);
-  background: linear-gradient(90deg, rgb(0 23 51 / 94%) 0%, rgb(0 28 61 / 78%) 46%, rgb(0 28 61 / 42%) 100%);
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
 }
 
-.home-hero .hero-grid {
+.home-hero-shell {
   position: relative;
-  z-index: 2;
-  padding-top: var(--home-brand-zone);
+  z-index: 1;
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3rem);
+  padding: clamp(4rem, 7vw, 6.25rem) 0 0;
+  text-align: center;
 }
 
-.home-hero .hero-image {
-  aspect-ratio: 4 / 3;
+.home-hero-copy {
+  width: min(100%, 58rem);
+  margin: 0 auto;
 }
 
 .home-hero h1 {
+  max-width: 18ch;
+  margin-right: auto;
+  margin-left: auto;
   color: var(--home-hero-copy);
+  font-size: clamp(2.45rem, 6.4vw, 5.2rem);
   text-shadow: 0 2px 18px rgb(0 17 38 / 38%);
 }
 
@@ -1295,7 +1303,46 @@ img {
 }
 
 .home-hero .lead {
+  max-width: 47rem;
+  margin-right: auto;
+  margin-bottom: 0;
+  margin-left: auto;
   color: var(--home-hero-body);
+}
+
+.home-hero-actions {
+  position: relative;
+  z-index: 2;
+  justify-content: center;
+  width: min(66rem, calc(100% - 2rem));
+  margin: -1.5rem auto -1.75rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1.1rem;
+  background: rgb(0 23 51 / 92%);
+  padding: 1rem;
+  box-shadow: 0 22px 46px rgb(0 15 34 / 30%);
+  backdrop-filter: blur(14px);
+}
+
+.home-hero-actions a {
+  flex: 1 1 13rem;
+  justify-content: center;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.home-hero-volunteer {
+  justify-content: center;
+}
+
+.home-hero-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .home-hero .cta-link,
@@ -2263,17 +2310,25 @@ h3 {
     padding: 48px 0 42px;
   }
 
-  .home-hero::before {
-    background: rgb(0 26 57 / 18%);
+  .home-hero-shell {
+    gap: 1.5rem;
+    padding-top: 3rem;
   }
 
-  .home-hero::after {
-    top: calc(var(--home-brand-zone) - 1.5rem);
-    background: linear-gradient(180deg, rgb(0 23 51 / 92%) 0%, rgb(0 28 61 / 78%) 54%, rgb(0 28 61 / 68%) 100%);
+  .home-brand-banner-picture {
+    aspect-ratio: var(--brand-banner-mobile-aspect);
   }
 
-  .home-hero {
-    --home-brand-zone: clamp(7.75rem, 31vw, 12rem);
+  .home-hero-actions {
+    display: grid;
+    width: calc(100% - 1rem);
+    margin-top: -0.75rem;
+    margin-bottom: -1.25rem;
+    padding: 0.75rem;
+  }
+
+  .home-hero-actions a {
+    width: 100%;
   }
 
   .section {

@@ -173,11 +173,16 @@ for (const selection of selections) {
         ...mobileDimensions,
       },
     },
-    placement: { page: selection.page, region: selection.region },
+    placements: [
+      { page: selection.page, region: selection.region },
+      ...(selection.id === "media.professional.about-primary"
+        ? [{ page: "/", region: "official profile portrait" }]
+        : []),
+    ],
     alt: selection.alt,
     approvalState: "approved",
   });
 }
 
-await writeFile(manifestPath, `${JSON.stringify({ version: 1, assets }, null, 2)}\n`, "utf8");
+await writeFile(manifestPath, `${JSON.stringify({ version: 2, assets }, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ imported: assets.length, manifest: path.relative(workspaceRoot, manifestPath) }));

@@ -37,6 +37,7 @@ describe("approved builder mapping", () => {
       page.regions.map((region) => (typeof region === "string" ? region : region.id))
     );
     expect(configured).toContain("home.hero.title");
+    expect(configured).toContain("home.hero.volunteer-cta");
     expect(configured).toContain("contact.form.eyebrow");
     expect(configured).toContain("contact.form.title");
     expect(configured).toContain("contact.form.body");
@@ -106,6 +107,7 @@ describe("approved builder mapping", () => {
       "media.outreach",
       "media.capitol",
       "media.professional.home-supporting",
+      "media.professional.home-official-portrait",
       "media.professional.about-primary",
       "media.professional.news-supporting",
       "media.professional.community-primary",
@@ -122,7 +124,8 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="home.official.title"');
     expect(html).toContain('data-builder-region="home.connections.title"');
     expect(html).toContain('data-builder-region="home.latest.title"');
-    expect(html).toContain('data-builder-region="media.hero"');
+    expect(html).not.toContain('data-builder-instance="home-hero"');
+    expect(html).toContain('data-builder-region="media.professional.home-official-portrait"');
     expect(html).toContain('data-builder-region="media.professional.home-supporting"');
   });
 

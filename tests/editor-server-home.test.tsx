@@ -26,7 +26,9 @@ describe("server-rendered home route", () => {
     expect(html).toContain("Current server title");
     expect(html).toContain('href="/resources"');
     expect(html).toContain("Current action");
-    expect(html).toContain("Current meeting");
+    expect(html).not.toContain("Current meeting");
+    expect(html).toContain('data-home-brand-banner="true"');
+    expect(html).toContain('data-builder-region="media.professional.home-official-portrait"');
   });
 
   it("puts dynamic-page published values in the initial HTML", async () => {

@@ -26,6 +26,22 @@ export const spanishTranslationsByKey: Readonly<Record<string, StableTranslation
       en: "Find district office contact information, official legislative resources, voting guidance, and ways to request help with a New Jersey state agency.",
       es: "Encuentre información de contacto de la oficina del distrito, recursos legislativos oficiales, orientación electoral y maneras de solicitar ayuda con una agencia estatal de Nueva Jersey."
     },
+    "home.hero.actions": {
+      en: "Primary District 34 actions",
+      es: "Acciones principales del Distrito 34"
+    },
+    "home.hero.volunteer-cta.label": {
+      en: "Volunteer",
+      es: "Voluntariado"
+    },
+    "media.professional.home-official-portrait.caption": {
+      en: "Assemblywoman Carmen Morales at the New Jersey State House",
+      es: "La asambleísta Carmen Morales en la Casa del Estado de Nueva Jersey"
+    },
+    "global.external.new-tab": {
+      en: "opens in a new tab",
+      es: "se abre en una pestaña nueva"
+    },
     "home.portal.eyebrow": {
       en: "Constituent Portal",
       es: "Portal para residentes"

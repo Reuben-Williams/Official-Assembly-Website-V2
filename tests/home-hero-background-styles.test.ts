@@ -22,17 +22,17 @@ function contrast(foreground: string, background: string) {
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 
-describe("homepage hero background styles", () => {
-  it("keeps the dark artwork treatment scoped to the homepage hero", () => {
+describe("homepage hero centerpiece styles", () => {
+  it("keeps the banner centered in document flow with a distinct action dock", () => {
     expect(css).toMatch(/\.home-hero\s*\{/);
-    expect(css).toMatch(/\.home-hero\s+\.home-brand-banner\s*\{/);
-    expect(css).toMatch(/\.home-hero::before\s*\{/);
+    expect(css).toMatch(/\.home-brand-banner\s*\{[^}]*position:\s*relative/);
     expect(css).toMatch(/\.home-hero::after\s*\{/);
-    expect(css).toMatch(/\.home-hero\s+\.hero-grid\s*\{/);
+    expect(css).toMatch(/\.home-hero-shell\s*\{[^}]*display:\s*grid/);
+    expect(css).toMatch(/\.home-brand-banner-picture\s*\{[^}]*aspect-ratio:\s*var\(--brand-banner-desktop-aspect\)/);
+    expect(css).toMatch(/\.home-hero-actions\s*\{[^}]*background:\s*rgb\(0 23 51 \/ 92%\)/);
     expect(css).toMatch(/\.home-hero\s+\.secondary-link:(?:hover|focus-visible)/);
-    expect(css).toMatch(/--home-brand-zone:\s*clamp\(/);
-    expect(css).toMatch(/\.home-hero\s+\.hero-grid\s*\{[^}]*padding-top:\s*var\(--home-brand-zone\)/);
-    expect(css).toMatch(/\.home-hero\s+\.hero-image\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*3/);
+    expect(css).not.toMatch(/--home-brand-zone:\s*clamp\(/);
+    expect(css).not.toMatch(/\.home-hero\s+\.hero-image\s*\{/);
   });
 
   it("preserves the generic light hero as a separate style contract", () => {
