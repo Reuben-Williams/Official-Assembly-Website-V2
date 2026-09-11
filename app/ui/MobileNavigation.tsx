@@ -111,7 +111,7 @@ export function MobileNavigation({
   }, [closeMenu, pathname]);
 
   useEffect(() => {
-    const query = window.matchMedia("(min-width: 921px)");
+    const query = window.matchMedia("(min-width: 1201px)");
     const onChange = (event: MediaQueryListEvent) => {
       if (event.matches) closeMenu(false);
     };

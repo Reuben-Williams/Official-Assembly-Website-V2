@@ -29,7 +29,7 @@ function installMatchMedia() {
     media: query,
     onchange: null,
     addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
-      if (query === "(min-width: 921px)") desktopListeners.add(listener);
+      if (query === "(min-width: 1201px)") desktopListeners.add(listener);
     },
     removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
       desktopListeners.delete(listener);
@@ -82,6 +82,20 @@ afterEach(async () => {
 });
 
 describe("mobile off-canvas navigation", () => {
+  it.each(["en", "es"] as const)("uses compact built-in News labels in both %s navigation surfaces", async (locale) => {
+    const expected = locale === "es" ? "Noticias" : "News";
+    for (const label of [undefined, "News & Updates", "News", "Noticias y novedades", "Noticias"]) {
+      const content: BuilderServerContent = { regions: label ? {
+        "global.navigation.news.label": { type: "text", value: label },
+      } : {} };
+      await renderHeader(content, locale);
+      expect(container.querySelector('.nav-links a[href="/news"]')?.textContent).toBe(expected);
+      await click(menuTrigger());
+      expect(dialog()?.querySelector('a[href="/news"]')?.textContent).toBe(expected);
+      await keydown("Escape");
+    }
+  });
+
   it("opens a fixed modal dialog without using normal-flow details content", async () => {
     await renderHeader();
 
@@ -237,6 +251,6 @@ describe("mobile off-canvas navigation", () => {
     expect(css).toMatch(/\.mobile-navigation-overlay\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0;/);
     expect(css).toMatch(/\.mobile-navigation-drawer\s*\{[^}]*position:\s*absolute;[^}]*overflow-y:\s*auto;/);
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.mobile-navigation-(?:overlay|drawer)/);
-    expect(css).toMatch(/@media\s*\(min-width:\s*921px\)[\s\S]*\.mobile-menu/);
+    expect(css).toMatch(/@media\s*\(min-width:\s*1201px\)[\s\S]*\.mobile-menu/);
   });
 });

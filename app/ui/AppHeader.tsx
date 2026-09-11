@@ -78,14 +78,16 @@ function navigationEntries({
       href: page.href,
       label: page.navLabel,
     });
+    const label = builderText(content, `global.navigation.${slug}.label`, link.label);
+    // Compact the built-in header label without rewriting published or custom content.
+    const compactNews = slug === "news" &&
+      ["News & Updates", "News", "Noticias y novedades", "Noticias"].includes(label);
     return [{
       slug,
       href: link.href,
-      label: localizedNavigationLabel(
-        locale,
-        slug,
-        builderText(content, `global.navigation.${slug}.label`, link.label),
-      ),
+      label: compactNews
+        ? publicCopy(locale, "global.header.news", "News")
+        : localizedNavigationLabel(locale, slug, label),
     }];
   });
 }

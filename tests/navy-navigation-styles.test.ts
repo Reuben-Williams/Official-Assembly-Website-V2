@@ -20,6 +20,21 @@ function contrast(foreground: number[], background: number[]) {
 }
 
 describe("navy navigation", () => {
+  it("keeps header labels on one line and gives both actions an equal 44px height", () => {
+    for (const selector of [".site-header .language-toggle", ".site-header .nav-cta"]) {
+      expect(declarations(selector), selector).toContain("height: 44px;");
+      expect(declarations(selector), selector).toContain("box-sizing: border-box;");
+      expect(declarations(selector), selector).toContain("white-space: nowrap;");
+      expect(declarations(selector), selector).toContain("flex-shrink: 0;");
+    }
+    expect(declarations(".site-header .nav-links a")).toContain("white-space: nowrap;");
+    expect(declarations(".site-header .brand span:last-child")).toContain("white-space: nowrap;");
+    expect(declarations(".site-header .brand span:last-child")).toContain("text-overflow: ellipsis;");
+    expect(declarations(".site-header .brand-mark")).toContain("flex-shrink: 0;");
+    expect(declarations(".site-header > .container")).toContain("width: min(1440px, calc(100% - 48px));");
+    expect(css).toMatch(/@media\s*\(max-width:\s*1200px\)\s*\{\s*\.nav-links,\s*\.nav-cta\s*\{\s*display: none;/);
+  });
+
   it("shares the exact opaque hero navy without changing the sticky header geometry", () => {
     expect(declarations(":root")).toContain("--brand-navy: #1e3353;");
     expect(declarations(".site-header")).toContain("background: var(--brand-navy);");

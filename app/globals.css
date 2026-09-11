@@ -1045,7 +1045,42 @@ img {
   color: #fff;
 }
 
+.site-header > .container {
+  width: min(1440px, calc(100% - 48px));
+}
+
+.site-header .brand {
+  min-width: 0;
+}
+
+.site-header .brand span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-header .nav-links,
+.site-header .header-actions {
+  flex-shrink: 0;
+}
+
+.site-header .nav-links a {
+  white-space: nowrap;
+}
+
+.site-header .language-toggle,
+.site-header .nav-cta {
+  box-sizing: border-box;
+  height: 44px;
+  flex-shrink: 0;
+  justify-content: center;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
 .site-header .brand-mark {
+  flex-shrink: 0;
   background: rgb(255 255 255 / 10%);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 25%);
 }
@@ -2303,15 +2338,6 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .nav-links,
-  .nav-cta {
-    display: none;
-  }
-
-  .mobile-menu {
-    display: block;
-  }
-
   .card-grid,
   .card-grid.two,
   .stats-grid {
@@ -2324,7 +2350,18 @@ h3 {
   }
 }
 
-@media (min-width: 921px) {
+@media (max-width: 1200px) {
+  .nav-links,
+  .nav-cta {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: block;
+  }
+}
+
+@media (min-width: 1201px) {
   .mobile-menu,
   .mobile-navigation-overlay {
     display: none;
@@ -2343,6 +2380,10 @@ h3 {
 
   .container {
     width: min(var(--container), calc(100% - 24px));
+  }
+
+  .site-header > .container {
+    width: calc(100% - 24px);
   }
 
   .hero-grid {
