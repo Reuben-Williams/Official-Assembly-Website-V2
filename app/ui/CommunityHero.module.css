@@ -1,5 +1,5 @@
 .hero {
-  --hero-navy: #1e3353;
+  --hero-navy: var(--brand-navy);
   --hero-gold: #eac68c;
   --hero-chrome-height: 75px;
   display: flex;

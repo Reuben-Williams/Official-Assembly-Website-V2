@@ -4,6 +4,7 @@
   --surface-muted: #ebeef0;
   --surface-soft: #f1f4f6;
   --primary: #002046;
+  --brand-navy: #1e3353;
   --primary-soft: #d6e3ff;
   --secondary: #b52426;
   --secondary-soft: #ffdad6;
@@ -907,9 +908,9 @@ img {
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid var(--border);
-  background: rgba(247, 250, 252, 0.94);
-  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgb(255 255 255 / 18%);
+  background: var(--brand-navy);
+  color: #fff;
 }
 
 .nav-shell {
@@ -1038,6 +1039,47 @@ img {
   outline: none;
 }
 
+.site-header .brand,
+.site-header .nav-links a,
+.site-header .mobile-summary {
+  color: #fff;
+}
+
+.site-header .brand-mark {
+  background: rgb(255 255 255 / 10%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 25%);
+}
+
+.site-header .language-toggle {
+  background: transparent;
+  border-color: #8b9aaf;
+  color: #fff;
+}
+
+.site-header .nav-links a:hover,
+.site-header .nav-links a:focus-visible,
+.site-header .language-toggle:hover,
+.site-header .language-toggle:focus-visible,
+.site-header .mobile-summary:hover,
+.site-header .mobile-summary:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+}
+
+.site-header .nav-cta {
+  background: #fff;
+  color: var(--brand-navy);
+}
+
+.site-header .nav-cta:hover {
+  background: #e7edf5;
+}
+
+.site-header :is(a, button):focus-visible {
+  outline: 3px solid #eac68c;
+  outline-offset: 3px;
+}
+
 .mobile-navigation-overlay {
   position: fixed;
   inset: 0;
@@ -1082,9 +1124,7 @@ img {
     max(1.5rem, env(safe-area-inset-bottom))
     1rem;
   border-left: 1px solid rgb(255 255 255 / 18%);
-  background:
-    radial-gradient(circle at 100% 0, rgb(47 111 94 / 28%), transparent 18rem),
-    var(--primary);
+  background: var(--brand-navy);
   box-shadow: -24px 0 70px rgb(0 20 44 / 28%);
   color: white;
   transform: translateX(100%);
