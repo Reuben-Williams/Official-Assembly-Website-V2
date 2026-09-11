@@ -1,0 +1,116 @@
+.hero {
+  --hero-navy: #1e3353;
+  --hero-gold: #eac68c;
+  --hero-chrome-height: 75px;
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
+  height: calc(100svh - var(--hero-chrome-height));
+  background: var(--hero-navy);
+  color: #fff;
+}
+.brand { height: clamp(88px, 12svh, 110px); flex-shrink: 0; display: grid; place-items: center; }
+.brand :global(.home-brand-banner) { height: 100%; width: min(94%, 470px); margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.brand :global(.home-brand-banner-picture) { display: block; height: 100%; aspect-ratio: auto; }
+.brand :global(.home-brand-banner-image) { width: 100%; height: 100%; object-fit: contain; }
+.carousel { flex: 1; min-height: 290px; position: relative; color: #fff; background: var(--hero-navy); }
+.stage { position: absolute; inset: 0; isolation: isolate; }
+.photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photo[hidden] { display: none; }
+.stage[data-format="portrait"] { padding: 24px 24px 104px; }
+.stage[data-format="portrait"] .photo { object-fit: contain; mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent); }
+.stage::before, .stage::after { content: ""; position: absolute; left: 0; right: 0; pointer-events: none; z-index: 1; }
+.stage::before { top: 0; height: 72px; background: linear-gradient(to bottom, var(--hero-navy), rgb(30 51 83 / 90%) 15%, rgb(30 51 83 / 30%) 65%, transparent); }
+.stage::after { bottom: 0; height: 174px; background: linear-gradient(to bottom, transparent, rgb(30 51 83 / 40%) 26%, rgb(30 51 83 / 96%) 65%, var(--hero-navy) 92%); }
+.footer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; min-height: 86px; padding: 10px 5.55% 16px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.description { display: flex; flex: 1; gap: 16px; min-width: 0; min-height: 54px; align-items: flex-start; }
+.description > div { min-width: 0; max-width: 550px; }
+.description strong { font-size: 17px; line-height: 1.3; font-weight: 600; display: block; }
+.description p { margin: 5px 0 0; font-size: 14px; line-height: 1.45; color: #e0e7f1; }
+.index { padding: 4px 16px 0 0; border-right: 1px solid #74849a; font-size: 12px; color: var(--hero-gold); letter-spacing: 1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.controls, .buttons { display: flex; align-items: center; gap: 17px; flex-shrink: 0; }
+.buttons { gap: 8px; }
+.buttons button { width: 48px; height: 48px; border: 1px solid #8b9aaf; border-radius: 50%; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }
+.buttons .play { width: auto; min-width: 108px; padding: 0 16px; border-radius: 26px; display: flex; gap: 7px; font-size: 14px; font-weight: 700; justify-content: center; }
+.buttons .galleryToggle { border-color: #7f8fa166; color: #d5e0ed; }
+.hero button { cursor: pointer; font-family: inherit; touch-action: manipulation; }
+.hero button:disabled { cursor: default; opacity: .55; }
+.buttons button:hover:not(:disabled) { background: #ffffff16; }
+.hero :is(button,a):focus-visible { outline: 3px solid var(--hero-gold); outline-offset: 4px; }
+.timeline { position: relative; width: 200px; height: 48px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); isolation: isolate; }
+.track { position: absolute; inset: 23px 0 auto; height: 2px; background: #73869c66; z-index: -1; overflow: hidden; }
+.fill { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--hero-gold); }
+.carousel[data-playing="true"] .fill { will-change: transform; }
+.timeline button { border: 0; background: none; min-width: 0; padding: 0; height: 48px; display: grid; place-items: center; border-radius: 6px; }
+.timeline button::before { content: ""; width: 7px; height: 7px; background: #a9b5c5; border-radius: 50%; box-shadow: 0 0 0 4px var(--hero-navy); }
+.timeline button[aria-current]::before { background: var(--hero-gold); box-shadow: 0 0 0 3px var(--hero-navy), 0 0 0 4px #eac68c77; }
+.timeline button[data-complete="true"]::before { background: var(--hero-gold); }
+.copyBand { flex-shrink: 0; display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; position: relative; padding: 20px 5.55% 26px; }
+.copyBand::before { content: ""; height: 1px; background: #8190a04a; position: absolute; top: 0; left: 5.55%; right: 5.55%; }
+.copyBand :global(.eyebrow) { color: var(--hero-gold); font-size: 10px; font-weight: 700; letter-spacing: 1.8px; margin: 0 0 12px; }
+.copyBand h1 { font-size: clamp(28px, 2.5vw, 38px); line-height: 1.1; letter-spacing: -1px; margin: 0; max-width: 600px; color: #fff; }
+.copyBand :global(.lead) { font-size: 13px; line-height: 1.5; color: #e2e9f2; margin: 0 0 12px; max-width: 560px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 620px; }
+.actions a { border: 1px solid #8b99ac; border-radius: 8px; padding: 13px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; line-height: 1.3; min-height: 54px; font-weight: 700; color: #fff; background: transparent; cursor: pointer; }
+.actions a:first-child { background: #fff; color: #082747; border-color: #fff; }
+.actions a:hover { background: #ffffff20; }
+.actions a:first-child:hover { background: #e7edf5; }
+.actions a svg { flex-shrink: 0; }
+.error { position: absolute; inset: 25%; text-align: center; align-content: center; font-size: 14px; }
+.dialog { border: 1px solid #c8d4df; border-radius: 16px; padding: 0; width: min(1000px, calc(100% - 48px)); max-height: 85dvh; margin: auto; background: #f4f7fa; color: #082747; box-shadow: 0 30px 100px #00172b66; }
+.dialog::backdrop { background: #081a32ba; backdrop-filter: blur(5px); }
+.modalHeading { position: sticky; top: 0; z-index: 1; padding: 24px 28px 20px; background: #f4f7faf5; border-bottom: 1px solid #d0dbe6; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.modalHeading h2 { margin: 0 0 8px; font-size: 24px; letter-spacing: -.5px; }
+.modalHeading p { margin: 0; font-size: 12px; color: #5b6e84; line-height: 1.5; }
+.modalHeading button { border: 1px solid #bdcbda; background: #fff; color: #082747; border-radius: 50%; width: 44px; height: 44px; display: grid; place-items: center; flex-shrink: 0; }
+.galleryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 24px 28px; }
+.galleryGrid button { min-width: 0; border: 1px solid #c5d2df; border-radius: 9px; padding: 0; background: #fff; text-align: left; overflow: hidden; color: #082747; }
+.galleryGrid button[aria-pressed="true"] { outline: 2px solid #9b733c; outline-offset: 3px; }
+.galleryGrid img { width: 100%; height: 154px; object-fit: contain; display: block; background: var(--hero-navy); padding: 5px; }
+.galleryGrid button > span { display: block; padding: 12px; }
+.galleryGrid strong { font-size: 14px; line-height: 1.4; display: block; }
+.galleryGrid small { font-size: 12px; color: #52647a; display: block; line-height: 1.45; margin-top: 5px; }
+.modalFoot { font-size: 12px; color: #5b6e84; padding: 0 28px 22px; margin: 0; line-height: 1.6; }
+@media (max-width: 1100px) {
+  .description strong { font-size: 16px; } .description p { font-size: 13px; }
+  .timeline { width: 144px; } .controls { gap: 12px; } .copyBand { gap: 28px; }
+  .buttons .play { min-width: 96px; } .actions a { font-size: 14px; padding: 13px 14px; }
+}
+@media (max-width: 900px) {
+  .hero { min-height: 660px; } .brand { height: 88px; }
+  .footer { display: grid; grid-template-columns: 1fr; gap: 8px; padding-left: 24px; padding-right: 24px; }
+  .description { min-height: 56px; } .description > div { max-width: none; }
+  .controls { justify-content: space-between; } .timeline { width: 40%; }
+  .stage[data-format="portrait"] { padding-bottom: 148px; } .stage::after { height: 198px; }
+  .copyBand { padding: 18px 24px 24px; gap: 24px; } .copyBand h1 { font-size: 28px; }
+  .galleryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .hero { min-height: 740px; height: auto; min-height: max(740px, calc(100svh - var(--hero-chrome-height))); }
+  .brand { height: 78px; padding: 0 8px; }
+  .carousel { min-height: 290px; } .stage::before { height: 45px; } .stage::after { height: 220px; }
+  .stage[data-format="portrait"] { padding: 14px 16px 90px; }
+  .footer { padding: 0 20px 12px; gap: 6px; }
+  .description { gap: 10px; min-height: 67px; } .description strong { font-size: 15px; } .description p { font-size: 13px; line-height: 1.35; margin-top: 4px; }
+  .index { font-size: 10px; padding-right: 10px; padding-top: 3px; }
+  .controls { display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .timeline { width: 100%; height: 30px; } .timeline button { height: 30px; } .track { top: 14px; }
+  .buttons { justify-content: flex-end; } .buttons button { width: 46px; height: 46px; } .buttons .play { min-width: 100px; height: 46px; }
+  .copyBand { grid-template-columns: 1fr; padding: 16px 20px 20px; gap: 10px; }
+  .copyBand::before { left: 20px; right: 20px; }
+  .copyBand :global(.eyebrow) { font-size: 8px; letter-spacing: 1px; margin-bottom: 8px; }
+  .copyBand h1 { font-size: 27px; letter-spacing: -.6px; }
+  .copyBand :global(.lead) { font-size: 12px; line-height: 1.45; }
+  .actions a { font-size: 14px; min-height: 54px; padding: 11px 12px; }
+  .dialog { width: calc(100% - 24px); max-height: 88dvh; border-radius: 12px; }
+  .modalHeading { padding: 20px 18px 16px; } .modalHeading h2 { font-size: 21px; }
+  .galleryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 18px; }
+  .galleryGrid button > span { padding: 10px; } .modalFoot { padding: 0 18px 18px; }
+}
+@media (max-width: 360px) {
+  .brand { height: 70px; } .copyBand { padding: 14px 16px 18px; } .copyBand h1 { font-size: 25px; }
+  .footer { padding-left: 16px; padding-right: 16px; } .description { gap: 8px; min-height: 84px; }
+  .index { padding-right: 8px; } .buttons { gap: 7px; } .buttons button { width: 44px; }
+  .buttons .play { min-width: 94px; } .actions a { padding: 11px 10px; gap: 6px; }
+  .galleryGrid img { height: 130px; }
+}

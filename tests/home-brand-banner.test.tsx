@@ -96,7 +96,7 @@ describe("homepage official brand banner", () => {
     expect(html).not.toContain("<section");
   });
 
-  it("renders in document flow between the homepage introduction and action dock", async () => {
+  it("renders the banner first in the approved community hero", async () => {
     const html = renderToStaticMarkup(await HomePageView({
       assets,
       calendar: { status: "ready", events: [] },
@@ -112,9 +112,10 @@ describe("homepage official brand banner", () => {
     expect(bannerPosition).toBeGreaterThanOrEqual(0);
     expect(sectionsPosition).toBeLessThan(heroPosition);
     expect(heroPosition).toBeLessThan(titlePosition);
-    expect(titlePosition).toBeLessThan(bannerPosition);
+    expect(heroPosition).toBeLessThan(bannerPosition);
+    expect(bannerPosition).toBeLessThan(titlePosition);
     expect(bannerPosition).toBeLessThan(actionsPosition);
-    expect(html).toContain('class="hero home-hero"');
+    expect(html).toContain('data-community-hero="true"');
   });
 
   it("verifies the settled desktop, tablet, and mobile centerpiece relationship", () => {

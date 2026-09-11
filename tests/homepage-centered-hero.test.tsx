@@ -39,19 +39,21 @@ describe("centered homepage banner release", () => {
     });
   });
 
-  it("orders the hero introduction, banner, and action dock without a competing hero photo", async () => {
+  it("orders the approved banner, community carousel, and editable service introduction", async () => {
     const html = await renderHome();
     const eyebrow = html.indexOf('data-builder-region="home.hero.eyebrow"');
     const title = html.indexOf('data-builder-region="home.hero.title"');
     const body = html.indexOf('data-builder-region="home.hero.body"');
     const banner = html.indexOf('data-home-brand-banner="true"');
     const actions = html.indexOf('data-home-hero-actions="true"');
+    const carousel = html.indexOf('data-community-carousel="true"');
 
     expect(eyebrow).toBeGreaterThanOrEqual(0);
     expect(eyebrow).toBeLessThan(title);
     expect(title).toBeLessThan(body);
-    expect(body).toBeLessThan(banner);
-    expect(banner).toBeLessThan(actions);
+    expect(banner).toBeLessThan(carousel);
+    expect(carousel).toBeLessThan(eyebrow);
+    expect(body).toBeLessThan(actions);
     expect(html).not.toContain('data-builder-instance="home-hero"');
   });
 

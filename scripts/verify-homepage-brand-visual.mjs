@@ -90,7 +90,8 @@ try {
     const state = await page.evaluate(() => {
       const banner = document.querySelector('[data-home-brand-banner="true"]');
       const hero = document.querySelector('[data-home-section="hero"]');
-      const copy = document.querySelector(".home-hero-copy");
+      const copy = document.querySelector('[data-builder-region="home.hero.title"]');
+      const carousel = document.querySelector('[data-community-carousel="true"]');
       const actions = document.querySelector('[data-home-hero-actions="true"]');
       const official = document.querySelector('[data-home-section="official"]');
       const portrait = document.querySelector('[data-profile-portrait="true"] img');
@@ -127,7 +128,8 @@ try {
             && bannerRect.width < heroRect.width,
         ),
         bannerInDocumentFlow: bannerPosition !== "absolute" && bannerPosition !== "fixed",
-        copyBeforeBanner: follows(copy, banner),
+        bannerBeforeCarousel: follows(banner, carousel),
+        carouselBeforeCopy: follows(carousel, copy),
         bannerBeforeActions: follows(banner, actions),
         actionDockFullyVisible: Boolean(
           heroRect
@@ -138,7 +140,7 @@ try {
         heroBeforeOfficial: follows(hero, official),
         officialBeforeStats: follows(official, stats),
         heroHasReadableBackground: Boolean(
-          heroStyle?.backgroundImage && heroStyle.backgroundImage !== "none",
+          heroStyle?.backgroundColor === "rgb(30, 51, 83)",
         ),
         actionCount: actions?.querySelectorAll("a").length || 0,
         volunteerDestination: actions
@@ -191,7 +193,8 @@ for (const result of results) {
     || !result.bannerInsideHero
     || !result.bannerCenteredInHero
     || !result.bannerInDocumentFlow
-    || !result.copyBeforeBanner
+    || !result.bannerBeforeCarousel
+    || !result.carouselBeforeCopy
     || !result.bannerBeforeActions
     || !result.actionDockFullyVisible
     || !result.heroBeforeOfficial

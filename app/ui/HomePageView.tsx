@@ -21,6 +21,8 @@ import { approvedBrandAssets } from "../../lib/brand/approved-assets";
 import type { VerifiedApprovedBrandAssets } from "../../lib/brand/assets";
 import { HomepageBrandBanner } from "./HomepageBrandBanner";
 import { PublicEventsSection } from "./PublicEventsSection";
+import { CommunityCarousel } from "./CommunityCarousel";
+import heroStyles from "./CommunityHero.module.css";
 
 // Checked-in values are used only when an authoritative server read confirms that
 // a registered region has no kind-correct published override.
@@ -87,9 +89,11 @@ export async function HomePageView({
 
   return (
     <div data-builder-region="home.sections" data-builder-kind="sections">
-      <section className="hero home-hero" data-builder-item-id="hero" data-home-section="hero">
-        <div className="container home-hero-shell">
-          <div className="home-hero-copy">
+      <section className={heroStyles.hero} data-community-hero="true" data-builder-item-id="hero" data-home-section="hero">
+        <div className={heroStyles.brand}><HomepageBrandBanner assets={assets} content={content} locale={locale} /></div>
+        <CommunityCarousel locale={locale} />
+        <div className={heroStyles.copyBand}>
+          <div>
             <p
               className="eyebrow"
               data-builder-region="home.hero.eyebrow"
@@ -105,6 +109,8 @@ export async function HomePageView({
             >
               {localizedBuilderText(locale, "home.hero.title", builderText(content, "home.hero.title", homeFallback.title))}
             </h1>
+          </div>
+          <div>
             <p
               className="lead"
               data-builder-region="home.hero.body"
@@ -113,10 +119,8 @@ export async function HomePageView({
             >
               {localizedBuilderText(locale, "home.hero.body", builderText(content, "home.hero.body", homeFallback.description))}
             </p>
-          </div>
-          <HomepageBrandBanner assets={assets} content={content} locale={locale} />
           <div
-            className="hero-actions home-hero-actions"
+            className={heroStyles.actions}
             aria-label={localizedBuilderText(locale, "home.hero.actions", "Primary District 34 actions")}
             data-home-hero-actions="true"
           >
@@ -136,6 +140,7 @@ export async function HomePageView({
               href={newsCta.href}
             >
               <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.news-cta.label", newsCta.label)}</span>
+              <ArrowRight size={18} aria-hidden="true" />
             </Link>
             <Link
               className="secondary-link"
@@ -144,6 +149,7 @@ export async function HomePageView({
               href={newsletterCta.href}
             >
               <span data-builder-link-label>{localizedBuilderText(locale, "home.hero.newsletter-cta.label", newsletterCta.label)}</span>
+              <ArrowRight size={18} aria-hidden="true" />
             </Link>
             <a
               className="secondary-link home-hero-volunteer"
@@ -159,6 +165,7 @@ export async function HomePageView({
                 {localizedBuilderText(locale, "global.external.new-tab", "opens in a new tab")}
               </span>
             </a>
+          </div>
           </div>
         </div>
       </section>
