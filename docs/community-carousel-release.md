@@ -14,7 +14,7 @@ The eight WebP files in `public/images/community-carousel/` are unchanged copies
 - Existing homepage ordering tests and the visual-verification script now reflect banner, carousel, and service copy order.
 - All eight files were checked for actual dimensions; portraits are 1066 × 1600 and use contained framing.
 
-## Release blocked; public site unchanged
+## Initial attempt (resolved)
 
 Staged production deployment `dpl_oLUEP25nMP7erK9jrDuCFVqMm9rV` used `vercel deploy --prod --skip-domain --yes`. It failed before the Next.js build at the unchanged newsletter preflight: `manual_attestation_missing`. All 21 other provider categories passed. Do not disable the newsletter or bypass this check.
 
@@ -22,13 +22,14 @@ The owner needs to review the Resend dashboard, then record **Confirm dashboard 
 
 The canonical homepage was verified HTTP 200 with the old banner and without the new carousel. Its aliases remain on deployment `dpl_2HwbmD4w8kGa8NcUSTesb4rWxq1A` (commit `160b27f`). No domain promotion, provider writes, form submissions, or email sends occurred.
 
-## Resume after owner review
+## Staged QA and production promotion
 
-Use this isolated `codex/community-carousel-release` worktree, not the original dirty checkout. Retain the separate pre-existing card-action test changes in that original checkout.
+On September 10, 2026 (Eastern time), the owner recorded the dashboard review. A read-only database check confirmed the review was current; the scheduled worker also matched the recent owner sign-in email to sent and delivered receipts. A fresh build passed the unchanged steady-mode newsletter preflight across all categories. The audit grid in an already-open editor can remain stale because recording a review refreshes status, not the separately stored inventory result.
 
-1. Recheck tests as needed and create a new production-target deployment with `--skip-domain`; keep the production newsletter preflight intact.
-2. Verify the actual rendered Next.js page on desktop, tablet, and mobile, including English/Spanish, all portraits, gallery keyboard/focus behavior, Play/Pause and progress, reduced motion, real header/alert height, service buttons, and newsletter navigation. Local rendering is blocked by deliberately absent published-content credentials; do not replace them with synthetic content.
-3. Check short-screen/enlarged-text flow for clipping or overlap before promotion. Update layout if visual QA identifies a mismatch with the approved demo.
-4. Commit any QA fixes, deploy the final exact commit, then promote only the verified deployment and repeat canonical-domain checks. Push the scoped release to the repository without overwriting unrelated main-checkout changes.
+Production-target deployment `dpl_4nbAKuowd4pQ8E7r8JaDX8dukifc` was staged with `--skip-domain` from application commit `434e9630f5c139d125a3ea1d57679aaac3f5108d`. Next.js built successfully (59 seconds). The deployment was promoted only after rendered QA, and the canonical homepage was then confirmed to display the new carousel.
 
-Rendered production QA and the final promotion have **not** been completed yet.
+Rendered checks covered 1440x900, 1280x720, 768x1024, 390x844, and 320x700 viewports. The normal desktop hero ends at the viewport boundary; shorter and narrow screens allow vertical page scrolling so service actions remain inside the section rather than being clipped. No horizontal overflow was found. All eight gallery images loaded. Portraits use contained framing; wide photographs retain the approved cover framing and navy fades. Manual next/previous, consecutive DSC09911/DSC09944 slides, optional playback, moving progress line, gallery selection, Escape dismissal, and focus return were verified. New carousel captions and controls switched to Spanish. Existing published labels and provider settings were not rewritten by this release.
+
+The canonical newsletter CTA navigated to the working signup route and displayed its required fields and consent notice. No form was submitted and no email delivery or broadcast was initiated for this visual release. Production readiness checks are not an end-to-end send test. The protected deployment hostname produced a Turnstile host error during staging; the canonical-domain check did not reproduce that error. A widget cleanup warning on client navigation was observed and is outside the carousel change. Reduced-motion behavior is covered by automated tests; an OS-level reduced-motion browser check was not performed.
+
+The isolated worktree preserves unrelated edits in the original checkout. The previous production deployment `dpl_2HwbmD4w8kGa8NcUSTesb4rWxq1A` remains the rollback reference. No database migrations, provider configuration changes, synthetic records, or outbound sends were performed.
