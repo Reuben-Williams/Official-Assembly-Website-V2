@@ -65,7 +65,8 @@
 .editorial-page .public-form-card :is(input, textarea, select), .editorial-home > section:not([data-community-hero]) .public-form-card :is(input, textarea, select) { border-radius: 2px; font-size: 16px; }
 .editorial-page .public-form-card button[type="submit"], .editorial-home > section:not([data-community-hero]) .public-form-card button[type="submit"] { border-radius: 2px; min-height: 48px; background: #1e3353; }
 .editorial-page .newsletter-first-section { background: #f3f0e9; padding-top: clamp(2rem, 5vw, 4rem); }
-.editorial-page .newsletter-first-shell { max-width: 52rem; }
+.editorial-page .newsletter-first-shell { max-width: 52rem; grid-template-columns: minmax(0, 1fr); }
+.editorial-page .newsletter-first-shell > * { min-width: 0; }
 .editorial-page .newsletter-first-copy h1 { font-size: clamp(2.1rem, 5vw, 3.25rem); max-width: none; }
 .editorial-page .newsletter-consent-context { border-radius: 2px; background: #f3f6f4; }
 .editorial-page .news-feed { background: #fcfbf8; }
@@ -108,4 +109,22 @@ body:has(main [data-editorial-page]) > .footer a { display: inline-flex; align-i
   .editorial-page .newsletter-supporting-grid { grid-template-columns: minmax(0, 1fr); }
   .editorial-home > [data-home-section="guidance"] .split { grid-template-columns: minmax(0, 1fr); }
   .editorial-page .image-caption { font-size: .75rem; left: .65rem; right: .65rem; bottom: .65rem; padding: .65rem; }
+}
+/* The standard verification widget needs 300px. On small phones, let the
+   card use the available screen width instead of clipping or scaling it. */
+@media (max-width: 380px) {
+  :is(.editorial-page, .editorial-home) .public-form-card {
+    width: min(302px, calc(100vw - 16px));
+    max-width: none;
+    margin-inline: calc((100% - min(302px, calc(100vw - 16px))) / 2);
+  }
+  :is(.editorial-page, .editorial-home) .public-form-card .public-form-card-body { padding: 0 0 1rem; }
+  :is(.editorial-page, .editorial-home) .public-form-card-body > :is(p, aside),
+  :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form fieldset,
+  :is(.editorial-page, .editorial-home) .public-form-card .public-form-interaction > p,
+  :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form > button {
+    margin-inline: 1rem;
+  }
+  :is(.editorial-page, .editorial-home) .public-form-card-page-first .public-form-card-body { padding-top: 1rem; }
+  :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form > button[type="submit"] { width: calc(100% - 2rem); }
 }

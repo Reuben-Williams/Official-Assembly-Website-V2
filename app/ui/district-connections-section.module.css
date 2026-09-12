@@ -182,8 +182,8 @@
 .newsletterCard :global(.newsletter-signup-embedded) > div:first-child :global(p) { color: #fff; }
 .newsletterCard :global(.newsletter-signup-embedded) > div:first-child :global(.eyebrow) { color: #e2c88e; }
 .newsletterCard :global(.secondary-link) { color: #fff; border-color: #a5b2c3; background: transparent; }
-.communityPhoto { grid-row: span 2; }
-.communityPhoto :global(.image-card) { aspect-ratio: 4 / 5; height: 100%; min-height: 22rem; border-radius: 2px; box-shadow: none; }
+.communityPhoto { grid-row: span 2; min-width: 0; align-self: start; }
+.communityPhoto :global(.image-card) { width: 100%; aspect-ratio: 4 / 5; height: auto; min-height: 0; border-radius: 2px; box-shadow: none; }
 .communityPhoto :global(img) { object-position: center top; }
 @media (max-width: 760px) {
   .newsletterCard :global(.newsletter-signup-embedded), .actionColumn { grid-template-columns: minmax(0, 1fr); }
@@ -195,4 +195,8 @@
   .section {
     padding: 3.5rem 0;
   }
+}
+@media (max-width: 380px) {
+  .newsletterCard { margin-inline: -19px; padding: 1.25rem 0; overflow: visible; }
+  .newsletterCard :global(.newsletter-signup-embedded) > div:first-child { padding-inline: 1rem; }
 }
