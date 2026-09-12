@@ -6,6 +6,16 @@ type StableTranslation = Readonly<{ en: string; es: string }>;
 
 export const spanishTranslationsByKey: Readonly<Record<string, StableTranslation>> =
   Object.freeze({
+    "newsletter.form.eyebrow": { en: "Email Updates", es: "Novedades por correo electrónico" },
+    "newsletter.form.title": { en: "Request District Newsletter emails", es: "Solicite correos del Boletín del distrito" },
+    "newsletter.form.body": { en: "Get legislative information, public services, and district events by email after confirming your request.", es: "Reciba información legislativa, servicios públicos y eventos del distrito por correo electrónico después de confirmar su solicitud." },
+    "newsletter.features.eyebrow": { en: "Newsletter Details", es: "Detalles del boletín" },
+    "newsletter.features.title": { en: "Know what happens after you request updates", es: "Sepa qué sucede después de solicitar novedades" },
+    "newsletter.features.body": { en: "Your request remains pending until you use the confirmation link sent to your email address.", es: "Su solicitud queda pendiente hasta que use el enlace de confirmación enviado a su dirección de correo electrónico." },
+    "newsletter.supporting.official.title": { en: "Official updates, delivered carefully", es: "Novedades oficiales, enviadas con cuidado" },
+    "newsletter.supporting.official.body": { en: "District Newsletter messages focus on legislative information, public services, and district events.", es: "Los mensajes del Boletín del distrito se centran en información legislativa, servicios públicos y eventos del distrito." },
+    "newsletter.supporting.office.title": { en: "You stay in control", es: "Usted mantiene el control" },
+    "newsletter.supporting.office.body": { en: "Every newsletter includes an unsubscribe link. Call (973) 450-0484 when you need direct District Office assistance.", es: "Cada boletín incluye un enlace para cancelar la suscripción. Llame al (973) 450-0484 cuando necesite asistencia directa de la oficina del distrito." },
     "home.official.identity.title": { en: "Assemblywoman", es: "Asambleísta" },
     "home.official.identity.position": { en: "Deputy Whip", es: "Subjefa de disciplina" },
     "home.official.occupation.value": { en: "Director of Curriculum and Instruction, Essex County Schools of Technology", es: "Directora de Currículo e Instrucción, Escuelas de Tecnología del Condado de Essex" },

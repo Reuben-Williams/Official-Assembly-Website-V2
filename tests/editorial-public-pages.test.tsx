@@ -8,6 +8,7 @@ vi.mock("../app/ui/ResidentForms", () => ({ ResidentForm: async () => <form /> }
 import { pages } from "../app/data/site";
 import { PageTemplate } from "../app/ui/PageTemplate";
 import { OfficialProfileSection } from "../app/ui/OfficialProfileSection";
+import { translateStableText } from "../app/i18n/translations";
 
 async function documentFor(slug: string, children?: React.ReactNode) {
   const page = pages.find((item) => item.slug === slug)!;
@@ -15,6 +16,10 @@ async function documentFor(slug: string, children?: React.ReactNode) {
 }
 
 describe("approved editorial public layout", () => {
+  it("translates the compact newsletter introduction without replacing edited content", () => {
+    expect(translateStableText("newsletter.form.title", "Request District Newsletter emails", "es")).toBe("Solicite correos del Boletín del distrito");
+    expect(translateStableText("newsletter.form.title", "An independently edited title", "es")).toBe("An independently edited title");
+  });
   it("keeps narrow newsletter columns fluid and gives the verification widget its full width", () => {
     const css = readFileSync("app/editorial.css", "utf8");
     expect(css).toMatch(/\.editorial-page \.newsletter-first-shell\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);

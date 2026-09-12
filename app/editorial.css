@@ -118,13 +118,13 @@ body:has(main [data-editorial-page]) > .footer a { display: inline-flex; align-i
     max-width: none;
     margin-inline: calc((100% - min(302px, calc(100vw - 16px))) / 2);
   }
-  :is(.editorial-page, .editorial-home) .public-form-card .public-form-card-body { padding: 0 0 1rem; }
-  :is(.editorial-page, .editorial-home) .public-form-card-body > :is(p, aside),
+  :is(.editorial-page, .editorial-home) .public-form-card[data-public-form-type] .public-form-card-body { padding: 0 0 1rem; }
+  :is(.editorial-page, .editorial-home) .public-form-card .public-form-card-body > :is(p, aside),
   :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form fieldset,
   :is(.editorial-page, .editorial-home) .public-form-card .public-form-interaction > p,
   :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form > button {
     margin-inline: 1rem;
   }
-  :is(.editorial-page, .editorial-home) .public-form-card-page-first .public-form-card-body { padding-top: 1rem; }
+  :is(.editorial-page, .editorial-home) .public-form-card-page-first[data-public-form-type] .public-form-card-body { padding-top: 1rem; }
   :is(.editorial-page, .editorial-home) .public-form-card .builder-public-form > button[type="submit"] { width: calc(100% - 2rem); }
 }
