@@ -19,7 +19,7 @@ export function PublishedPostArticle({ locale, post }: {
   post: PublishedPost & { snapshot: NonNullable<PublishedPost["snapshot"]> };
 }) {
   return (
-    <article className="published-post">
+    <article className="published-post editorial-page" data-editorial-page="post">
       <header className="published-post-header">
         <div className="container published-post-heading">
           <Link className="secondary-link" href="/news">

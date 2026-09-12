@@ -88,7 +88,7 @@ export async function HomePageView({
   const connections = await DistrictConnectionsSection({ content, locale });
 
   return (
-    <div data-builder-region="home.sections" data-builder-kind="sections">
+    <div className="editorial-home" data-editorial-page="home" data-builder-region="home.sections" data-builder-kind="sections">
       <section className={heroStyles.hero} data-community-hero="true" data-builder-item-id="hero" data-home-section="hero">
         <div className={heroStyles.brand}><HomepageBrandBanner assets={assets} content={content} locale={locale} /></div>
         <CommunityCarousel locale={locale} />
@@ -197,9 +197,9 @@ export async function HomePageView({
           ))}
         </div>
       </section>
-      {connections}
       <LatestUpdatesSection content={content} locale={locale} posts={posts} />
       <PublicEventsSection calendar={calendar} content={content} locale={locale} variant="home" />
+      {connections}
 
       <section className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
         <div className="container split">

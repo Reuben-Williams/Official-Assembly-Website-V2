@@ -146,7 +146,8 @@ export async function NewsletterPageView({
 
   return (
     <div
-      className="newsletter-page"
+      className="newsletter-page editorial-page"
+      data-editorial-page="newsletter"
       data-newsletter-page-view="true"
       data-builder-region="newsletter.sections"
       data-builder-kind="sections"

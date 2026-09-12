@@ -158,7 +158,7 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="contact.form"');
     expect(html).toContain('data-builder-item-id="send-message"');
     expect(html).toContain('data-builder-form-unavailable="true"');
-    expect(html).toContain('data-builder-instance="contact-hero"');
+    expect(html).not.toContain('data-builder-instance="contact-hero"');
     expect(html).toContain('data-builder-instance="contact-supporting"');
   });
 

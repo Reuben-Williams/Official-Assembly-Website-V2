@@ -26,7 +26,7 @@
   flex-direction: column;
   min-height: 15rem;
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 2px;
   padding: 1.4rem;
 }
 
@@ -70,8 +70,8 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 1.25rem;
-  border: 1px dashed rgb(0 32 70 / 28%);
-  border-radius: 1rem;
+  border: 1px solid #cbd0cf;
+  border-radius: 2px;
   background: var(--surface-muted);
   padding: clamp(1.25rem, 4vw, 2rem);
 }
@@ -91,7 +91,7 @@
   place-items: center;
   width: 3rem;
   height: 3rem;
-  border-radius: 0.85rem;
+  border-radius: 2px;
   background: var(--primary);
   color: #fff;
 }
@@ -108,7 +108,7 @@
   gap: 0.45rem;
   min-height: 2.75rem;
   border: 1px solid var(--primary);
-  border-radius: 0.7rem;
+  border-radius: 2px;
   color: var(--primary);
   padding: 0.6rem 0.8rem;
   font-size: 0.82rem;

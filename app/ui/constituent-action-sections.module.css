@@ -4,9 +4,7 @@
 }
 
 .resourceSection {
-  background:
-    linear-gradient(135deg, rgb(0 32 70 / 4%), transparent 58%),
-    var(--surface);
+  background: #fcfbf8;
   border-block: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
   padding: clamp(3.5rem, 7vw, 6rem) 0;
 }
@@ -61,8 +59,8 @@
 .emptyResource {
   aspect-ratio: 16 / 10;
   border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-  border-radius: calc(var(--radius) + 0.35rem);
-  box-shadow: var(--shadow);
+  border-radius: 2px;
+  box-shadow: none;
   min-height: 22rem;
   overflow: hidden;
   position: relative;
@@ -75,9 +73,7 @@
 
 .emptyResource {
   align-content: center;
-  background:
-    linear-gradient(145deg, rgb(214 227 255 / 82%), rgb(247 250 252 / 96%)),
-    var(--surface-soft);
+  background: #f3f0e9;
   color: var(--primary);
   display: grid;
   gap: 0.9rem;
@@ -171,7 +167,7 @@
   align-items: center;
   background: var(--secondary);
   border: 2px solid transparent;
-  border-radius: 0.75rem;
+  border-radius: 2px;
   color: white;
   cursor: pointer;
   display: inline-flex;

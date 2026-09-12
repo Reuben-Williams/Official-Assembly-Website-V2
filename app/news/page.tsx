@@ -55,8 +55,7 @@ export default async function NewsPage() {
   });
 
   return (
-    <>
-      <PageTemplate content={content} page={page} locale={locale} />
+    <PageTemplate content={content} page={page} locale={locale}>
       <section className="section news-feed" aria-labelledby="district-updates-title">
         <div className="container">
           <div className="section-heading">
@@ -70,6 +69,6 @@ export default async function NewsPage() {
         </div>
       </section>
       {newsletterSignup}
-    </>
+    </PageTemplate>
   );
 }

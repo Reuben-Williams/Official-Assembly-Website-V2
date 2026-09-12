@@ -9,7 +9,7 @@ vi.mock("@reuben-williams/next/forms", () => ({
   UnavailableFormFallback: ({ phone }: { phone: string }) => <p>Call {phone}</p>
 }));
 vi.mock("../app/ui/PageTemplate", () => ({
-  PageTemplate: () => <div data-page-template="news" />
+  PageTemplate: ({ children }: { children?: React.ReactNode }) => <div data-page-template="news">{children}</div>
 }));
 vi.mock("../lib/builder/server-content", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/builder/server-content")>();

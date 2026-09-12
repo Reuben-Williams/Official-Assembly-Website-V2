@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import "./globals.css";
+import "./editorial.css";
 import { AppFooter } from "./ui/AppFooter";
 import { AppHeader } from "./ui/AppHeader";
 import { PublicAlertController } from "./ui/PublicAlertController";

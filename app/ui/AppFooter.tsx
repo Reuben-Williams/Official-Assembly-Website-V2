@@ -24,8 +24,8 @@ export function AppFooter({
   const footerPages = builderSectionIds(
     content,
     "global.navigation",
-    pages.slice(0, 5).map((page) => page.slug ?? "home"),
-  ).slice(0, 5).flatMap((slug) => pagesBySlug.get(slug) ?? []);
+    pages.map((page) => page.slug ?? "home"),
+  ).flatMap((slug) => pagesBySlug.get(slug) ?? []);
   return (
     <footer className="footer" lang={locale}>
       <div className="container footer-grid">

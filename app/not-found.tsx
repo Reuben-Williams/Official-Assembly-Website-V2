@@ -42,7 +42,7 @@ function NotFoundPageView({ content, locale }: { content: BuilderServerContent; 
   });
 
   return (
-    <section className="hero" data-builder-content-path="/404">
+    <section className="hero editorial-page" data-editorial-page="404" data-builder-content-path="/404">
       <div className="container hero-grid">
         <div>
           <p

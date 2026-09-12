@@ -39,7 +39,7 @@ export default async function EventsPage() {
   ]);
 
   return (
-    <div data-builder-region="events.sections" data-builder-kind="sections">
+    <div className="editorial-page" data-editorial-page="events" data-builder-region="events.sections" data-builder-kind="sections">
       <section className="hero" data-builder-item-id="hero">
         <div className="container">
           <p className="eyebrow" data-builder-region="events.hero.eyebrow" data-builder-kind="text">

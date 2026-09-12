@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Vote } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { getImage, siteConfig, type PageContent } from "../data/site";
 import { Cards } from "./Cards";
@@ -19,11 +20,12 @@ type PageTemplateProps = {
   page: PageContent;
   content?: BuilderServerContent;
   locale?: PublicLocale;
+  children?: ReactNode;
 };
 
 const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
-export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en" }: PageTemplateProps) {
+export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en", children }: PageTemplateProps) {
   const slug = page.slug ?? "home";
   if (slug === "newsletter") {
     return NewsletterPageView({ page, content, locale });
@@ -53,9 +55,36 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
     href: "/newsletter",
     label: "Get Updates",
   });
+  const heroAsset = slug === "about"
+    ? { ...getImage("professional-home-official"), regionId: getImage(page.imageKey).regionId }
+    : getImage(page.imageKey);
+  // Compact introductions omit the default photo, but an office-published image
+  // still belongs to the page: retain its stable identity in the supporting area.
+  const retainedHeroMedia = ["contact", "news", "resources", "voting"].includes(slug)
+    && content.regions[getImage(page.imageKey).regionId]?.type === "image";
+  const formSection = formType ? (
+    <section className="section section-muted editorial-intake" data-builder-item-id="form">
+      <div className="container split">
+        <div>
+          <p className="eyebrow" data-builder-region={formCopyRegions!.eyebrow} data-builder-kind="text">
+            {localizedBuilderText(locale, formCopyRegions!.eyebrow, builderText(content, formCopyRegions!.eyebrow, "Resident Form"))}
+          </p>
+          <h2 data-builder-region={formCopyRegions!.title} data-builder-kind="text">
+            {localizedBuilderText(locale, formCopyRegions!.title, builderText(content, formCopyRegions!.title, "District office intake"))}
+          </h2>
+          <p className="lead" data-builder-region={formCopyRegions!.body} data-builder-kind="text">
+            {localizedBuilderText(locale, formCopyRegions!.body, builderText(content, formCopyRegions!.body, "Online submission is shown only when an approved form revision and verification service are available."))}
+          </p>
+        </div>
+        <div data-builder-region={formType === "survey" ? undefined : `${slug}.form`} data-builder-kind={formType === "survey" ? undefined : "sections"} data-builder-item-id="managed-form">
+          {residentForm}
+        </div>
+      </div>
+    </section>
+  ) : null;
 
   return (
-    <div data-builder-region={`${slug}.sections`} data-builder-kind="sections">
+    <div className="editorial-page" data-editorial-page={slug} data-builder-region={`${slug}.sections`} data-builder-kind="sections">
       <section className="hero" data-builder-item-id="hero">
         <div className="container hero-grid">
           <div>
@@ -102,17 +131,22 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
               </Link>
             </div>
           </div>
-          <ImagePanel
-            asset={getImage(page.imageKey)}
+          {slug === "voting" ? (
+            <div className="editorial-voting-symbol" data-editorial-voting-symbol aria-hidden="true"><Vote strokeWidth={1} /></div>
+          ) : slug === "contact" || slug === "news" || slug === "resources" ? null : <ImagePanel
+            asset={heroAsset}
             caption="District office media"
             instance={`${slug}-hero`}
             priority
             variant="hero"
             content={content}
             locale={locale}
-          />
+          />}
         </div>
       </section>
+
+      {children}
+      {formSection}
 
       {slug === "resources" ? <CurrentResourceSection content={content} locale={locale} /> : null}
       {slug === "community" ? <VolunteerPortalSection content={content} locale={locale} /> : null}
@@ -162,60 +196,12 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         </div>
       </section>
 
-      {formType ? (
-        <section className="section section-muted" data-builder-item-id="form">
-          <div className="container split">
-            <div>
-              <p
-                className="eyebrow"
-                data-builder-region={formCopyRegions!.eyebrow}
-                data-builder-kind="text"
-              >
-                {localizedBuilderText(locale, formCopyRegions!.eyebrow, builderText(
-                  content,
-                  formCopyRegions!.eyebrow,
-                  "Resident Form",
-                ))}
-              </p>
-              <h2
-                data-builder-region={formCopyRegions!.title}
-                data-builder-kind="text"
-              >
-                {localizedBuilderText(locale, formCopyRegions!.title, builderText(
-                  content,
-                  formCopyRegions!.title,
-                  "District office intake",
-                ))}
-              </h2>
-              <p
-                className="lead"
-                data-builder-region={formCopyRegions!.body}
-                data-builder-kind="text"
-              >
-                {localizedBuilderText(locale, formCopyRegions!.body, builderText(
-                  content,
-                  formCopyRegions!.body,
-                  "Online submission is shown only when an approved form revision and verification service are available.",
-                ))}
-              </p>
-            </div>
-            <div
-              data-builder-region={formType === "survey" ? undefined : `${slug}.form`}
-              data-builder-kind={formType === "survey" ? undefined : "sections"}
-              data-builder-item-id="managed-form"
-            >
-              {residentForm}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       <section className="section section-muted" data-builder-item-id="supporting">
         <div className="container split">
           <ImagePanel
-            asset={getImage(supportingImage)}
+            asset={retainedHeroMedia ? getImage(page.imageKey) : getImage(supportingImage)}
             caption="Additional district media"
-            instance={`${slug}-supporting`}
+            instance={`${slug}-${retainedHeroMedia ? "hero" : "supporting"}`}
             content={content}
             locale={locale}
           />

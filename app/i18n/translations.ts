@@ -6,6 +6,18 @@ type StableTranslation = Readonly<{ en: string; es: string }>;
 
 export const spanishTranslationsByKey: Readonly<Record<string, StableTranslation>> =
   Object.freeze({
+    "home.official.identity.title": { en: "Assemblywoman", es: "Asambleísta" },
+    "home.official.identity.position": { en: "Deputy Whip", es: "Subjefa de disciplina" },
+    "home.official.occupation.value": { en: "Director of Curriculum and Instruction, Essex County Schools of Technology", es: "Directora de Currículo e Instrucción, Escuelas de Tecnología del Condado de Essex" },
+    "home.official.public-service.0": { en: "Essex County College Trustee 2017-2023", es: "Miembro de la junta de Essex County College, 2017-2023" },
+    "home.official.legislative-service.0": { en: "General Assembly 2024-present, Deputy Majority Whip 2026-present", es: "Asamblea General desde 2024; subjefa de disciplina de la mayoría desde 2026" },
+    "home.official.education.0": { en: "B.A. Montclair State University (Speech Communications)", es: "B.A., Montclair State University (Comunicación Oral)" },
+    "home.official.education.1": { en: "M.A.S. Fairleigh Dickinson University (Administration)", es: "M.A.S., Fairleigh Dickinson University (Administración)" },
+    "home.official.committee.AHI": { en: "Higher Education", es: "Educación Superior" },
+    "home.official.committee.AHI.position": { en: "Chair", es: "Presidenta" },
+    "home.official.committee.AAP": { en: "Appropriations", es: "Asignaciones" },
+    "home.official.committee.AST": { en: "Science, Innovation and Technology", es: "Ciencia, Innovación y Tecnología" },
+    "home.official.committee.JPS": { en: "Joint Committee on the Public Schools", es: "Comité Conjunto de Escuelas Públicas" },
     "global.skip": {
       en: "Skip to content",
       es: "Saltar al contenido"

@@ -70,9 +70,9 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
         <div className={styles.identityBand} data-profile-identity="true">
           <div className={styles.seal}><Landmark aria-hidden="true" /></div>
           <div>
-            <p>{profile.identity.title} · {profile.identity.party}</p>
+            <p>{localizedBuilderText(locale, "home.official.identity.title", profile.identity.title)} · {profile.identity.party}</p>
             <h3>{profile.identity.name}</h3>
-            <strong>{profile.identity.position} · District {profile.identity.district}</strong>
+            <strong>{localizedBuilderText(locale, "home.official.identity.position", profile.identity.position)} · {locale === "es" ? "Distrito" : "District"} {profile.identity.district}</strong>
           </div>
           <a className={styles.phone} href={profile.office.phoneHref}>
             <Phone aria-hidden="true" />
@@ -97,15 +97,17 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
               <h3>{localizedBuilderText(locale, "home.official.office.title", "District office")}</h3>
               <p>{profile.office.address}</p>
               <p>{localizedBuilderText(locale, "home.official.phone", `Phone ${profile.office.phoneDisplay}`)}<br />{localizedBuilderText(locale, "home.official.fax", `Fax ${profile.office.fax}`)}</p>
+              <ExternalAction href={profile.actions.legislativeContact} locale={locale}>{localizedBuilderText(locale, "home.official.contact-form", "Official Legislative Contact Form")}</ExternalAction>
             </div>
           </article>
           <article className={styles.factCard}>
             <BookOpenCheck aria-hidden="true" />
             <div>
               <h3>{localizedBuilderText(locale, "home.official.biography.title", "Biography and service")}</h3>
-              <p><strong>{localizedBuilderText(locale, "home.official.occupation", "Occupation:")}</strong> {profile.occupation}</p>
-              {profile.publicService.map((item) => <p key={item}>{item}</p>)}
-              {profile.legislativeService.map((item) => <p key={item}>{item}</p>)}
+              <p><strong>{localizedBuilderText(locale, "home.official.occupation", "Occupation:")}</strong> {localizedBuilderText(locale, "home.official.occupation.value", profile.occupation)}</p>
+              {profile.publicService.map((item, index) => <p key={item}>{localizedBuilderText(locale, `home.official.public-service.${index}`, item)}</p>)}
+              {profile.legislativeService.map((item, index) => <p key={item}>{localizedBuilderText(locale, `home.official.legislative-service.${index}`, item)}</p>)}
+              <ExternalAction href={profile.actions.profile} locale={locale}>{localizedBuilderText(locale, "home.official.profile", "Official NJ Legislature profile")}</ExternalAction>
             </div>
           </article>
           <article className={styles.factCard}>
@@ -113,8 +115,9 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
             <div>
               <h3>{localizedBuilderText(locale, "home.official.education", "Education")}</h3>
               <ul>
-                {profile.education.map((item) => <li key={item}>{item}</li>)}
+                {profile.education.map((item, index) => <li key={item}>{localizedBuilderText(locale, `home.official.education.${index}`, item)}</li>)}
               </ul>
+              <ExternalAction href={profile.actions.profile} locale={locale}>{localizedBuilderText(locale, "home.official.profile", "Official NJ Legislature profile")}</ExternalAction>
             </div>
           </article>
           <article className={styles.factCard}>
@@ -124,20 +127,15 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
               <ul>
                 {profile.committees.map((committee) => (
                   <li key={committee.code}>
-                    {committee.name}{committee.position ? `, ${committee.position}` : ""}
+                    {localizedBuilderText(locale, `home.official.committee.${committee.code}`, committee.name)}{committee.position ? `, ${localizedBuilderText(locale, `home.official.committee.${committee.code}.position`, committee.position)}` : ""}
                   </li>
                 ))}
               </ul>
+              <ExternalAction href={profile.actions.sponsoredBills} locale={locale}>{localizedBuilderText(locale, "home.official.sponsored", "Sponsored bills")}</ExternalAction>
+              <ExternalAction href={profile.actions.votesByBill} locale={locale}>{localizedBuilderText(locale, "home.official.votes-bill", "Votes by bill")}</ExternalAction>
+              <ExternalAction href={profile.actions.votesBySubject} locale={locale}>{localizedBuilderText(locale, "home.official.votes-subject", "Votes by subject")}</ExternalAction>
             </div>
           </article>
-        </div>
-
-        <div className={styles.actions} aria-label={localizedBuilderText(locale, "home.official.actions", "Official Legislature actions")}>
-          <ExternalAction href={profile.actions.profile} locale={locale}>{localizedBuilderText(locale, "home.official.profile", "Official NJ Legislature profile")}</ExternalAction>
-          <ExternalAction href={profile.actions.sponsoredBills} locale={locale}>{localizedBuilderText(locale, "home.official.sponsored", "Sponsored bills")}</ExternalAction>
-          <ExternalAction href={profile.actions.votesByBill} locale={locale}>{localizedBuilderText(locale, "home.official.votes-bill", "Votes by bill")}</ExternalAction>
-          <ExternalAction href={profile.actions.votesBySubject} locale={locale}>{localizedBuilderText(locale, "home.official.votes-subject", "Votes by subject")}</ExternalAction>
-          <ExternalAction href={profile.actions.legislativeContact} locale={locale}>{localizedBuilderText(locale, "home.official.contact-form", "Official Legislative Contact Form")}</ExternalAction>
         </div>
 
         <footer className={styles.source}>

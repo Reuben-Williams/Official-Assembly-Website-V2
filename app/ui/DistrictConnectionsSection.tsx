@@ -1,6 +1,8 @@
 import { ArrowUpRight, MessageSquareText, Phone, Users } from "lucide-react";
 
 import { districtConnections } from "../data/district-connections";
+import { getImage } from "../data/site";
+import { ImagePanel } from "./ImagePanel";
 import { officialLegislatureProfile } from "../data/official-legislature-profile";
 import { builderText, type BuilderServerContent } from "../../lib/builder/server-content";
 import { NewsletterSignupSection } from "./NewsletterSignupSection";
@@ -63,6 +65,9 @@ export async function DistrictConnectionsSection({
         <div className={styles.grid}>
           <article className={styles.newsletterCard}>{newsletter}</article>
           <div className={styles.actionColumn}>
+            <div className={styles.communityPhoto}>
+              <ImagePanel asset={getImage("professional-community-primary")} content={content} instance="home-community-invitation" caption="Community and district engagement" locale={locale} />
+            </div>
             <article className={styles.connectionCard}>
               <div className={styles.cardIcon}><Users aria-hidden="true" /></div>
               <p className={styles.kicker}>{locale === "es" ? "Español · English" : "English · Español"}</p>

@@ -18,7 +18,7 @@ const emptyCalendar: PublicCalendarLoad = { status: "ready", events: [] };
 describe("District 34 homepage", () => {
   it("renders the approved section order and four distinct hero actions", async () => {
     const html = renderToStaticMarkup(await HomePageView({ calendar: emptyCalendar, content: { regions: {} }, posts: [] }));
-    const orderedSections = ["hero", "official", "access", "connections", "latest", "events", "guidance"];
+    const orderedSections = ["hero", "official", "access", "latest", "events", "connections", "guidance"];
     const positions = orderedSections.map((section) => html.indexOf(`data-home-section="${section}"`));
 
     expect(positions.every((position) => position >= 0)).toBe(true);

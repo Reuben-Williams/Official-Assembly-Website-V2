@@ -8,7 +8,7 @@ export function PrivacyPageContent({ locale }: { readonly locale: PublicLocale }
   const notice = privacyNoticeFor(locale);
   const spanish = locale === "es";
   return (
-    <article className="privacy-page">
+    <article className="privacy-page editorial-page" data-editorial-page="privacy">
       <header className="privacy-hero">
         <div className="container privacy-container">
           <p className="eyebrow">{spanish ? "Sitio web y Boletín del distrito" : "Website and District Newsletter"}</p>
