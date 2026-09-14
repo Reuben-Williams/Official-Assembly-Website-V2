@@ -52,6 +52,44 @@ function data(overrides: Record<string, unknown> = {}) {
 }
 
 describe("durable newsletter Segment reconciliation", () => {
+  it("stops before provider removal when the reservation restarts an outdated audience walk", async () => {
+    const providerAdapter = provider();
+    const reconciliationData = data({ reserveRemoval: vi.fn(async () => ({ status: "restarted" as const })) });
+    const handler = createNewsletterSegmentReconciliationHandler({ provider: providerAdapter, data: reconciliationData, segmentId: "segment-1", topicId: "topic-1" });
+    await expect(handler(baseJob)).resolves.toEqual({ code: "reconciliation_restarted", alreadyCompleted: true });
+    expect(providerAdapter.removeSegment).not.toHaveBeenCalled();
+    expect(reconciliationData.completeRemoval).not.toHaveBeenCalled();
+    expect(reconciliationData.checkpoint).not.toHaveBeenCalled();
+  });
+
+  it.each(["provider_segment", "local_eligible"])("accepts an epoch restart at the %s checkpoint without finalizing stale evidence", async (phase) => {
+    const providerAdapter = provider({ listSegmentContacts: vi.fn(async () => ({ contacts: [], hasMore: false })) });
+    const reconciliationData = data({ checkpoint: vi.fn(async () => ({ status: "restarted" as const })) });
+    const handler = createNewsletterSegmentReconciliationHandler({ provider: providerAdapter, data: reconciliationData, segmentId: "segment-1", topicId: "topic-1" });
+    await expect(handler({ ...baseJob, phase })).resolves.toEqual({ code: "reconciliation_restarted", alreadyCompleted: true });
+    expect(reconciliationData.finalize).not.toHaveBeenCalled();
+    expect(providerAdapter.removeSegment).not.toHaveBeenCalled();
+  });
+
+  it("accepts a concurrent epoch restart from finalization instead of reporting success", async () => {
+    const reconciliationData = data({ finalize: vi.fn(async () => ({ status: "restarted" as const })) });
+    const handler = createNewsletterSegmentReconciliationHandler({ provider: provider(), data: reconciliationData, segmentId: "segment-1", topicId: "topic-1" });
+    await expect(handler({ ...baseJob, phase: "local_eligible" })).resolves.toEqual({ code: "reconciliation_restarted", alreadyCompleted: true });
+  });
+
+  it("resumes finalization directly without replaying provider reads or removals", async () => {
+    const providerAdapter = provider();
+    const reconciliationData = data();
+    const handler = createNewsletterSegmentReconciliationHandler({ provider: providerAdapter, data: reconciliationData, segmentId: "segment-1", topicId: "topic-1" });
+    const job = { ...baseJob, phase: "finalize", providerComplete: true, localComplete: true };
+    await expect(handler(job)).resolves.toEqual({ code: "segment_reconciled", alreadyCompleted: true });
+    expect(reconciliationData.finalize).toHaveBeenCalledWith(job);
+    expect(providerAdapter.listSegmentContacts).not.toHaveBeenCalled();
+    expect(reconciliationData.listLocalEligible).not.toHaveBeenCalled();
+    expect(reconciliationData.checkpoint).not.toHaveBeenCalled();
+    expect(providerAdapter.removeSegment).not.toHaveBeenCalled();
+  });
+
   it("removes a provider-only Segment member and yields to the local walk", async () => {
     const providerAdapter = provider();
     const reconciliationData = data();

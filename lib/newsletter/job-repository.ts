@@ -247,10 +247,10 @@ export function createSupabaseNewsletterReconciliationData(
       const status = result.data && typeof result.data === "object"
         ? String((result.data as Record<string, unknown>).status)
         : "";
-      if (result.error || !["reserved", "pending", "completed"].includes(status)) {
+      if (result.error || !["reserved", "pending", "completed", "restarted"].includes(status)) {
         throw new Error("newsletter reconciliation mutation reservation unavailable");
       }
-      return { status: status as "reserved" | "pending" | "completed" };
+      return { status: status as "reserved" | "pending" | "completed" | "restarted" };
     },
 
     async completeRemoval(job, providerContactId) {
@@ -317,10 +317,10 @@ export function createSupabaseNewsletterReconciliationData(
       const status = result.data && typeof result.data === "object"
         ? String((result.data as Record<string, unknown>).status)
         : "";
-      if (result.error || !["queued", "checkpointed"].includes(status)) {
+      if (result.error || !["queued", "checkpointed", "restarted"].includes(status)) {
         throw new Error("newsletter reconciliation checkpoint unavailable");
       }
-      return { status: status as "queued" | "checkpointed" };
+      return { status: status as "queued" | "checkpointed" | "restarted" };
     },
 
     async finalize(job) {
@@ -340,6 +340,7 @@ export function createSupabaseNewsletterReconciliationData(
         throw new Error("newsletter reconciliation finalization unavailable");
       }
       const value = result.data as Record<string, unknown>;
+      if (value.status === "restarted") return { status: "restarted" as const };
       if (value.status !== "ready" || typeof value.readinessRevisionId !== "string") {
         throw new Error("newsletter reconciliation finalization unavailable");
       }

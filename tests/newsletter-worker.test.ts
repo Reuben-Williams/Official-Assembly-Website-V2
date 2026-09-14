@@ -35,6 +35,30 @@ const ownerLoginJob = {
 };
 
 describe("newsletter durable worker", () => {
+  it.each(["reconciliation_restarted", "reconciliation_page_yielded", "segment_reconciled"])(
+    "does not complete or fail a reconciliation lease already transitioned by %s",
+    async (code) => {
+      const job = { subject: "site" as const, id: "reconciliation", kind: "newsletter.segment.reconcile" as const, fencingToken: 7 };
+      const repository = { claim: vi.fn(async () => [job]), complete: vi.fn(), fail: vi.fn() };
+      const segmentReconcile = vi.fn(async () => ({ code, alreadyCompleted: true }));
+      const result = await runNewsletterWorker({
+        repository,
+        handlers: {
+          confirmationSend: vi.fn(), contactSync: vi.fn(), contactAudit: vi.fn(),
+          segmentReconcile, broadcastAudit: vi.fn(), ownerLoginReconcile: vi.fn()
+        },
+        workerId: "reconciliation-worker",
+        emailEnabled: true,
+        limit: 1,
+        now: () => new Date("2026-09-14T23:00:00.000Z")
+      });
+      expect(segmentReconcile).toHaveBeenCalledWith(job);
+      expect(repository.complete).not.toHaveBeenCalled();
+      expect(repository.fail).not.toHaveBeenCalled();
+      expect(result).toEqual({ claimed: 1, completed: 1, failed: 0, blocked: 0 });
+    }
+  );
+
   it("uses bounded claims, completes with fencing, and never executes outbound work while disabled", async () => {
     const complete = vi.fn(async () => undefined);
     const repository = {

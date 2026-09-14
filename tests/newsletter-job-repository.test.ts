@@ -1,8 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createSupabaseNewsletterJobRepository } from "../lib/newsletter/job-repository";
+import { createSupabaseNewsletterJobRepository, createSupabaseNewsletterReconciliationData } from "../lib/newsletter/job-repository";
 
 describe("newsletter job repository", () => {
+  it.each(["checkpoint", "reserveRemoval", "finalize"] as const)("preserves the atomic %s restart response", async (operation) => {
+    const rpc = vi.fn(async () => ({ data: { version: 1, status: "restarted" }, error: null }));
+    const repository = createSupabaseNewsletterReconciliationData({ rpc } as never, "site-id", "worker-id");
+    const job = { subject: "site" as const, id: "job-id", kind: "newsletter.segment.reconcile" as const, fencingToken: 4, runId: "run-id", expectedEligibilityEpoch: 2 };
+    const request = operation === "checkpoint"
+      ? repository.checkpoint(job, { phase: "finalize", localComplete: true, moreWork: false, members: [] })
+      : operation === "reserveRemoval"
+        ? repository.reserveRemoval(job, { providerContactId: "provider-id", seenProvider: true, seenLocal: false, eligible: false, disposition: "removed", actionState: "pending" })
+        : repository.finalize(job);
+    await expect(request).resolves.toEqual({ status: "restarted" });
+    expect(rpc).toHaveBeenCalledOnce();
+  });
+
   it("claims owner-login evidence before the outbound-capable queue and preserves the total bound", async () => {
     const rpc = vi.fn(async (name: string, input: { p_request: Record<string, unknown> }) => {
       if (name === "builder_claim_newsletter_auth_login_jobs_v1") {

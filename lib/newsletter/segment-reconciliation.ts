@@ -35,7 +35,7 @@ export interface NewsletterReconciliationData {
   reserveRemoval(
     job: NewsletterClaimedJob,
     member: NewsletterReconciliationMember
-  ): Promise<{ readonly status: "reserved" | "pending" | "completed" }>;
+  ): Promise<{ readonly status: "reserved" | "pending" | "completed" | "restarted" }>;
   completeRemoval(
     job: NewsletterClaimedJob,
     providerContactId: string
@@ -53,11 +53,11 @@ export interface NewsletterReconciliationData {
     readonly localPages?: number;
     readonly moreWork: boolean;
     readonly members: readonly NewsletterReconciliationMember[];
-  }): Promise<{ readonly status: "queued" | "checkpointed" }>;
+  }): Promise<{ readonly status: "queued" | "checkpointed" | "restarted" }>;
   finalize(job: NewsletterClaimedJob): Promise<{
     readonly readinessRevisionId: string;
     readonly audienceCount: number;
-  }>;
+  } | { readonly status: "restarted" }>;
 }
 
 async function snapshotIsEligible(
@@ -88,10 +88,22 @@ export function createNewsletterSegmentReconciliationHandler(input: {
   readonly topicId: string;
   readonly segmentId: string;
 }) {
+  async function finalize(job: NewsletterClaimedJob) {
+    const result = await input.data.finalize(job);
+    return {
+      code: "status" in result && result.status === "restarted"
+        ? "reconciliation_restarted"
+        : "segment_reconciled",
+      alreadyCompleted: true
+    };
+  }
+
   return async (job: NewsletterClaimedJob) => {
     if (job.kind !== "newsletter.segment.reconcile") {
       throw new NewsletterJobFailure("invalid_job", true);
     }
+
+    if (job.phase === "finalize") return finalize(job);
 
     if (job.phase !== "local_eligible") {
       let workingJob = job;
@@ -121,6 +133,9 @@ export function createNewsletterSegmentReconciliationHandler(input: {
             actionState: "pending"
           };
           const reservation = await input.data.reserveRemoval(workingJob, pendingMember);
+          if (reservation.status === "restarted") {
+            return { code: "reconciliation_restarted", alreadyCompleted: true };
+          }
           if (reservation.status !== "completed") {
             await input.provider.removeSegment({ id: providerContact.id, segmentId: input.segmentId });
             const completion = await input.data.completeRemoval(workingJob, providerContact.id);
@@ -144,7 +159,7 @@ export function createNewsletterSegmentReconciliationHandler(input: {
           actionState: eligible ? "none" : "completed"
         });
       }
-      await input.data.checkpoint(workingJob, {
+      const checkpoint = await input.data.checkpoint(workingJob, {
         phase: page.hasMore ? "provider_segment" : "local_eligible",
         providerAfterCursor: page.after,
         providerComplete: !page.hasMore,
@@ -152,6 +167,9 @@ export function createNewsletterSegmentReconciliationHandler(input: {
         moreWork: true,
         members
       });
+      if (checkpoint.status === "restarted") {
+        return { code: "reconciliation_restarted", alreadyCompleted: true };
+      }
       return { code: "reconciliation_page_yielded", alreadyCompleted: true };
     }
 
@@ -179,7 +197,7 @@ export function createNewsletterSegmentReconciliationHandler(input: {
         actionState: "none"
       });
     }
-    await input.data.checkpoint(job, {
+    const checkpoint = await input.data.checkpoint(job, {
       phase: page.hasMore ? "local_eligible" : "finalize",
       localAfterId: page.afterId,
       localComplete: !page.hasMore,
@@ -187,8 +205,10 @@ export function createNewsletterSegmentReconciliationHandler(input: {
       moreWork: page.hasMore,
       members
     });
+    if (checkpoint.status === "restarted") {
+      return { code: "reconciliation_restarted", alreadyCompleted: true };
+    }
     if (page.hasMore) return { code: "reconciliation_page_yielded", alreadyCompleted: true };
-    await input.data.finalize(job);
-    return { code: "segment_reconciled", alreadyCompleted: true };
+    return finalize(job);
   };
 }
