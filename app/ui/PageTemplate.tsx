@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Vote } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { getImage, siteConfig, type PageContent } from "../data/site";
+import { getEditorialPagePhoto, isRetiredEditorialSource } from "../data/editorial-media";
 import { Cards } from "./Cards";
 import { ResidentForm } from "./ResidentForms";
 import { ImagePanel } from "./ImagePanel";
@@ -39,11 +40,6 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         body: `${slug}.form.body`,
       }
     : null;
-  const supportingImage = {
-    news: "professional-news-supporting",
-    resources: "professional-resources-supporting",
-    community: "graduation",
-  }[slug] ?? "coverage";
   const residentForm = formType && formType !== "newsletter"
     ? await ResidentForm({ type: formType, locale })
     : null;
@@ -57,11 +53,20 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
   });
   const heroAsset = slug === "about"
     ? { ...getImage("professional-home-official"), regionId: getImage(page.imageKey).regionId }
-    : getImage(page.imageKey);
-  // Compact introductions omit the default photo, but an office-published image
-  // still belongs to the page: retain its stable identity in the supporting area.
+    : getEditorialPagePhoto(slug, "hero") ?? getImage(page.imageKey);
+  const defaultSupportingAsset = getEditorialPagePhoto(slug, "supporting")
+    ?? getImage(slug === "news" ? "professional-news-supporting" : page.imageKey);
+  // The dedicated supporting slot takes precedence over a legacy hero edit.
+  // Compact introductions retain that older edit only until this slot is edited.
+  const publishedSupportingMedia = content.regions[defaultSupportingAsset.regionId];
+  const publishedHeroMedia = content.regions[getImage(page.imageKey).regionId];
   const retainedHeroMedia = ["contact", "news", "resources", "voting"].includes(slug)
-    && content.regions[getImage(page.imageKey).regionId]?.type === "image";
+    && publishedSupportingMedia?.type !== "image"
+    && publishedHeroMedia?.type === "image"
+    && !isRetiredEditorialSource(publishedHeroMedia.src);
+  const supportingAsset = retainedHeroMedia
+    ? getImage(page.imageKey)
+    : defaultSupportingAsset;
   const formSection = formType ? (
     <section className="section section-muted editorial-intake" data-builder-item-id="form">
       <div className="container split">
@@ -135,7 +140,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
             <div className="editorial-voting-symbol" data-editorial-voting-symbol aria-hidden="true"><Vote strokeWidth={1} /></div>
           ) : slug === "contact" || slug === "news" || slug === "resources" ? null : <ImagePanel
             asset={heroAsset}
-            caption="District office media"
+            caption={heroAsset.caption ?? "District office media"}
             instance={`${slug}-hero`}
             priority
             variant="hero"
@@ -199,8 +204,8 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
       <section className="section section-muted" data-builder-item-id="supporting">
         <div className="container split">
           <ImagePanel
-            asset={retainedHeroMedia ? getImage(page.imageKey) : getImage(supportingImage)}
-            caption="Additional district media"
+            asset={supportingAsset}
+            caption={supportingAsset.caption ?? "Additional district media"}
             instance={`${slug}-${retainedHeroMedia ? "hero" : "supporting"}`}
             content={content}
             locale={locale}

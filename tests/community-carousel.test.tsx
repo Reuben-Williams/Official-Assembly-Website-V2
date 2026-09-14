@@ -43,15 +43,18 @@ describe("approved community carousel", () => {
     await act(async () => vi.advanceTimersByTime(15000));
     expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("community.webp");
   });
-  it("has eight bilingual slides and preserves the before-and-after order", () => {
+  it("has eight unique bilingual slides from the approved mixed-scene collection", () => {
     expect(communityPhotos).toHaveLength(8);
-    expect(communityPhotos[4].id).toBe("dsc09911");
-    expect(communityPhotos[5].id).toBe("dsc09944");
+    expect(communityPhotos.map((photo) => photo.id)).toEqual([
+      "community", "dsc09235", "dsc09857", "bill-signing-group", "community-greeting",
+      "state-house-recognition", "outreach-table", "chamber-group",
+    ]);
+    expect(new Set(communityPhotos.map((photo) => photo.src)).size).toBe(8);
     for (const photo of communityPhotos) {
       expect(photo.en.title.length).toBeGreaterThan(5);
       expect(photo.es.caption.length).toBeGreaterThan(20);
       expect(photo.es.caption).not.toBe(photo.en.caption);
-      expect(photo.src).toMatch(/^\/images\/community-carousel\//);
+      expect(photo.src).toMatch(/^\/images\/community-(carousel|editorial)\//);
     }
   });
   it("moves manually and changes captions and controls with the locale", async () => {
@@ -80,11 +83,11 @@ describe("approved community carousel", () => {
     await click("View all photos");
     expect(container.querySelector("dialog")?.open).toBe(true);
     expect(container.querySelectorAll("dialog img")).toHaveLength(8);
-    await click("Show photo 6: A moment to celebrate");
+    await click("Show photo 6: A photograph in the chamber");
     expect(container.querySelector("dialog")?.open).toBe(false);
     expect(document.activeElement?.getAttribute("aria-label")).toBe("View all photos");
     expect(container.querySelector('[data-carousel-stage]')?.getAttribute("data-format")).toBe("portrait");
-    expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("dsc09944");
+    expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("state-house-recognition-desktop.webp");
   });
   it("disables automatic playback for reduced motion without disabling navigation", async () => {
     motion.matches = true;

@@ -1,7 +1,7 @@
 import { ArrowUpRight, MessageSquareText, Phone, Users } from "lucide-react";
 
 import { districtConnections } from "../data/district-connections";
-import { getImage } from "../data/site";
+import { getEditorialPhoto } from "../data/editorial-media";
 import { ImagePanel } from "./ImagePanel";
 import { officialLegislatureProfile } from "../data/official-legislature-profile";
 import { builderText, type BuilderServerContent } from "../../lib/builder/server-content";
@@ -23,6 +23,7 @@ export async function DistrictConnectionsSection({
   content: BuilderServerContent;
   locale?: PublicLocale;
 }) {
+  const volunteerPhoto = getEditorialPhoto("office-group", "media.editorial.home-volunteer");
   const newsletter = await NewsletterSignupSection({
     content,
     regions: {
@@ -66,7 +67,7 @@ export async function DistrictConnectionsSection({
           <article className={styles.newsletterCard}>{newsletter}</article>
           <div className={styles.actionColumn}>
             <div className={styles.communityPhoto}>
-              <ImagePanel asset={getImage("professional-community-primary")} content={content} instance="home-community-invitation" caption="Community and district engagement" locale={locale} />
+              <ImagePanel asset={volunteerPhoto} content={content} instance="home-community-invitation" caption={volunteerPhoto.caption ?? "Community and district engagement"} locale={locale} />
             </div>
             <article className={styles.connectionCard}>
               <div className={styles.cardIcon}><Users aria-hidden="true" /></div>

@@ -1,4 +1,5 @@
 import type { BuilderSiteConfig } from "@reuben-williams/core";
+import { editorialImageRegions } from "./app/data/editorial-media";
 
 export default {
   "siteId": "official-assembly-website-v2",
@@ -8,6 +9,7 @@ export default {
     "protected": true
   },
   "globalRegions": [
+    ...editorialImageRegions,
     {
       "id": "global.office.name",
       "kind": "text",

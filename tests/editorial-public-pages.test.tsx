@@ -5,14 +5,16 @@ import { describe, expect, it, vi } from "vitest";
 
 // The form provider is isolated; assertions below concern server page composition.
 vi.mock("../app/ui/ResidentForms", () => ({ ResidentForm: async () => <form /> }));
-import { pages } from "../app/data/site";
+import { getImage, pages } from "../app/data/site";
 import { PageTemplate } from "../app/ui/PageTemplate";
+import { DistrictConnectionsSection } from "../app/ui/DistrictConnectionsSection";
 import { OfficialProfileSection } from "../app/ui/OfficialProfileSection";
 import { translateStableText } from "../app/i18n/translations";
+import type { BuilderServerContent } from "../lib/builder/server-content";
 
-async function documentFor(slug: string, children?: React.ReactNode) {
+async function documentFor(slug: string, children?: React.ReactNode, content?: BuilderServerContent) {
   const page = pages.find((item) => item.slug === slug)!;
-  return new DOMParser().parseFromString(renderToStaticMarkup(await PageTemplate({ page, children })), "text/html");
+  return new DOMParser().parseFromString(renderToStaticMarkup(await PageTemplate({ page, children, content })), "text/html");
 }
 
 describe("approved editorial public layout", () => {
@@ -51,6 +53,89 @@ describe("approved editorial public layout", () => {
     const voting = await documentFor("voting");
     expect(voting.querySelector('[data-editorial-voting-symbol]')).not.toBeNull();
     expect(voting.querySelector('[data-builder-item-id="hero"] img')).toBeNull();
+  });
+
+  it.each([
+    ["about", "chamber-group"],
+    ["resources", "chamber-group"],
+    ["contact", "office-group"],
+    ["community", "student-recognition"],
+    ["voting", "hallway-portrait"],
+    ["survey", "community-greeting"],
+    ["social", "community-greeting"],
+  ])("uses the reviewed %s supporting photograph without a generic flyer", async (slug, photo) => {
+    const doc = await documentFor(slug);
+    const panel = doc.querySelector('[data-builder-item-id="supporting"]');
+    expect(panel?.querySelector("img")?.getAttribute("src")).toContain(photo);
+    const caption = panel?.querySelector(".image-caption")?.textContent;
+    expect(caption).toBeTruthy();
+    expect(caption).not.toBe("Additional district media");
+    expect(doc.querySelector('img[src*="rosy-bagolie-coverage"]')).toBeNull();
+  });
+
+  it.each([
+    ["community", "community-greeting"],
+    ["survey", "outreach-table"],
+    ["social", "community-selfie"],
+  ])("uses the reviewed %s hero photograph", async (slug, photo) => {
+    const doc = await documentFor(slug);
+    expect(doc.querySelector('[data-builder-item-id="hero"] img')?.getAttribute("src")).toContain(photo);
+  });
+
+  it("keeps the News supporting recognition photo unchanged", async () => {
+    const doc = await documentFor("news");
+    expect(doc.querySelector('[data-builder-item-id="supporting"] img')?.getAttribute("src")).toContain("news-supporting-desktop");
+  });
+
+  it("does not let a retired compact-page hero default hide its new supporting photo", async () => {
+    const page = pages.find((item) => item.slug === "resources")!;
+    const doc = await documentFor("resources", undefined, { regions: {
+      [getImage(page.imageKey).regionId]: {
+        type: "image", src: "/images/professional/resources-supporting-desktop.webp", alt: "Retired default",
+      },
+    } });
+    expect(doc.querySelector('[data-builder-item-id="supporting"] img')?.getAttribute("src")).toContain("chamber-group");
+    expect(doc.querySelector('img[alt="Retired default"]')).toBeNull();
+  });
+
+  it("preserves a genuine office-published compact-page hero photograph", async () => {
+    const page = pages.find((item) => item.slug === "resources")!;
+    const doc = await documentFor("resources", undefined, { regions: {
+      [getImage(page.imageKey).regionId]: {
+        type: "image", src: "/images/office-published-community.jpg", alt: "Office-published community photograph",
+      },
+    } });
+    expect(doc.querySelector('[data-builder-item-id="supporting"] img')?.getAttribute("src")).toContain("office-published-community.jpg");
+    expect(doc.querySelector('img[alt="Office-published community photograph"]')).not.toBeNull();
+  });
+
+  it.each([
+    ["resources", "media.editorial.resources-supporting"],
+    ["contact", "media.editorial.contact-supporting"],
+    ["voting", "media.editorial.voting-supporting"],
+    ["news", "media.professional.news-supporting"],
+  ])("prefers the %s dedicated supporting edit over an older compact-page hero edit", async (slug, supportingRegion) => {
+    const page = pages.find((item) => item.slug === slug)!;
+    const doc = await documentFor(slug, undefined, { regions: {
+      [getImage(page.imageKey).regionId]: {
+        type: "image", src: "/images/legacy-published-hero.jpg", alt: "Previously published hero photograph",
+      },
+      [supportingRegion]: {
+        type: "image", src: "/images/new-published-supporting.jpg", alt: "New supporting photograph",
+      },
+    } });
+    const panel = doc.querySelector('[data-builder-item-id="supporting"]');
+    expect(panel?.querySelector("img")?.getAttribute("src")).toContain("new-published-supporting.jpg");
+    expect(panel?.querySelector(`[data-builder-region="${supportingRegion}"]`)).not.toBeNull();
+    expect(doc.querySelector('img[alt="Previously published hero photograph"]')).toBeNull();
+  });
+
+  it("gives the volunteer office group its own editable image without changing the volunteer destination", async () => {
+    const doc = new DOMParser().parseFromString(renderToStaticMarkup(await DistrictConnectionsSection({ content: { regions: {} } })), "text/html");
+    const panel = doc.querySelector('[data-builder-region="media.editorial.home-volunteer"]');
+    expect(panel?.querySelector("img")?.getAttribute("src")).toContain("office-group");
+    expect(doc.querySelector('[data-builder-region="media.professional.community-primary"]')).toBeNull();
+    expect([...doc.querySelectorAll("a")].find((link) => link.textContent?.includes("Open volunteer form"))?.href).toContain("docs.google.com/forms/");
   });
 
   it("keeps the relevant official actions inside every fact card", () => {

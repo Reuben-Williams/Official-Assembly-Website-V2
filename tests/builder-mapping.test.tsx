@@ -129,12 +129,12 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-region="media.professional.home-supporting"');
   });
 
-  it("places each approved professional photo in its assigned page region", async () => {
+  it("places each approved photo in its assigned stable page region", async () => {
     const assignments = [
       ["about", "about-hero", "media.professional.about-primary"],
       ["news", "news-supporting", "media.professional.news-supporting"],
       ["community", "community-hero", "media.professional.community-primary"],
-      ["resources", "resources-supporting", "media.professional.resources-supporting"],
+      ["resources", "resources-supporting", "media.editorial.resources-supporting"],
     ] as const;
 
     for (const [slug, instance, region] of assignments) {
@@ -144,6 +144,16 @@ describe("approved builder mapping", () => {
       expect(html).toContain(`data-builder-instance="${instance}"`);
       expect(html).toContain(`data-builder-region="${region}"`);
     }
+  });
+
+  it("registers every new independent editorial photograph without removing legacy identities", () => {
+    const ids = site.globalRegions.map((region) => region.id);
+    for (const slug of ["home-volunteer", "about-supporting", "resources-supporting", "community-supporting", "contact-supporting", "voting-supporting", "survey-supporting", "social-supporting"]) {
+      expect(ids).toContain(`media.editorial.${slug}`);
+    }
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("media.coverage");
+    expect(ids).toContain("media.professional.community-primary");
   });
 
   it("renders a managed contact surface and durable card item IDs", async () => {

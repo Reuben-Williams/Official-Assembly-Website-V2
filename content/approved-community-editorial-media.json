@@ -1,0 +1,463 @@
+{
+  "version": 1,
+  "approval": {
+    "specPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md",
+    "approvedOn": "2026-09-14",
+    "basis": "User-approved written photo sheet, with subsequent carousel instruction keeping the student group only on Community and placing community-greeting on hero slide 5."
+  },
+  "provenanceNote": "Instagram URLs are retained from the user-supplied source cache, not an independent event or licensing verification. Photo associations and release use follow the user-approved sheet. Captions describe visible content only.",
+  "processing": {
+    "desktopMaxLongEdge": 1600,
+    "mobileMaxLongEdge": 800,
+    "quality": 88,
+    "withoutEnlargement": true,
+    "preserveAspectRatio": true
+  },
+  "assets": [
+    {
+      "key": "office-group",
+      "id": "media.community-editorial.office-group",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DaLtQD2CMH2/",
+      "source": {
+        "path": "content/media-source/community-editorial/office-group.jpg",
+        "sha256": "177f6b608ad0854ddf625c74ece7238b877dc115a030c1409bb55fb65567b0dc",
+        "bytes": 192222,
+        "width": 1440,
+        "height": 1331,
+        "originalFilename": "asw_carmenmorales_DaLtQD2CMH2_117.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/office-group-desktop.webp",
+          "sha256": "fa1a2d357fb6c775ca1d197ec76d79db0cadb6a485e8b5068bb44da6361f62be",
+          "bytes": 165000,
+          "width": 1440,
+          "height": 1331
+        },
+        "mobile": {
+          "path": "/images/community-editorial/office-group-mobile.webp",
+          "sha256": "908d5563ed89111b4f91a82a229931367b506821a46b45fb9885a48a33a9da06",
+          "bytes": 69278,
+          "width": 800,
+          "height": 739
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "home volunteer invitation"
+        },
+        {
+          "page": "/contact",
+          "region": "contact supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing with four people in an office",
+        "es": "La asambleísta Carmen Morales posa con cuatro personas en una oficina"
+      },
+      "caption": {
+        "en": "A moment together at the office",
+        "es": "Un momento juntos en la oficina"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "chamber-group",
+      "id": "media.community-editorial.chamber-group",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DaQ-MerEbea/",
+      "attribution": "Local source cache credits Assemblyman Michael Venezia; publication source is the supplied Morales collection.",
+      "source": {
+        "path": "content/media-source/community-editorial/chamber-group.jpg",
+        "sha256": "920c7ef0f89b15144aeffeef4f61523e694597b352bd6530e0f31f9b64aa7b6c",
+        "bytes": 1175150,
+        "width": 3072,
+        "height": 4096,
+        "originalFilename": "asw_carmenmorales_DaQ-MerEbea_085.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/chamber-group-desktop.webp",
+          "sha256": "54f51b68ee9431ba4fa336e967485a4ebbf25fe9503f4368c220c2516ec95eed",
+          "bytes": 263148,
+          "width": 1200,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/chamber-group-mobile.webp",
+          "sha256": "0e2109545acb0a6776f7d081c92806cadf5c30ebc0a8a6017bf2f8cce9be0e77",
+          "bytes": 93502,
+          "width": 600,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 8"
+        },
+        {
+          "page": "/about",
+          "region": "about supporting"
+        },
+        {
+          "page": "/resources",
+          "region": "resources supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing with two men in suits in the legislative chamber",
+        "es": "La asambleísta Carmen Morales posa con dos hombres de traje en la cámara legislativa"
+      },
+      "caption": {
+        "en": "Together in the legislative chamber",
+        "es": "Juntos en la cámara legislativa"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "community-greeting",
+      "id": "media.community-editorial.community-greeting",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DZDMW4hkd2F/",
+      "source": {
+        "path": "content/media-source/community-editorial/community-greeting.jpg",
+        "sha256": "bcb4ca965d7dd7781112a415f62a6283fddf34c8a14b0b9a73958066e701e172",
+        "bytes": 630536,
+        "width": 1440,
+        "height": 1920,
+        "originalFilename": "asw_carmenmorales_DZDMW4hkd2F_244.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/community-greeting-desktop.webp",
+          "sha256": "9c70cadd52b89f78c9f20981c37c7c2a0c1d8170ffcac1a07a1548c6d5080b1f",
+          "bytes": 585200,
+          "width": 1200,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/community-greeting-mobile.webp",
+          "sha256": "5317d8c95bf31f484dc6903338d6fcf082c5b0422701cd5c059d7b8eba7d0ccd",
+          "bytes": 158328,
+          "width": 600,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 5"
+        },
+        {
+          "page": "/community",
+          "region": "community primary"
+        },
+        {
+          "page": "/survey",
+          "region": "survey supporting"
+        },
+        {
+          "page": "/social",
+          "region": "social supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales sharing an outdoor embrace with a young child, with bicycles behind them",
+        "es": "La asambleísta Carmen Morales comparte un abrazo al aire libre con un menor, con bicicletas al fondo"
+      },
+      "caption": {
+        "en": "A warm greeting outdoors",
+        "es": "Un saludo afectuoso al aire libre"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "student-recognition",
+      "id": "media.community-editorial.student-recognition",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DY0N3smldax/",
+      "attribution": "Local source cache credits New Jersey Assembly Democrats; publication source is the supplied Morales collection.",
+      "qualityNote": "Source width is 1280px. No derivative is enlarged.",
+      "source": {
+        "path": "content/media-source/community-editorial/student-recognition.jpg",
+        "sha256": "1040716b818d484dd12c3493e76448c17b9547a67ed9a2b45a2f1128979195c0",
+        "bytes": 253929,
+        "width": 1280,
+        "height": 853,
+        "originalFilename": "asw_carmenmorales_DY0N3smldax_276.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/student-recognition-desktop.webp",
+          "sha256": "72b878e65657f1feb0999e812c0ba3bd731807b93531680544df3646b3ad9b6d",
+          "bytes": 278084,
+          "width": 1280,
+          "height": 853
+        },
+        "mobile": {
+          "path": "/images/community-editorial/student-recognition-mobile.webp",
+          "sha256": "5ddf71ce8aa0560c7921e92e3ad154eebe8d8aa83f75004d2c3ea8b9d74094f0",
+          "bytes": 136504,
+          "width": 800,
+          "height": 533
+        }
+      },
+      "placements": [
+        {
+          "page": "/community",
+          "region": "community supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales at the left of a group wearing Bloomfield HS Unified shirts in the legislative chamber",
+        "es": "La asambleísta Carmen Morales a la izquierda de un grupo con camisetas de Bloomfield HS Unified en la cámara legislativa"
+      },
+      "caption": {
+        "en": "Bloomfield HS Unified in the chamber",
+        "es": "Bloomfield HS Unified en la cámara"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "state-house-recognition",
+      "id": "media.community-editorial.state-house-recognition",
+      "sourceCollection": "Previously approved State House professional photo collection",
+      "sourceUrl": "https://www.assemblywomanmorales.com/images/professional/news-supporting-desktop.webp",
+      "sourceUrlNote": "Existing published derivative identifies the previously approved source; the original album URL was not retained in its provenance manifest. News keeps its existing derivative and placement.",
+      "sourceProvenanceRecord": "content/approved-professional-media.json#media.professional.news-supporting",
+      "source": {
+        "path": "content/media-source/community-editorial/state-house-recognition.jpg",
+        "sha256": "5bfadecd45f8b7aa35bbdd9818a46d14572f1c8b299fc4822876bb4bc911b7f5",
+        "bytes": 16256201,
+        "width": 3633,
+        "height": 5450,
+        "originalFilename": "news-supporting.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/state-house-recognition-desktop.webp",
+          "sha256": "2bd37794798f09e78cd0a38fb52610e49e8e82048d737031cfbb3d93513244c7",
+          "bytes": 314354,
+          "width": 1066,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/state-house-recognition-mobile.webp",
+          "sha256": "c3fedc04734edae47ec42e98c753c7e750a4c5e43b9ef2f4e8c3df4bb83d2a9f",
+          "bytes": 75474,
+          "width": 533,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 6"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing with a group holding a certificate in the legislative chamber",
+        "es": "La asambleísta Carmen Morales posa con un grupo que sostiene un certificado en la cámara legislativa"
+      },
+      "caption": {
+        "en": "Sharing a certificate in the chamber",
+        "es": "Un certificado compartido en la cámara"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "outreach-table",
+      "id": "media.community-editorial.outreach-table",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DY7rRPbkaBt/",
+      "source": {
+        "path": "content/media-source/community-editorial/outreach-table.jpg",
+        "sha256": "69070b77ec1158cba206305dcaf896bdda5a1f7a8e2a3ccc01a2ed396cdfdce6",
+        "bytes": 427660,
+        "width": 1440,
+        "height": 1914,
+        "originalFilename": "asw_carmenmorales_DY7rRPbkaBt_254.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/outreach-table-desktop.webp",
+          "sha256": "fc4d229992706df3740b6db8b18cd0b73c38f891e6f873fb37ad920cef38ff8c",
+          "bytes": 344144,
+          "width": 1204,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/outreach-table-mobile.webp",
+          "sha256": "6636bbfdafd29c5db5fb40e0d6615d11a91f8aa3da3de47991b3535b6c4c59b1",
+          "bytes": 126410,
+          "width": 602,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 7"
+        },
+        {
+          "page": "/survey",
+          "region": "survey primary"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales with two people beside an outdoor office table with seasonal decorations",
+        "es": "La asambleísta Carmen Morales con dos personas junto a una mesa de la oficina al aire libre con decoraciones de temporada"
+      },
+      "caption": {
+        "en": "Together at the outdoor office table",
+        "es": "Juntos en la mesa de la oficina al aire libre"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "community-selfie",
+      "id": "media.community-editorial.community-selfie",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DaIY5RjkfSr/",
+      "source": {
+        "path": "content/media-source/community-editorial/community-selfie.jpg",
+        "sha256": "9bdd0782aa069c129777ed21039c6ff212e030af91d6383f6f3578e3381b86dd",
+        "bytes": 346493,
+        "width": 1440,
+        "height": 1920,
+        "originalFilename": "asw_carmenmorales_DaIY5RjkfSr_137.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/community-selfie-desktop.webp",
+          "sha256": "58cf104da1016a7ef8a8b1718db78a45e85be7143c743a5924ed445dcb4da491",
+          "bytes": 293262,
+          "width": 1200,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/community-selfie-mobile.webp",
+          "sha256": "533e46af52a9df4d46b5a86f79646fe917d87dce3bd54aedb2893d829baf7e87",
+          "bytes": 92132,
+          "width": 600,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/social",
+          "region": "social primary"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales smiling beside a man in an indoor selfie",
+        "es": "La asambleísta Carmen Morales sonríe junto a un hombre en una selfi tomada en un interior"
+      },
+      "caption": {
+        "en": "Sharing a smile for the camera",
+        "es": "Compartiendo una sonrisa ante la cámara"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "hallway-portrait",
+      "id": "media.community-editorial.hallway-portrait",
+      "sourceCollection": "User-supplied Assemblywoman Morales photo collection",
+      "sourceUrl": "https://www.instagram.com/asw_carmenmorales/p/DaO63bVDQYq/",
+      "source": {
+        "path": "content/media-source/community-editorial/hallway-portrait.jpg",
+        "sha256": "f0f58e516472b73015033083540c8bed16eba6e9ad53ae454b1210c27b4832a8",
+        "bytes": 225346,
+        "width": 1440,
+        "height": 1920,
+        "originalFilename": "asw_carmenmorales_DaO63bVDQYq_107.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/hallway-portrait-desktop.webp",
+          "sha256": "c2be2cb390845928d419b75e619ef51607b5b346c6361fd0ab33764b60217f09",
+          "bytes": 153444,
+          "width": 1200,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/hallway-portrait-mobile.webp",
+          "sha256": "66ffd0b4ecbb2cd4f0f02467dc9c59dbcbb7dcf59986e0c521d1dc0234bc5068",
+          "bytes": 59892,
+          "width": 600,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/voting",
+          "region": "voting supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing for a photograph in an indoor hallway",
+        "es": "La asambleísta Carmen Morales posa para una fotografía en un pasillo interior"
+      },
+      "caption": {
+        "en": "Assemblywoman Carmen Morales",
+        "es": "La asambleísta Carmen Morales"
+      },
+      "approvalState": "approved"
+    },
+    {
+      "key": "bill-signing-group",
+      "id": "media.community-editorial.bill-signing-group",
+      "sourceCollection": "User-supplied Google Drive folder: Bill Signing (08-11-2026)",
+      "sourceUrl": "https://drive.google.com/file/d/18rk_gyD7NrTvnwweUgW9jnZiRHNEczrN/view",
+      "conversion": "Orientation-preserving JPEG conversion made with heif-convert. The original HEIF is archived alongside this portable input; no decoder security limits were disabled.",
+      "source": {
+        "path": "content/media-source/community-editorial/bill-signing-group.jpg",
+        "sha256": "cbde8a262278b3cd31b28b1f19f437c968cf92145b0f6e1bf9319a82a2c0158e",
+        "bytes": 2496128,
+        "width": 3024,
+        "height": 4032,
+        "originalFilename": "IMG_7235.HEIC"
+      },
+      "archivalOriginal": {
+        "path": "content/media-source/community-editorial/bill-signing-group.heif",
+        "sha256": "631ff308f940b80c928e4e706361e4dcfd708390dbefcc64756bd9204ce5aca6",
+        "bytes": 1704456,
+        "format": "heif"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/bill-signing-group-desktop.webp",
+          "sha256": "ee0c2b09dc53a12301dc6509aef0e6de97c02ff304f1d53da86af3db7c82366b",
+          "bytes": 422086,
+          "width": 1200,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/bill-signing-group-mobile.webp",
+          "sha256": "24cc83e6a31c27bdcbbfd802d62bce37593569d0ab9341b9ac449d452939f773",
+          "bytes": 118508,
+          "width": 600,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 4"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing with a group in a gymnasium, with more attendees behind them",
+        "es": "La asambleísta Carmen Morales posa con un grupo en un gimnasio, con más asistentes al fondo"
+      },
+      "caption": {
+        "en": "A group moment in the gymnasium",
+        "es": "Un momento en grupo en el gimnasio"
+      },
+      "approvalState": "approved"
+    }
+  ]
+}

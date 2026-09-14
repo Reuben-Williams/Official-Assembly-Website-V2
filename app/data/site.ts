@@ -29,6 +29,14 @@ export type ImageAsset = {
   src: string;
   mobileSrc?: string;
   alt: string;
+  altEs?: string;
+  caption?: string;
+  captionEs?: string;
+  width?: number;
+  height?: number;
+  fullFrame?: boolean;
+  legacyRegionIds?: readonly string[];
+  retiredSources?: readonly string[];
 };
 
 export type Stat = {

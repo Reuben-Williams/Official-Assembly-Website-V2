@@ -6,7 +6,7 @@ The user approved an eight-photo homepage carousel with its first three photogra
 
 This is a photography, caption, and crop refresh, not a redesign. Preserve the navy hero fades, viewport layout, header, carousel interactions, bilingual content, forms, newsletter, editor access, page content, and links. Cultural-event imagery is not prohibited: the first approved carousel photograph remains unchanged. Do not retouch flags out of photographs or manufacture different events.
 
-Status: source and public-page audit complete; the user must review and approve this written placement sheet before implementation, as required by the design-planning workflow. Internal reviewer approval does not satisfy that user-approval gate. No application source or production content has changed in this review.
+Status: the user approved this written selection sheet on September 14, 2026. During implementation the user expressed concern about Morales being off-center in the student-recognition photograph. That photo remains Community supporting only; the approved community-greeting photograph replaces it on carousel slide 5. No new unreviewed photograph is introduced.
 
 ## Approach
 
@@ -42,8 +42,8 @@ The supplied local collection and Drive folders establish provenance, not an ind
 | --- | --- | --- | --- |
 | office-group | `Gallery/asw_carmenmorales/asw_carmenmorales_DaLtQD2CMH2_117.jpg`, 1440×1331 | Home volunteer invitation; Contact supporting | Morales posing with four people in an office; do not label them volunteers |
 | chamber-group | `Gallery/asw_carmenmorales/asw_carmenmorales_DaQ-MerEbea_085.jpg`, 3072×4096; byte-identical existing `public/images/carmen-capitol-colleagues.jpg` | Hero slide 8; About supporting; Resources supporting | Morales posing with two men in suits in a legislative chamber |
-| community-greeting | `Gallery/asw_carmenmorales/asw_carmenmorales_DZDMW4hkd2F_244.jpg`, 1440×1920 | Community hero; Survey supporting; Social supporting | Morales sharing an outdoor embrace with a young child, with bicycles in the background |
-| student-recognition | `Gallery/asw_carmenmorales/asw_carmenmorales_DY0N3smldax_276.jpg`, 1280×853 | Hero slide 5; Community supporting | Group in Bloomfield HS Unified shirts in the legislative chamber; avoid inferred event date |
+| community-greeting | `Gallery/asw_carmenmorales/asw_carmenmorales_DZDMW4hkd2F_244.jpg`, 1440×1920 | Hero slide 5; Community hero; Survey supporting; Social supporting | Morales sharing an outdoor embrace with a young child, with bicycles in the background |
+| student-recognition | `Gallery/asw_carmenmorales/asw_carmenmorales_DY0N3smldax_276.jpg`, 1280×853 | Community supporting only | Group in Bloomfield HS Unified shirts in the legislative chamber; avoid inferred event date |
 | state-house-recognition | Existing `content/media-source/professional/news-supporting.jpg`, 3633×5450 | Hero slide 6; retain News supporting | Morales and a group holding a certificate in the chamber |
 | outreach-table | `Gallery/asw_carmenmorales/asw_carmenmorales_DY7rRPbkaBt_254.jpg`, 1440×1914 | Hero slide 7; Survey hero | Morales and two people beside an outdoor office table with seasonal decorations |
 | community-selfie | `Gallery/asw_carmenmorales/asw_carmenmorales_DaIY5RjkfSr_137.jpg`, 1440×1920 | Social hero | Morales smiling beside a man in an indoor selfie |

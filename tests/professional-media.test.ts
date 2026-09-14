@@ -43,11 +43,11 @@ const workspaceRoot = process.cwd();
 const manifestPath = path.join(workspaceRoot, "content", "approved-professional-media.json");
 const expectedPlacements = {
   "media.professional.home-supporting": [["/", "home supporting"]],
-  "media.professional.home-official-portrait": [["/", "official profile portrait"]],
-  "media.professional.about-primary": [["/about", "about primary"]],
+  "media.professional.home-official-portrait": [["/", "official profile portrait"], ["/about", "about primary"]],
+  "media.professional.about-primary": [],
   "media.professional.news-supporting": [["/news", "news supporting"]],
-  "media.professional.community-primary": [["/community", "community primary"]],
-  "media.professional.resources-supporting": [["/resources", "resources supporting"]],
+  "media.professional.community-primary": [],
+  "media.professional.resources-supporting": [],
 } as const;
 
 async function loadManifest() {
@@ -61,7 +61,7 @@ function localPath(publicOrRepoPath: string) {
 }
 
 describe("approved professional media", () => {
-  it("pins six approved bilingual assets and gives the homepage portrait its own verified source", async () => {
+  it("preserves six source records while recording only their current default public placements", async () => {
     const manifest = await loadManifest();
 
     expect(manifest.version).toBe(2);
