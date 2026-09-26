@@ -126,6 +126,7 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
         }
       }}>
       <div id={`${id}-stage`} className={styles.stage} data-carousel-stage data-format={photo.height > photo.width ? "portrait" : "landscape"}
+        data-mobile-framing={"mobileFraming" in photo ? photo.mobileFraming : undefined}
         role="group" aria-roledescription={copy.slide} aria-label={`${current + 1} ${copy.of} ${communityPhotos.length}: ${text.title}`}>
         <Image key={photo.id} className={styles.photo} src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${photo.src}`} alt={text.caption}
           width={photo.width} height={photo.height} sizes={photo.height > photo.width ? "(max-width: 600px) 70vw, 420px" : "100vw"}

@@ -59,7 +59,7 @@ describe("approved editorial public layout", () => {
     ["about", "chamber-group"],
     ["resources", "chamber-group"],
     ["contact", "office-group"],
-    ["community", "student-recognition"],
+    ["community", "parade-selfie"],
     ["voting", "hallway-portrait"],
     ["survey", "community-greeting"],
     ["social", "community-greeting"],
@@ -74,9 +74,9 @@ describe("approved editorial public layout", () => {
   });
 
   it.each([
-    ["community", "community-greeting"],
+    ["community", "parade-wave"],
     ["survey", "outreach-table"],
-    ["social", "community-selfie"],
+    ["social", "parade-smiles"],
   ])("uses the reviewed %s hero photograph", async (slug, photo) => {
     const doc = await documentFor(slug);
     expect(doc.querySelector('[data-builder-item-id="hero"] img')?.getAttribute("src")).toContain(photo);

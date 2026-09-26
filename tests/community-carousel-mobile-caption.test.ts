@@ -12,6 +12,10 @@ function declarations(selector: string) {
 }
 
 describe("mobile portrait carousel caption readability", () => {
+  it("reserves caption space only for the new landscape photographs on narrow screens", () => {
+    expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("height: calc(100% - 125px);");
+    expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("object-position: center 33%;");
+  });
   it("backs wrapped portrait captions with navy without changing their dimensions", () => {
     expect(declarations(`${portrait} .description`)).toContain("background: rgb(30 51 83 / 95%);");
     expect(declarations(`${portrait} .description`)).toContain("box-shadow: 0 0 0 6px rgb(30 51 83 / 95%);");

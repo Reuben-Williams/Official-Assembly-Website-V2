@@ -7,11 +7,6 @@ import { communityPhotos } from "../app/data/community-photos";
 
 const preservedPhotos = [
   {
-    id: "community", src: "/images/community-carousel/community.webp", width: 1600, height: 1000, position: "center 33%",
-    en: { title: "Community gathering", caption: "Neighbors gather for a group photo with Puerto Rican flags." },
-    es: { title: "Encuentro comunitario", caption: "Vecinos se reúnen para una foto grupal con banderas de Puerto Rico." },
-  },
-  {
     id: "dsc09235", src: "/images/community-carousel/dsc09235.webp", width: 1600, height: 1066, position: "center 33%",
     en: { title: "Together at the stadium", caption: "Assemblywoman Morales joins community members for a group photo on the field." },
     es: { title: "Juntos en el estadio", caption: "La asambleísta Morales se une a miembros de la comunidad para una foto grupal en el campo." },
@@ -24,28 +19,35 @@ const preservedPhotos = [
 ];
 
 const preservedHashes = [
-  "40072d0c0716e12400725dd34e8e21df8e5a519b7c308a8b2780359f37fb59d6",
   "aaeb457ef074c5e55567ec0244ee828e1b2d975041bf457e6c0d833aa7905552",
   "856342992f826c6e0e34e07ef0a0a1339e9ad77989fb1dd7a8d6481c9f472cb7",
 ];
 
 describe("approved carousel photo integrity", () => {
-  it("preserves all original first-three records including captions, order and crops", () => {
-    expect(communityPhotos.slice(0, 3)).toEqual(preservedPhotos);
+  it("preserves stadium and backpacks as slides two and three including captions and crops", () => {
+    expect(communityPhotos.slice(1, 3)).toEqual(preservedPhotos);
   });
 
-  it("preserves the exact approved first-three image bytes", () => {
+  it("preserves the exact approved stadium and backpack image bytes", () => {
     expect(preservedPhotos.map((photo) => createHash("sha256")
       .update(readFileSync(resolve("public", photo.src.slice(1))))
       .digest("hex"))).toEqual(preservedHashes);
   });
 
-  it("uses the five approved replacement photographs without the excluded cafe or school slide", () => {
+  it("opens with the approved street group while retaining eight unique slides", () => {
+    expect(communityPhotos).toHaveLength(8);
+    expect(new Set(communityPhotos.map((photo) => photo.id)).size).toBe(8);
+    expect(communityPhotos[0].src).toBe("/images/community-editorial/parade-group-desktop.webp");
+    expect(communityPhotos[0].en.caption).toContain("group photo");
+    expect(communityPhotos[0].es.caption).toContain("foto grupal");
+  });
+
+  it("changes only slide seven in the later mixed-event sequence", () => {
     expect(communityPhotos.slice(3).map((photo) => photo.src)).toEqual([
       "/images/community-editorial/bill-signing-group-desktop.webp",
       "/images/community-editorial/community-greeting-desktop.webp",
       "/images/community-editorial/state-house-recognition-desktop.webp",
-      "/images/community-editorial/outreach-table-desktop.webp",
+      "/images/community-editorial/parade-walk-desktop.webp",
       "/images/community-editorial/chamber-group-desktop.webp",
     ]);
   });

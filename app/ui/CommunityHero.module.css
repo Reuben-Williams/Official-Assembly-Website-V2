@@ -90,6 +90,8 @@
   .brand { height: 78px; padding: 0 8px; }
   .carousel { min-height: 290px; } .stage::before { height: 45px; } .stage::after { height: 220px; }
   .stage[data-format="portrait"] { padding: 14px 16px 90px; }
+  /* Keep the new landscape faces above wrapped bilingual captions; other slides retain their framing. */
+  .stage[data-mobile-framing="caption-safe"] .photo { height: calc(100% - 125px); object-position: center 33%; }
   /* Keep white captions readable over light clothing without shrinking portrait photos. */
   .carousel:has(.stage[data-format="portrait"]) .description { background: rgb(30 51 83 / 95%); box-shadow: 0 0 0 6px rgb(30 51 83 / 95%); border-radius: 4px; }
   .footer { padding: 0 20px 12px; gap: 6px; }

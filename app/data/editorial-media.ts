@@ -43,11 +43,11 @@ export function getEditorialPhoto(key: string, regionId?: string): ImageAsset {
 const pageSelections: Record<string, { hero?: [string, string]; supporting: [string, string] }> = {
   about: { supporting: ["chamber-group", "media.coverage"] },
   resources: { supporting: ["chamber-group", "media.professional.resources-supporting"] },
-  community: { hero: ["community-greeting", "media.professional.community-primary"], supporting: ["student-recognition", "media.graduation"] },
+  community: { hero: ["parade-wave", "media.professional.community-primary"], supporting: ["parade-selfie", "media.graduation"] },
   contact: { supporting: ["office-group", "media.coverage"] },
   voting: { supporting: ["hallway-portrait", "media.coverage"] },
   survey: { hero: ["outreach-table", "media.outdoor-visit"], supporting: ["community-greeting", "media.coverage"] },
-  social: { hero: ["community-selfie", "media.capitol"], supporting: ["community-greeting", "media.coverage"] },
+  social: { hero: ["parade-smiles", "media.capitol"], supporting: ["community-greeting", "media.coverage"] },
 };
 
 export function getEditorialPagePhoto(slug: string, placement: "hero" | "supporting"): ImageAsset | undefined {

@@ -1,9 +1,10 @@
 // Approved Concept C collection. Captions describe visible activity, not inferred dates or events.
 export const communityPhotos = [
   {
-    id: "community", src: "/images/community-carousel/community.webp", width: 1600, height: 1000, position: "center 33%",
-    en: { title: "Community gathering", caption: "Neighbors gather for a group photo with Puerto Rican flags." },
-    es: { title: "Encuentro comunitario", caption: "Vecinos se reúnen para una foto grupal con banderas de Puerto Rico." },
+    id: "parade-group", src: "/images/community-editorial/parade-group-desktop.webp", width: 1600, height: 1066, position: "center 33%",
+    mobileFraming: "caption-safe",
+    en: { title: "Together along the parade route", caption: "Morales joins a group photo on a street, with parade floats behind them." },
+    es: { title: "Juntos durante el desfile", caption: "Morales participa en una foto grupal en una calle, con carrozas del desfile al fondo." },
   },
   {
     id: "dsc09235", src: "/images/community-carousel/dsc09235.webp", width: 1600, height: 1066, position: "center 33%",
@@ -31,9 +32,10 @@ export const communityPhotos = [
     es: { title: "Una foto en el recinto legislativo", caption: "Morales se une a un grupo que sostiene un certificado en el recinto legislativo." },
   },
   {
-    id: "outreach-table", src: "/images/community-editorial/outreach-table-desktop.webp", width: 1204, height: 1600, position: "center",
-    en: { title: "At the office information table", caption: "Morales poses with two people beside an outdoor office table with seasonal decorations." },
-    es: { title: "En la mesa informativa de la oficina", caption: "Morales posa con dos personas junto a una mesa de su oficina al aire libre con decoraciones de temporada." },
+    id: "parade-walk", src: "/images/community-editorial/parade-walk-desktop.webp", width: 1600, height: 1066, position: "center 33%",
+    mobileFraming: "caption-safe",
+    en: { title: "Walking together at the parade", caption: "Morales walks beside a man holding an umbrella, with parade participants behind them." },
+    es: { title: "Caminando juntos en el desfile", caption: "Morales camina junto a un hombre que sostiene un paraguas, con participantes del desfile detrás." },
   },
   {
     id: "chamber-group", src: "/images/community-editorial/chamber-group-desktop.webp", width: 1200, height: 1600, position: "center",

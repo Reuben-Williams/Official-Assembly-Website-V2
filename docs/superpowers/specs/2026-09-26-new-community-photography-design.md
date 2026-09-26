@@ -2,7 +2,7 @@
 
 ## Decision and scope
 
-The user approved the recommended placement plan with “Proceed.” This document records that plan for written review before implementation. This is a photo-and-caption update, not a layout redesign or a newsletter/provider change.
+The user approved the recommended placement plan with “Proceed,” then approved this written specification with “Approved spec” on September 26, 2026. This is a photo-and-caption update, not a layout redesign or a newsletter/provider change.
 
 Use five authentic originals from the user-supplied Google Drive folder `1tFoxvxB6N9v1H5wMUHRi_OgdOw-wt66_`, named Puerto Rican Parade 2026, Photos subfolder `1AOqwDGv_Lzu_YpW8WSTn2UN7RU_8TreS`. The inspected originals and source inventory are retained at `D:/Project Morales/photo-review-september26/`. Folder naming supplies provenance, not proof of specific participants' roles or an exact event date.
 

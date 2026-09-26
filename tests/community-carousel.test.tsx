@@ -34,20 +34,28 @@ afterEach(async () => {
 });
 
 describe("approved community carousel", () => {
+  it("applies narrow-screen face protection only to the two new landscape slides", async () => {
+    await act(async () => root.render(<CommunityCarousel locale="es" />));
+    for (let index = 0; index < 8; index++) {
+      expect(container.querySelector('[data-carousel-stage]')?.getAttribute('data-mobile-framing'))
+        .toBe([0, 6].includes(index) ? 'caption-safe' : null);
+      await click('Foto siguiente');
+    }
+  });
   it("starts still with one photograph and meaningful copy", async () => {
     await act(async () => root.render(<CommunityCarousel locale="en" />));
     expect(container.querySelector('[data-community-carousel]')?.getAttribute("data-playing")).toBe("false");
     expect(container.querySelectorAll('[data-carousel-stage] img')).toHaveLength(1);
-    expect(container.textContent).toContain("Neighbors gather for a group photo with Puerto Rican flags.");
+    expect(container.textContent).toContain("Morales joins a group photo on a street, with parade floats behind them.");
     expect(container.textContent).not.toContain("Existing site collection");
     await act(async () => vi.advanceTimersByTime(15000));
-    expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("community.webp");
+    expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("parade-group-desktop.webp");
   });
   it("has eight unique bilingual slides from the approved mixed-scene collection", () => {
     expect(communityPhotos).toHaveLength(8);
     expect(communityPhotos.map((photo) => photo.id)).toEqual([
-      "community", "dsc09235", "dsc09857", "bill-signing-group", "community-greeting",
-      "state-house-recognition", "outreach-table", "chamber-group",
+      "parade-group", "dsc09235", "dsc09857", "bill-signing-group", "community-greeting",
+      "state-house-recognition", "parade-walk", "chamber-group",
     ]);
     expect(new Set(communityPhotos.map((photo) => photo.src)).size).toBe(8);
     for (const photo of communityPhotos) {

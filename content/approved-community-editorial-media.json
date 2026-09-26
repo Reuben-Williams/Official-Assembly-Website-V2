@@ -5,6 +5,13 @@
     "approvedOn": "2026-09-14",
     "basis": "User-approved written photo sheet, with subsequent carousel instruction keeping the student group only on Community and placing community-greeting on hero slide 5."
   },
+  "revisions": [
+    {
+      "specPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md",
+      "approvedOn": "2026-09-26",
+      "basis": "User-approved September 26 spec: five new authentic originals, replacing carousel slides 1 and 7, Community primary/supporting and Social primary. Prior originals retained; current placements are listed per asset."
+    }
+  ],
   "provenanceNote": "Instagram URLs are retained from the user-supplied source cache, not an independent event or licensing verification. Photo associations and release use follow the user-approved sheet. Captions describe visible content only.",
   "processing": {
     "desktopMaxLongEdge": 1600,
@@ -61,7 +68,9 @@
         "en": "A moment together at the office",
         "es": "Un momento juntos en la oficina"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "chamber-group",
@@ -115,7 +124,9 @@
         "en": "Together in the legislative chamber",
         "es": "Juntos en la cámara legislativa"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "community-greeting",
@@ -152,10 +163,6 @@
           "region": "hero slide 5"
         },
         {
-          "page": "/community",
-          "region": "community primary"
-        },
-        {
           "page": "/survey",
           "region": "survey supporting"
         },
@@ -172,7 +179,9 @@
         "en": "A warm greeting outdoors",
         "es": "Un saludo afectuoso al aire libre"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "student-recognition",
@@ -205,12 +214,7 @@
           "height": 533
         }
       },
-      "placements": [
-        {
-          "page": "/community",
-          "region": "community supporting"
-        }
-      ],
+      "placements": [],
       "alt": {
         "en": "Assemblywoman Carmen Morales at the left of a group wearing Bloomfield HS Unified shirts in the legislative chamber",
         "es": "La asambleísta Carmen Morales a la izquierda de un grupo con camisetas de Bloomfield HS Unified en la cámara legislativa"
@@ -219,7 +223,9 @@
         "en": "Bloomfield HS Unified in the chamber",
         "es": "Bloomfield HS Unified en la cámara"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "state-house-recognition",
@@ -266,7 +272,9 @@
         "en": "Sharing a certificate in the chamber",
         "es": "Un certificado compartido en la cámara"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "outreach-table",
@@ -299,10 +307,6 @@
       },
       "placements": [
         {
-          "page": "/",
-          "region": "hero slide 7"
-        },
-        {
           "page": "/survey",
           "region": "survey primary"
         }
@@ -315,7 +319,9 @@
         "en": "Together at the outdoor office table",
         "es": "Juntos en la mesa de la oficina al aire libre"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "community-selfie",
@@ -346,12 +352,7 @@
           "height": 800
         }
       },
-      "placements": [
-        {
-          "page": "/social",
-          "region": "social primary"
-        }
-      ],
+      "placements": [],
       "alt": {
         "en": "Assemblywoman Carmen Morales smiling beside a man in an indoor selfie",
         "es": "La asambleísta Carmen Morales sonríe junto a un hombre en una selfi tomada en un interior"
@@ -360,7 +361,9 @@
         "en": "Sharing a smile for the camera",
         "es": "Compartiendo una sonrisa ante la cámara"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "hallway-portrait",
@@ -405,7 +408,9 @@
         "en": "Assemblywoman Carmen Morales",
         "es": "La asambleísta Carmen Morales"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
     },
     {
       "key": "bill-signing-group",
@@ -457,7 +462,244 @@
         "en": "A group moment in the gymnasium",
         "es": "Un momento en grupo en el gimnasio"
       },
-      "approvalState": "approved"
+      "approvalState": "approved",
+      "approvedOn": "2026-09-14",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-14-community-photo-refresh-design.md"
+    },
+    {
+      "key": "parade-group",
+      "id": "media.community-editorial.parade-group",
+      "sourceCollection": "User-supplied Google Drive folder: Puerto Rican Parade 2026 / Photos",
+      "sourceUrl": "https://drive.google.com/file/d/1fFrpwrObHHK8h3N8FqDhcqRgnavAMvIQ/view",
+      "source": {
+        "path": "content/media-source/community-editorial/parade-group.jpg",
+        "sha256": "504c5cd03686a61159d2561f3469d9c3c19be931688fe5dedf93c41d07d85c73",
+        "bytes": 2631655,
+        "width": 2048,
+        "height": 1365,
+        "originalFilename": "DSC09013.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/parade-group-desktop.webp",
+          "sha256": "bd496865c70c78f2784f2bc8a5f80513cad669f08aa52d64c77802a30dfbe601",
+          "bytes": 517566,
+          "width": 1600,
+          "height": 1066
+        },
+        "mobile": {
+          "path": "/images/community-editorial/parade-group-mobile.webp",
+          "sha256": "df9149b804d1be86de0cfb9a2112be4deb463f54718281d5b2651db7fbf8128b",
+          "bytes": 140796,
+          "width": 800,
+          "height": 533
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 1"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales posing with a group on a street, with parade floats behind them",
+        "es": "La asambleísta Carmen Morales posa con un grupo en una calle, con carrozas del desfile al fondo"
+      },
+      "caption": {
+        "en": "A group moment along the parade route",
+        "es": "Un momento en grupo durante el desfile"
+      },
+      "approvalState": "approved",
+      "approvedOn": "2026-09-26",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md"
+    },
+    {
+      "key": "parade-walk",
+      "id": "media.community-editorial.parade-walk",
+      "sourceCollection": "User-supplied Google Drive folder: Puerto Rican Parade 2026 / Photos",
+      "sourceUrl": "https://drive.google.com/file/d/1RWPsjnZFTXWnaygkAM4cw8aMjh88H8gg/view",
+      "source": {
+        "path": "content/media-source/community-editorial/parade-walk.jpg",
+        "sha256": "560b2113b51a7c1434bd48b2021cb11fe5a3fb679a765bef78da546562a2ff84",
+        "bytes": 1571505,
+        "width": 2048,
+        "height": 1365,
+        "originalFilename": "DSC09399.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/parade-walk-desktop.webp",
+          "sha256": "3148fe44113770df3a054e40cd81264538a6d02f3bd40edad538b76cae2e1805",
+          "bytes": 216244,
+          "width": 1600,
+          "height": 1066
+        },
+        "mobile": {
+          "path": "/images/community-editorial/parade-walk-mobile.webp",
+          "sha256": "6b7cf616ada9d3b9106af968d1e1887502e65472436d9ddc589d126ee8a0a0fa",
+          "bytes": 77642,
+          "width": 800,
+          "height": 533
+        }
+      },
+      "placements": [
+        {
+          "page": "/",
+          "region": "hero slide 7"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales walking beside a man holding an umbrella, with parade participants behind them",
+        "es": "La asambleísta Carmen Morales camina junto a un hombre que sostiene un paraguas, con participantes del desfile detrás"
+      },
+      "caption": {
+        "en": "Walking together along the parade route",
+        "es": "Caminando juntos durante el desfile"
+      },
+      "approvalState": "approved",
+      "approvedOn": "2026-09-26",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md"
+    },
+    {
+      "key": "parade-wave",
+      "id": "media.community-editorial.parade-wave",
+      "sourceCollection": "User-supplied Google Drive folder: Puerto Rican Parade 2026 / Photos",
+      "sourceUrl": "https://drive.google.com/file/d/18jb-hW4eDuUWCpJrQEhBZV_olwZBZg_u/view",
+      "source": {
+        "path": "content/media-source/community-editorial/parade-wave.jpg",
+        "sha256": "ea1516582f2d0bdb7e63ba51e41bed32bfa42bc835ad8f03410c2e94077d9408",
+        "bytes": 1726626,
+        "width": 1365,
+        "height": 2048,
+        "originalFilename": "DSC09418.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/parade-wave-desktop.webp",
+          "sha256": "f6a63405a5dc09a3a83b4884a96228ea8cb18f1e7f416583eec5e7db6ae51767",
+          "bytes": 225140,
+          "width": 1066,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/parade-wave-mobile.webp",
+          "sha256": "5535a5a3eba1f60db4acdc4b4815bed771647dc88da9751f465e21078464355b",
+          "bytes": 73690,
+          "width": 533,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/community",
+          "region": "community primary"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales smiling and waving in a denim jacket and burgundy cap",
+        "es": "La asambleísta Carmen Morales sonríe y saluda con una chaqueta de mezclilla y una gorra color borgoña"
+      },
+      "caption": {
+        "en": "A smile and a wave from Morales",
+        "es": "Una sonrisa y un saludo de Morales"
+      },
+      "approvalState": "approved",
+      "approvedOn": "2026-09-26",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md"
+    },
+    {
+      "key": "parade-selfie",
+      "id": "media.community-editorial.parade-selfie",
+      "sourceCollection": "User-supplied Google Drive folder: Puerto Rican Parade 2026 / Photos",
+      "sourceUrl": "https://drive.google.com/file/d/1Lk-E37uHhgSJ5_11CrAP8Lqj9DrnjAkg/view",
+      "source": {
+        "path": "content/media-source/community-editorial/parade-selfie.jpg",
+        "sha256": "42fa0e13ad09c9df4eb786ef419830b99986246e7c931e695b2a2a929f1eba84",
+        "bytes": 2254389,
+        "width": 1365,
+        "height": 2048,
+        "originalFilename": "DSC09192.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/parade-selfie-desktop.webp",
+          "sha256": "26d0b6d9c84fe567241bdf44e3e3d7a49e387b788190a712dc6e944c2a97c5c7",
+          "bytes": 418434,
+          "width": 1066,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/parade-selfie-mobile.webp",
+          "sha256": "e0b17826223dfb8914cbf1faa36c1e2667f97adfd426ab27f61bfc5d5b2788fe",
+          "bytes": 119022,
+          "width": 533,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/community",
+          "region": "community supporting"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales smiling with a group posing for a selfie outdoors",
+        "es": "La asambleísta Carmen Morales sonríe con un grupo que posa para una selfi al aire libre"
+      },
+      "caption": {
+        "en": "Coming together for a group selfie",
+        "es": "Juntos para una selfi en grupo"
+      },
+      "approvalState": "approved",
+      "approvedOn": "2026-09-26",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md"
+    },
+    {
+      "key": "parade-smiles",
+      "id": "media.community-editorial.parade-smiles",
+      "sourceCollection": "User-supplied Google Drive folder: Puerto Rican Parade 2026 / Photos",
+      "sourceUrl": "https://drive.google.com/file/d/1RwX1PNFpl4Ups0cHkk6tYLMt4DgaTJjl/view",
+      "source": {
+        "path": "content/media-source/community-editorial/parade-smiles.jpg",
+        "sha256": "c2a89532fed515cf250f3db2fec81efce7627d84f97318f544f1a55ff1ffa0f0",
+        "bytes": 1597019,
+        "width": 1365,
+        "height": 2048,
+        "originalFilename": "DSC09212.jpg"
+      },
+      "derivatives": {
+        "desktop": {
+          "path": "/images/community-editorial/parade-smiles-desktop.webp",
+          "sha256": "aa71d3aa8e4b38860e2e95ca8157c018ca4baea85a30828dbd77f758cbab4dc1",
+          "bytes": 213024,
+          "width": 1066,
+          "height": 1600
+        },
+        "mobile": {
+          "path": "/images/community-editorial/parade-smiles-mobile.webp",
+          "sha256": "e6f350cbb39d4483283aa5d00cf5386486adbe907dfcca19f4e151b3c5ee5671",
+          "bytes": 71054,
+          "width": 533,
+          "height": 800
+        }
+      },
+      "placements": [
+        {
+          "page": "/social",
+          "region": "social primary"
+        }
+      ],
+      "alt": {
+        "en": "Assemblywoman Carmen Morales and a woman in a burgundy shirt smiling together outdoors",
+        "es": "La asambleísta Carmen Morales y una mujer con una camiseta color borgoña sonríen juntas al aire libre"
+      },
+      "caption": {
+        "en": "Sharing a smile outdoors",
+        "es": "Compartiendo una sonrisa al aire libre"
+      },
+      "approvalState": "approved",
+      "approvedOn": "2026-09-26",
+      "approvalSpecPath": "docs/superpowers/specs/2026-09-26-new-community-photography-design.md"
     }
   ]
 }

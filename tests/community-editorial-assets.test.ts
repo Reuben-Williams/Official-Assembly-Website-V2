@@ -19,6 +19,7 @@ type Asset = {
   caption: { en: string; es: string };
   placements: { page: string; region: string }[];
   approvalState: string;
+  approvedOn: string;
 };
 type Manifest = {
   version: number;
@@ -37,6 +38,11 @@ const approvedHashes = {
   "community-selfie": "9bdd0782aa069c129777ed21039c6ff212e030af91d6383f6f3578e3381b86dd",
   "hallway-portrait": "f0f58e516472b73015033083540c8bed16eba6e9ad53ae454b1210c27b4832a8",
   "bill-signing-group": "cbde8a262278b3cd31b28b1f19f437c968cf92145b0f6e1bf9319a82a2c0158e",
+  "parade-group": "504c5cd03686a61159d2561f3469d9c3c19be931688fe5dedf93c41d07d85c73",
+  "parade-walk": "560b2113b51a7c1434bd48b2021cb11fe5a3fb679a765bef78da546562a2ff84",
+  "parade-wave": "ea1516582f2d0bdb7e63ba51e41bed32bfa42bc835ad8f03410c2e94077d9408",
+  "parade-selfie": "42fa0e13ad09c9df4eb786ef419830b99986246e7c931e695b2a2a929f1eba84",
+  "parade-smiles": "c2a89532fed515cf250f3db2fec81efce7627d84f97318f544f1a55ff1ffa0f0",
 };
 
 async function loadManifest(): Promise<Manifest> {
@@ -49,12 +55,12 @@ function localPath(filePath: string) {
 }
 
 describe("approved community editorial photographs", () => {
-  it("includes exactly the nine approved photographs, excluding the uncertain café candidate", async () => {
+  it("retains the nine earlier photographs and adds exactly five approved originals", async () => {
     const manifest = await loadManifest();
     expect(manifest.version).toBe(1);
     expect(manifest.assets.map(({ key }) => key).sort()).toEqual(Object.keys(approvedHashes).sort());
     expect(manifest.processing).toEqual({ desktopMaxLongEdge: 1600, mobileMaxLongEdge: 800, quality: 88, withoutEnlargement: true, preserveAspectRatio: true });
-    expect(new Set(manifest.assets.map(({ id }) => id)).size).toBe(9);
+    expect(new Set(manifest.assets.map(({ id }) => id)).size).toBe(14);
     for (const asset of manifest.assets) {
       expect(asset.id).toBe(`media.community-editorial.${asset.key}`);
       expect(asset.approvalState).toBe("approved");
@@ -62,7 +68,8 @@ describe("approved community editorial photographs", () => {
       expect(asset.sourceUrl).toMatch(/^https:\/\/(www\.instagram\.com|drive\.google\.com|www\.assemblywomanmorales\.com)\//);
       expect(asset.sourceCollection.length).toBeGreaterThan(10);
       expect(asset.source.originalFilename.length).toBeGreaterThan(4);
-      expect(asset.placements.length).toBeGreaterThan(0);
+      expect(asset.approvedOn).toBe(asset.key.startsWith("parade-") ? "2026-09-26" : "2026-09-14");
+      if (!["student-recognition", "community-selfie"].includes(asset.key)) expect(asset.placements.length).toBeGreaterThan(0);
       for (const localized of [asset.alt, asset.caption]) {
         expect(localized.en.length).toBeGreaterThan(12);
         expect(localized.es.length).toBeGreaterThan(12);
@@ -111,7 +118,15 @@ describe("approved community editorial photographs", () => {
   it("keeps the school group outside the carousel and records deliberate page-specific placements", async () => {
     const manifest = await loadManifest();
     const placements = Object.fromEntries(manifest.assets.map(({ key, placements }) => [key, placements]));
-    expect(placements["student-recognition"]).toEqual([{ page: "/community", region: "community supporting" }]);
+    expect(placements["student-recognition"]).toEqual([]);
+    expect(placements["community-selfie"]).toEqual([]);
+    expect(placements["parade-group"]).toEqual([{ page: "/", region: "hero slide 1" }]);
+    expect(placements["parade-walk"]).toEqual([{ page: "/", region: "hero slide 7" }]);
+    expect(placements["parade-wave"]).toEqual([{ page: "/community", region: "community primary" }]);
+    expect(placements["parade-selfie"]).toEqual([{ page: "/community", region: "community supporting" }]);
+    expect(placements["parade-smiles"]).toEqual([{ page: "/social", region: "social primary" }]);
+    expect(placements["outreach-table"]).toEqual([{ page: "/survey", region: "survey primary" }]);
+    expect(placements["community-greeting"]).not.toContainEqual({ page: "/community", region: "community primary" });
     expect(placements["community-greeting"]).toContainEqual({ page: "/", region: "hero slide 5" });
     expect(placements["office-group"]).toEqual([
       { page: "/", region: "home volunteer invitation" },
