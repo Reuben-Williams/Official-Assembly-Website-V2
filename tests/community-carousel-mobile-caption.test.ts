@@ -15,6 +15,7 @@ describe("mobile portrait carousel caption readability", () => {
   it("reserves caption space only for the new landscape photographs on narrow screens", () => {
     expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("height: calc(100% - 125px);");
     expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("object-position: center 33%;");
+    expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);");
   });
   it("backs wrapped portrait captions with navy without changing their dimensions", () => {
     expect(declarations(`${portrait} .description`)).toContain("background: rgb(30 51 83 / 95%);");
