@@ -611,7 +611,7 @@ export function CarouselStudio({
         <div className={styles.previewPanel}>
           <div className={styles.panelTitle}>
             <h2>Live preview</h2>
-            <span>Not yet published</span>
+            <span>Preview only</span>
           </div>
           <div className={styles.previewTools}>
             <div>

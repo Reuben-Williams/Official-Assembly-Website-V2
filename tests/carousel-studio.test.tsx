@@ -68,6 +68,8 @@ describe("Carousel Studio A", () => {
     expect(host.textContent).toContain("This photo");
     expect(host.textContent).toContain("Whole carousel");
     expect(host.textContent).toContain("Review saved draft");
+    expect(host.textContent).toContain("Preview only");
+    expect(host.textContent).not.toContain("Not yet published");
     expect(
       host.querySelector('[aria-label="Live carousel preview"]'),
     ).not.toBeNull();

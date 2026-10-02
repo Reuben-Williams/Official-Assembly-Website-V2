@@ -28,9 +28,20 @@ Before initial activation, authoritative database evidence that no carousel-awar
 
 Before carousel activation, the previous production deployment remains a safe rollback target; additive tables may remain unused. After activation, do not roll back to a renderer/worker that lacks carousel-aware recovery support. Prefer a corrected forward release, or restore an earlier carousel revision as a new reviewed draft. Never delete immutable revisions, command receipts, media, or recovery artifacts as rollback cleanup.
 
-## Remaining verification at this checkpoint
+## Production activation completed October 2
 
-Canonical owner activation and post-activation checks. Physical-device testing and the additional Editor's personal sign-in are not represented by automated browser checks.
+- Source commit `0bbe238` deployed as `dpl_EapboJv3WDP9hthmjKxzoJkS59eX`, with the canonical production domains attached and newsletter preflight ready.
+- Owner-authenticated initialization succeeded: enabled carousel version 1, immutable revision `f458749a-0103-40ff-8f18-7d7e16b0b9a1`, exactly one bootstrap audit event.
+- Full-site generation 4 includes all 12 configured routes and the exact carousel revision. Its recovery job completed without errors. All eight carousel photos have verified backups.
+- Registered the already-live Events route with migration `20261002041414_register_events_recovery_route.sql`. The normal owner content command versions its existing fallback only; private drafts and the global published version remain untouched. Five isolated SQL checks passed.
+- Production storage exposed a generic duplicate-object response. Immutable artifact writes now verify/reuse exact bytes and reject conflicts; ambiguous responses require exact durable readback. The latest-pointer conditional update is unchanged.
+- Final full suite after the storage repair: 136 files / 696 tests passed. All 65 isolated SQL checks passed. The final preview-label correction also passed its focused UI regression.
+- Production owner UI: direct Carousel workspace, all eight slots, managed image picker, whole-carousel controls, English/Spanish desktop/mobile previews verified. Public gallery loaded all eight managed image endpoints; homepage had no horizontal overflow at the tested browser width.
+- Additional Editor membership rechecked; recipient has not completed personal email verification. No test email or synthetic constituent record was created.
+
+## Verification limits
+
+Physical-device testing and the additional Editor's personal sign-in are not represented by automated browser checks. The authenticated browser's screenshot capture timed out; production UI interactions were verified through its visible DOM, and a public production gallery screenshot was saved separately.
 
 ## Staff handoff
 
