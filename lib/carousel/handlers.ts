@@ -177,6 +177,15 @@ export function createCarouselHandlers(input: {
           { error: { code: "VALIDATION", message: error.message } },
           400,
         );
+      // Never log provider URLs, content, tokens, or raw exception messages.
+      const message = error instanceof Error ? error.message : "";
+      const codes = ["INCOMPLETE_ROUTES", "GENERATION_IDENTITY_MISMATCH", "MEDIA_DIGEST_MISMATCH", "INVALID_ARTIFACT", "IMMUTABLE_CONFLICT", "POINTER_CONFLICT", "EVENTS_BASELINE_READ_FAILED"];
+      const code = codes.find((candidate) => message === candidate)
+        ?? (/already exists/i.test(message) ? "BLOB_EXISTS"
+          : /too many requests/i.test(message) ? "PROVIDER_RATE_LIMIT"
+          : /access denied|not authorized|forbidden/i.test(message) ? "PROVIDER_ACCESS"
+          : "UNEXPECTED_STORAGE_ERROR");
+      console.error("carousel_operation_failed", { code });
       return response(
         {
           error: {

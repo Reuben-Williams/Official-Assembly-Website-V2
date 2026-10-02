@@ -80,6 +80,16 @@ describe("carousel request boundary", () => {
     expect(result.headers.get("cache-control")).toBe("no-store");
     expect(service.execute).toHaveBeenCalledWith(identity, command);
   });
+  it("logs a bounded storage diagnostic without leaking provider details", async () => {
+    const { handlers, service } = setup();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    service.execute.mockRejectedValueOnce(new Error("Vercel Blob: This blob already exists. private/path?token=secret"));
+    const result = await handlers.POST(request());
+    expect(result.status).toBe(503);
+    expect(log).toHaveBeenCalledWith("carousel_operation_failed", { code: "BLOB_EXISTS" });
+    expect(await result.text()).not.toContain("secret");
+    log.mockRestore();
+  });
   it("does not let an Editor initialize the site baseline", async () => {
     const { handlers, service } = setup();
     const document = createCarouselBaseline(
