@@ -47,7 +47,8 @@ export const EXPECTED_PENDING_MIGRATIONS = Object.freeze([
   ["20260902033000_site_calendar_publishing.sql", "ea3f81bd4f43e6240d9cb9dad79fe5c27a366d2a4835b81d4b33d0d74b461b02"],
   ["20260914232545_newsletter_reconciliation_epoch_restart.sql", "273c0199cb79da4bacba6a8b6092b7bf96526eb31c90c7af598b3f65106f5106"],
   ["20261002025302_carousel_studio.sql", "6cf403a43f8c48c584b21890c41b5083df717d2eebed1dcb8e13dccdff33f599"],
-  ["20261002035726_fix_media_claim_required_description.sql", "fbf52b37451956ab8fb1b392a017e238f1ede80c3d7bf277f48cb37448351316"]
+  ["20261002035726_fix_media_claim_required_description.sql", "fbf52b37451956ab8fb1b392a017e238f1ede80c3d7bf277f48cb37448351316"],
+  ["20261002041414_register_events_recovery_route.sql", "f1d5a89afe470d493a20d51be62a3b138d6041ea77c0a81cc22b13a02544deb1"]
 ]);
 
 function checksumCandidates(contents) {

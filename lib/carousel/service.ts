@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import site from "../../builder.config";
+import { ensureEventsRecoveryBaseline } from "./events-baseline";
 import type { ActiveBuilderIdentity } from "../builder/authorization";
 import {
   canonicalRecoveryJson,
@@ -360,6 +361,7 @@ export function createCarouselService(client: SupabaseClient): CarouselService {
           );
       }
       if (command.action === "publish" || command.action === "bootstrap") {
+        if (command.action === "bootstrap") await ensureEventsRecoveryBaseline(client, identity);
         const latest = await client
           .from("builder_site_generations")
           .select("generation_id")
