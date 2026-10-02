@@ -121,6 +121,15 @@ export function createRecoveryArtifactStore(input: {
     };
   }
 
+  async function existingImmutable(path: string, bytes: Uint8Array, contentType: string) {
+    const existing = await input.objects.get(path, { useCache: false });
+    if (!existing) return null;
+    if (existing.contentType !== contentType || !sameBytes(existing.bytes, bytes)) {
+      throw new RecoveryStoreError("IMMUTABLE_CONFLICT");
+    }
+    return existing;
+  }
+
   return {
     environment: input.environment,
     siteKey: input.siteKey,
@@ -137,6 +146,8 @@ export function createRecoveryArtifactStore(input: {
       if (!path.startsWith(`${namespace}/`)) throw new RecoveryStoreError("INVALID_ARTIFACT");
       const bytes = new TextEncoder().encode(canonicalRecoveryJson(value));
       const digest = await recoveryDigest(bytes);
+      const existing = await existingImmutable(path, bytes, "application/json");
+      if (existing) return { path, digest, byteLength: bytes.byteLength, etag: existing.etag };
       try {
         const result = await input.objects.put(path, bytes, {
           allowOverwrite: false,
@@ -144,11 +155,10 @@ export function createRecoveryArtifactStore(input: {
         });
         return { path, digest, byteLength: bytes.byteLength, etag: result.etag };
       } catch (error) {
-        if (!(error instanceof RecoveryStoreError) || error.code !== "PRECONDITION_FAILED") throw error;
-        const existing = await input.objects.get(path, { useCache: false });
-        if (!existing || existing.contentType !== "application/json" || !sameBytes(existing.bytes, bytes)) {
-          throw new RecoveryStoreError("IMMUTABLE_CONFLICT");
-        }
+        // Providers can report an existing object as a generic error, or lose
+        // the acknowledgement after a successful write. Exact readback is proof.
+        const existing = await existingImmutable(path, bytes, "application/json");
+        if (!existing) throw error;
         return { path, digest, byteLength: bytes.byteLength, etag: existing.etag };
       }
     },
@@ -160,6 +170,8 @@ export function createRecoveryArtifactStore(input: {
           await recoveryDigest(bytes) !== options.expectedDigest) {
         throw new RecoveryStoreError("INVALID_ARTIFACT");
       }
+      const existing = await existingImmutable(path, bytes, options.contentType);
+      if (existing) return { path, digest: options.expectedDigest, byteLength: bytes.byteLength, etag: existing.etag };
       try {
         const result = await input.objects.put(path, bytes, {
           allowOverwrite: false,
@@ -167,11 +179,8 @@ export function createRecoveryArtifactStore(input: {
         });
         return { path, digest: options.expectedDigest, byteLength: bytes.byteLength, etag: result.etag };
       } catch (error) {
-        if (!(error instanceof RecoveryStoreError) || error.code !== "PRECONDITION_FAILED") throw error;
-        const existing = await input.objects.get(path, { useCache: false });
-        if (!existing || existing.contentType !== options.contentType || !sameBytes(existing.bytes, bytes)) {
-          throw new RecoveryStoreError("IMMUTABLE_CONFLICT");
-        }
+        const existing = await existingImmutable(path, bytes, options.contentType);
+        if (!existing) throw error;
         return { path, digest: options.expectedDigest, byteLength: bytes.byteLength, etag: existing.etag };
       }
     },

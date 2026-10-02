@@ -50,7 +50,45 @@ describe("published snapshot recovery store", () => {
     expect(replay).toEqual(first);
     await expect(recovery.writeImmutableJson(path, { route: "/about", generationId: 4 }))
       .rejects.toMatchObject({ code: "IMMUTABLE_CONFLICT" });
-    expect(objects.writes.filter((write) => write.path === path)).toHaveLength(3);
+    expect(objects.writes.filter((write) => write.path === path)).toHaveLength(1);
+  });
+
+  it("verifies bytes after an ambiguous provider duplicate response without overwriting", async () => {
+    const objects = new MemoryObjects();
+    const originalPut = objects.put.bind(objects);
+    vi.spyOn(objects, "put").mockImplementationOnce(async (path, bytes, options) => {
+      await originalPut(path, bytes, options);
+      throw new Error("Vercel Blob: This blob already exists.");
+    });
+    const recovery = createRecoveryArtifactStore({ objects, environment: "preview", siteKey: "site" });
+    const bytes = new TextEncoder().encode("authentic image bytes");
+    const { recoveryDigest } = await import("../lib/builder/recovery/blob-store");
+    const digest = await recoveryDigest(bytes);
+    await expect(recovery.writeImmutableBytes("recovery/v1/preview/site/media/photo.jpg", bytes, {
+      contentType: "image/jpeg", expectedDigest: digest,
+    })).resolves.toMatchObject({ digest });
+    expect(objects.writes.every(write => !write.allowOverwrite)).toBe(true);
+  });
+
+  it("never accepts a failed write when no durable object exists", async () => {
+    const objects = new MemoryObjects();
+    vi.spyOn(objects, "put").mockRejectedValue(new Error("provider unavailable"));
+    const recovery = createRecoveryArtifactStore({ objects, environment: "preview", siteKey: "site" });
+    await expect(recovery.writeImmutableJson("recovery/v1/preview/site/route.json", { value: 1 }))
+      .rejects.toThrow("provider unavailable");
+  });
+
+  it("rejects different image bytes without overwriting an existing backup", async () => {
+    const objects = new MemoryObjects();
+    const recovery = createRecoveryArtifactStore({ objects, environment: "preview", siteKey: "site" });
+    const path = "recovery/v1/preview/site/media/photo.jpg";
+    const { recoveryDigest } = await import("../lib/builder/recovery/blob-store");
+    const first = new Uint8Array([1,2,3]);
+    const other = new Uint8Array([1,2,4]);
+    await recovery.writeImmutableBytes(path, first, { contentType: "image/jpeg", expectedDigest: await recoveryDigest(first) });
+    await expect(recovery.writeImmutableBytes(path, other, { contentType: "image/jpeg", expectedDigest: await recoveryDigest(other) }))
+      .rejects.toMatchObject({ code: "IMMUTABLE_CONFLICT" });
+    expect(objects.writes).toHaveLength(1);
   });
 
   it("reads and advances latest with uncached reads and an ETag precondition", async () => {
