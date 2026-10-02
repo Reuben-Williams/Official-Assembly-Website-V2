@@ -13,9 +13,21 @@
 .brand :global(.home-brand-banner) { height: 100%; width: min(94%, 470px); margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .brand :global(.home-brand-banner-picture) { display: block; height: 100%; aspect-ratio: auto; }
 .brand :global(.home-brand-banner-image) { width: 100%; height: 100%; object-fit: contain; }
-.carousel { flex: 1; min-height: 290px; position: relative; color: #fff; background: var(--hero-navy); }
+.carousel { flex: 1; min-height: 290px; position: relative; color: #fff; background: var(--hero-navy); container-type: inline-size; container-name: carousel; }
 .stage { position: absolute; inset: 0; isolation: isolate; }
-.photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photo { display: block; width: 100%; height: 100%; object-fit: var(--photo-fit,cover); object-position: var(--photo-position,center); }
+.photoMotion { width: 100%; height: 100%; overflow: hidden; }
+.photoMotion[data-transition="fade"] { animation: carouselFade var(--photo-speed) ease both; }
+.photoMotion[data-transition="slide"] { animation: carouselSlide var(--photo-speed) ease both; }
+.photoMotion[data-zoom="true"] .photo { animation: carouselZoom var(--photo-seconds) linear both; animation-play-state: paused; }
+.carousel[data-playing="true"] .photoMotion[data-zoom="true"] .photo { animation-play-state: running; }
+.carousel[data-custom-blend="true"] .stage::before { height: var(--blend-top); }
+.carousel[data-custom-blend="true"] .stage::after { height: var(--blend-bottom); }
+.carousel[data-custom-blend="true"] .description { background: rgb(30 51 83 / 96%); box-shadow: 0 0 0 6px rgb(30 51 83 / 96%); border-radius: 4px; }
+@keyframes carouselFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes carouselSlide { from { transform: translateX(5%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes carouselZoom { from { transform: scale(1); } to { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .photoMotion, .photo { animation: none !important; } }
 .photo[hidden] { display: none; }
 .stage[data-format="portrait"] { padding: 24px 24px 104px; }
 .stage[data-format="portrait"] .photo { object-fit: contain; mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent); }
@@ -72,34 +84,17 @@
 .galleryGrid small { font-size: 12px; color: #52647a; display: block; line-height: 1.45; margin-top: 5px; }
 .modalFoot { font-size: 12px; color: #5b6e84; padding: 0 28px 22px; margin: 0; line-height: 1.6; }
 @media (max-width: 1100px) {
-  .description strong { font-size: 16px; } .description p { font-size: 13px; }
-  .timeline { width: 144px; } .controls { gap: 12px; } .copyBand { gap: 28px; }
-  .buttons .play { min-width: 96px; } .actions a { font-size: 14px; padding: 13px 14px; }
+  .copyBand { gap: 28px; }
+  .actions a { font-size: 14px; padding: 13px 14px; }
 }
 @media (max-width: 900px) {
   .hero { min-height: 660px; } .brand { height: 88px; }
-  .footer { display: grid; grid-template-columns: 1fr; gap: 8px; padding-left: 24px; padding-right: 24px; }
-  .description { min-height: 56px; } .description > div { max-width: none; }
-  .controls { justify-content: space-between; } .timeline { width: 40%; }
-  .stage[data-format="portrait"] { padding-bottom: 148px; } .stage::after { height: 198px; }
   .copyBand { padding: 18px 24px 24px; gap: 24px; } .copyBand h1 { font-size: 28px; }
   .galleryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .hero { min-height: 740px; height: auto; min-height: max(740px, calc(100svh - var(--hero-chrome-height))); }
   .brand { height: 78px; padding: 0 8px; }
-  .carousel { min-height: 290px; } .stage::before { height: 45px; } .stage::after { height: 220px; }
-  .stage[data-format="portrait"] { padding: 14px 16px 90px; }
-  /* Keep the new landscape faces above wrapped bilingual captions; other slides retain their framing. */
-  .stage[data-mobile-framing="caption-safe"] .photo { height: calc(100% - 125px); object-position: center 33%; mask-image: linear-gradient(to bottom, #000 65%, transparent 100%); }
-  /* Keep white captions readable over light clothing without shrinking portrait photos. */
-  .carousel:has(.stage[data-format="portrait"]) .description { background: rgb(30 51 83 / 95%); box-shadow: 0 0 0 6px rgb(30 51 83 / 95%); border-radius: 4px; }
-  .footer { padding: 0 20px 12px; gap: 6px; }
-  .description { gap: 10px; min-height: 67px; } .description strong { font-size: 15px; } .description p { font-size: 13px; line-height: 1.35; margin-top: 4px; }
-  .index { font-size: 10px; padding-right: 10px; padding-top: 3px; }
-  .controls { display: grid; grid-template-columns: 1fr; gap: 2px; }
-  .timeline { width: 100%; height: 30px; } .timeline button { height: 30px; } .track { top: 14px; }
-  .buttons { justify-content: flex-end; } .buttons button { width: 46px; height: 46px; } .buttons .play { min-width: 100px; height: 46px; }
   .copyBand { grid-template-columns: 1fr; padding: 16px 20px 20px; gap: 10px; }
   .copyBand::before { left: 20px; right: 20px; }
   .copyBand :global(.eyebrow) { font-size: 8px; letter-spacing: 1px; margin-bottom: 8px; }
@@ -111,10 +106,53 @@
   .galleryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 18px; }
   .galleryGrid button > span { padding: 10px; } .modalFoot { padding: 0 18px 18px; }
 }
+@container carousel (max-width: 1100px) {
+  .description strong { font-size: 16px; } .description p { font-size: 13px; }
+  .timeline { width: 144px; } .controls { gap: 12px; }
+  .buttons .play { min-width: 96px; }
+}
+@container carousel (max-width: 900px) {
+  .footer { display: grid; grid-template-columns: 1fr; gap: 8px; padding-left: 24px; padding-right: 24px; }
+  .description { min-height: 56px; } .description > div { max-width: none; }
+  .controls { justify-content: space-between; } .timeline { width: 40%; }
+  .stage[data-format="portrait"] { padding-bottom: 148px; }
+  .stage::after { height: 198px; }
+}
+@container carousel (max-width: 600px) {
+  .stage .photo { object-fit: var(--photo-mobile-fit); object-position: var(--photo-mobile-position); }
+  .stage[data-format="portrait"] .photo { object-fit: var(--photo-mobile-fit); }
+  .stage[data-format="portrait"] { padding: 14px 16px 90px; }
+  .stage[data-mobile-format="landscape"] { padding: 0; }
+  .stage[data-mobile-format="landscape"] .photo { mask-image: none; }
+  .stage[data-mobile-format="portrait"] { padding: 14px 16px 90px; }
+  .stage[data-mobile-format="portrait"] .photo { mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent); }
+  .stage[data-mobile-framing="caption-safe"] .photo { height: calc(100% - 125px); object-position: var(--photo-mobile-position,center 33%); mask-image: linear-gradient(to bottom, #000 65%, transparent 100%); }
+  .stage::before { height: 45px; } .stage::after { height: 220px; }
+  .footer { padding: 0 20px 12px; gap: 6px; }
+  .description { gap: 10px; min-height: 67px; }
+  .stage[data-format="portrait"] ~ .footer .description { background: rgb(30 51 83 / 95%); box-shadow: 0 0 0 6px rgb(30 51 83 / 95%); border-radius:4px; }
+  .description strong { font-size: 15px; } .description p { font-size: 13px; line-height: 1.35; margin-top:4px; }
+  .index { font-size: 10px; padding-right: 10px; padding-top:3px; }
+  .controls { display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .timeline { width: 100%; height: 44px; } .timeline button { height: 44px; } .track { top: 21px; }
+  .buttons { justify-content: flex-end; } .buttons button { width: 46px; height: 46px; }
+  .buttons .play { min-width: 100px; height: 46px; }
+}
 @media (max-width: 360px) {
   .brand { height: 70px; } .copyBand { padding: 14px 16px 18px; } .copyBand h1 { font-size: 25px; }
+  .actions a { padding: 11px 10px; gap: 6px; }
+  .galleryGrid img { height: 130px; }
+}
+@container carousel (max-width: 360px) {
   .footer { padding-left: 16px; padding-right: 16px; } .description { gap: 8px; min-height: 84px; }
   .index { padding-right: 8px; } .buttons { gap: 7px; } .buttons button { width: 44px; }
-  .buttons .play { min-width: 94px; } .actions a { padding: 11px 10px; gap: 6px; }
-  .galleryGrid img { height: 130px; }
+  .buttons .play { min-width: 94px; }
+}
+.unavailable {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  color: white;
+  background: #1e3353;
 }

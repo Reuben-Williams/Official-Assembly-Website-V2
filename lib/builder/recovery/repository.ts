@@ -7,6 +7,7 @@ import type {
   RecoveryWorkerRepository
 } from "./worker";
 import type { MediaReplicaClaim, MediaReplicaRepository } from "./media-replica-worker";
+import { validateCarouselDocument } from '../../carousel/contract';
 
 type GenerationRow = {
   site_id: unknown;
@@ -15,6 +16,7 @@ type GenerationRow = {
   global_version_id: unknown;
   page_versions: unknown;
   created_at: unknown;
+  carousel_revision_id?: unknown;
 };
 
 function errorMessage(error: unknown) {
@@ -35,6 +37,7 @@ export function createSupabaseRecoveryWorkerRepository(
     now?: () => Date;
     maxAttempts?: number;
     mediaBucket?: string;
+    carouselRevisionId?: string;
   } = {}
 ): RecoveryWorkerRepository {
   const now = options.now ?? (() => new Date());
@@ -62,7 +65,7 @@ export function createSupabaseRecoveryWorkerRepository(
     async loadGeneration(claim) {
       const generationResult = await client
         .from("builder_site_generations")
-        .select("site_id, generation_id, command_id, global_version_id, page_versions, created_at")
+        .select("site_id, generation_id, command_id, global_version_id, page_versions, created_at, carousel_revision_id")
         .eq("site_id", claim.siteId)
         .eq("generation_id", claim.generationId)
         .single();
@@ -99,11 +102,19 @@ export function createSupabaseRecoveryWorkerRepository(
         .in("version_id", versionIds);
       if (mediaRefsResult.error) throw new Error(errorMessage(mediaRefsResult.error));
       const mediaRefs = mediaRefsResult.data ?? [];
-      const revisionIds = [...new Set(mediaRefs.map((row) => String(row.revision_id)))];
+      const carouselRevisionId = options.carouselRevisionId ?? generation.carousel_revision_id;
+      let carousel: RecoveryGenerationSource['carousel'];
+      if (carouselRevisionId) {
+        const result = await client.from('builder_carousel_revisions').select('id,document').eq('site_id',claim.siteId).eq('id',carouselRevisionId).single();
+        if(result.error || !result.data) throw new Error('CAROUSEL_REVISION_MISSING');
+        carousel = {revisionId:String(result.data.id),document:validateCarouselDocument(result.data.document,true)};
+      }
+      const carouselMedia = new Set(carousel?.document.entries.map(entry=>entry.media.revisionId) ?? []);
+      const revisionIds = [...new Set([...mediaRefs.map((row) => String(row.revision_id)),...carouselMedia])];
       let media: RecoveryGenerationSource["media"] = [];
       if (revisionIds.length > 0) {
         const revisionsResult = await client.from("builder_media_revisions")
-          .select("media_id, id, object_key, mime_type, byte_size, sha256")
+          .select("media_id, id, object_key, mime_type, byte_size, sha256, width, height")
           .eq("site_id", claim.siteId)
           .in("id", revisionIds);
         if (revisionsResult.error) throw new Error(errorMessage(revisionsResult.error));
@@ -120,7 +131,8 @@ export function createSupabaseRecoveryWorkerRepository(
             bytes: new Uint8Array(await download.data.arrayBuffer()),
             digest: String(revision.sha256),
             mimeType: String(revision.mime_type),
-            routePaths: sourcePages.filter((page) => referencedVersions.has(page.versionId)).map((page) => page.path)
+            width: Number(revision.width), height:Number(revision.height),
+            routePaths: sourcePages.filter((page) => referencedVersions.has(page.versionId) || (page.path==='/' && carouselMedia.has(String(revision.id)))).map((page) => page.path)
           };
         }));
       }
@@ -138,7 +150,8 @@ export function createSupabaseRecoveryWorkerRepository(
           values: snapshotValues(global.snapshot)
         },
         pages: sourcePages,
-        media
+        media,
+        ...(carousel ? {carousel} : {})
       } as RecoveryGenerationSource;
     },
 

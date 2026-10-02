@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Grid2X2, Pause, Play, X } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { effectiveCarouselSettings, type CarouselProjection } from '../../lib/carousel/contract';
 import { carouselCopy, communityPhotos } from "../data/community-photos";
 import type { PublicLocale } from "../i18n/locale";
 import styles from "./CommunityHero.module.css";
 
-const duration = 7000;
 const motionQuery = "(prefers-reduced-motion: reduce)";
 function subscribeMotion(callback: () => void) {
   const query = window.matchMedia(motionQuery);
@@ -17,8 +17,10 @@ function subscribeMotion(callback: () => void) {
 const readMotion = () => window.matchMedia(motionQuery).matches;
 const serverMotion = () => false;
 
-export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
-  const [current, setCurrent] = useState(0);
+export function CommunityCarousel({ locale, projection, initialIndex = 0, onSelect }: {
+  locale: PublicLocale; projection?: CarouselProjection; initialIndex?: number; onSelect?: (id: string) => void;
+}) {
+  const [current, setCurrent] = useState(initialIndex);
   const [playing, setPlaying] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
@@ -27,23 +29,42 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
   const progress = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const galleryButton = useRef<HTMLButtonElement>(null);
-  const clock = useRef({ index: 0, elapsed: 0 });
+  const clock = useRef({ index: initialIndex, elapsed: 0 });
   const id = useId();
   const copy = carouselCopy[locale];
-  const photo = communityPhotos[current];
+  const photos = useMemo(() => projection ? projection.document.entries.map(entry => {
+    const image = projection.images.find(image => image.mediaId === entry.media.mediaId && image.revisionId === entry.media.revisionId);
+    if (!image) throw new Error('Carousel projection is missing an approved image.');
+    const desktop = effectiveCarouselSettings(projection.document, entry, 'desktop', reduced);
+    const mobile = effectiveCarouselSettings(projection.document, entry, 'mobile', reduced);
+    return { id: entry.id, src: image.url, width: image.width, height: image.height,
+      position: `${desktop.frame.x}% ${desktop.frame.y}%`, mobilePosition: `${mobile.frame.x}% ${mobile.frame.y}%`,
+      fit: desktop.frame.fit, mobileFit: mobile.frame.fit, en: entry.en, es: entry.es,
+      mobileFraming: entry.captionSafeMobile ? 'caption-safe' : undefined,
+      settings: desktop, original: desktop.blend === null };
+  }) : communityPhotos.map(photo => ({...photo,
+    en: {...photo.en, alt: photo.en.caption}, es: {...photo.es, alt: photo.es.caption},
+    mobilePosition: photo.position, fit: photo.height > photo.width ? 'contain' : 'cover',
+    mobileFit: photo.height > photo.width ? 'contain' : 'cover',
+    mobileFraming: 'mobileFraming' in photo ? photo.mobileFraming : undefined,
+    settings: { transition: 'none', seconds: 7, speed: 700, blend: null, zoom: false }, original: true,
+  })), [projection, reduced]);
+  const photo = photos[current];
   const text = photo[locale];
   const activePlayback = playing && !reduced;
   const pause = useCallback(() => setPlaying(false), []);
   const paint = useCallback(() => {
-    if (progress.current) progress.current.style.transform = `scaleX(${(clock.current.index + clock.current.elapsed / duration) / communityPhotos.length})`;
-  }, []);
+    const duration = photos[clock.current.index].settings.seconds * 1000;
+    if (progress.current) progress.current.style.transform = `scaleX(${(clock.current.index + clock.current.elapsed / duration) / photos.length})`;
+  }, [photos]);
   const choose = useCallback((index: number) => {
     pause();
-    const next = (index + communityPhotos.length) % communityPhotos.length;
+    const next = (index + photos.length) % photos.length;
     clock.current = { index: next, elapsed: 0 };
     setCurrent(next);
+    onSelect?.(photos[next].id);
     paint();
-  }, [paint, pause]);
+  }, [paint, pause, photos, onSelect]);
 
   useEffect(() => {
     if (!activePlayback) return;
@@ -52,9 +73,10 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
     const tick = (now: number) => {
       clock.current.elapsed += Math.max(0, now - last);
       last = now;
+      const duration = photos[clock.current.index].settings.seconds * 1000;
       if (clock.current.elapsed >= duration) {
-        clock.current.index = (clock.current.index + Math.floor(clock.current.elapsed / duration)) % communityPhotos.length;
-        clock.current.elapsed %= duration;
+        clock.current.index = (clock.current.index + 1) % photos.length;
+        clock.current.elapsed = 0;
         setCurrent(clock.current.index);
       }
       paint();
@@ -62,7 +84,7 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [activePlayback, paint]);
+  }, [activePlayback, paint, photos]);
 
   useEffect(() => {
     const visibility = () => { if (document.hidden) pause(); };
@@ -116,6 +138,11 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
   const closeGallery = () => dialog.current?.close();
   return (
     <section ref={root} className={styles.carousel} data-community-carousel="true" data-playing={activePlayback}
+      data-carousel-revision={projection?.revisionId} data-custom-blend={!photo.original}
+      style={{'--photo-position':photo.position,'--photo-mobile-position':photo.mobilePosition,
+        '--photo-fit':photo.fit,'--photo-mobile-fit':photo.mobileFit,
+        '--photo-speed':`${photo.settings.speed}ms`,'--photo-seconds':`${photo.settings.seconds}s`,
+        ...(photo.settings.blend ? {'--blend-top':`${photo.settings.blend.top}%`,'--blend-bottom':`${photo.settings.blend.bottom}%`} : {})} as CSSProperties}
       aria-roledescription={copy.carousel} aria-label={copy.label}
       onPointerEnter={(event) => { if (event.pointerType === "mouse") pause(); }}
       onFocusCapture={(event) => { if (!(event.target as HTMLElement).closest("[data-carousel-play]")) pause(); }}
@@ -125,13 +152,17 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
           event.preventDefault(); choose(current + (event.key === "ArrowRight" ? 1 : -1));
         }
       }}>
-      <div id={`${id}-stage`} className={styles.stage} data-carousel-stage data-format={photo.height > photo.width ? "portrait" : "landscape"}
-        data-mobile-framing={"mobileFraming" in photo ? photo.mobileFraming : undefined}
-        role="group" aria-roledescription={copy.slide} aria-label={`${current + 1} ${copy.of} ${communityPhotos.length}: ${text.title}`}>
-        <Image key={photo.id} className={styles.photo} src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${photo.src}`} alt={text.caption}
+      <div id={`${id}-stage`} className={styles.stage} data-carousel-stage data-format={photo.fit === 'contain' ? "portrait" : "landscape"}
+        data-mobile-format={photo.mobileFit === 'contain' ? "portrait" : "landscape"}
+        data-mobile-framing={photo.mobileFraming}
+        role="group" aria-roledescription={copy.slide} aria-label={`${current + 1} ${copy.of} ${photos.length}: ${text.title || text.alt}`}>
+        <div key={photo.id} className={styles.photoMotion} data-transition={reduced ? 'none' : photo.settings.transition} data-zoom={photo.settings.zoom}>
+        <Image className={styles.photo} src={photo.src.startsWith('/') ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${photo.src}` : photo.src} alt={text.alt}
           width={photo.width} height={photo.height} sizes={photo.height > photo.width ? "(max-width: 600px) 70vw, 420px" : "100vw"}
+          unoptimized={!!projection}
           preload={current === 0} loading={current === 0 ? undefined : "eager"}
-          style={{ objectPosition: photo.position }} hidden={failedPhoto === photo.id} onError={() => setFailedPhoto(photo.id)} />
+          hidden={failedPhoto === photo.id} onError={() => setFailedPhoto(photo.id)} />
+        </div>
         {failedPhoto === photo.id && <p className={styles.error} role="status">{copy.error}</p>}
       </div>
       <div className={styles.footer}>
@@ -142,7 +173,7 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
         <div className={styles.controls}>
           <div className={styles.timeline} role="group" aria-label={copy.progress}>
             <div className={styles.track} aria-hidden="true"><div ref={progress} className={styles.fill} data-carousel-progress /></div>
-            {communityPhotos.map((item, index) => <button type="button" key={item.id}
+            {photos.map((item, index) => <button type="button" key={item.id}
               aria-label={`${copy.show} ${index + 1}: ${item[locale].title}`} aria-current={index === current ? "true" : undefined}
               aria-controls={`${id}-stage`} data-complete={index < current} onClick={() => choose(index)} />)}
           </div>
@@ -168,10 +199,10 @@ export function CommunityCarousel({ locale }: { locale: PublicLocale }) {
         }}>
         <div className={styles.modalHeading}><div><h2 id={`${id}-gallery-title`}>{copy.galleryTitle}</h2><p id={`${id}-gallery-description`}>{copy.description}</p></div>
           <button type="button" aria-label={copy.close} onClick={closeGallery}><X size={22} aria-hidden="true" /></button></div>
-        {galleryOpen && <div className={styles.galleryGrid}>{communityPhotos.map((item, index) => <button type="button" key={item.id}
+        {galleryOpen && <div className={styles.galleryGrid}>{photos.map((item, index) => <button type="button" key={item.id}
           aria-pressed={index === current} aria-label={`${copy.show} ${index + 1}: ${item[locale].title}`}
           onClick={() => { choose(index); closeGallery(); }}>
-          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${item.src}`} width={item.width} height={item.height} sizes="(max-width: 600px) 42vw, 220px" alt="" />
+          <Image src={item.src.startsWith('/') ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${item.src}` : item.src} unoptimized={!!projection} width={item.width} height={item.height} sizes="(max-width: 600px) 42vw, 220px" alt="" />
           <span><strong>{String(index + 1).padStart(2, "0")} · {item[locale].title}</strong><small>{item[locale].caption}</small></span>
         </button>)}</div>}
         <p className={styles.modalFoot}>{copy.still}</p>

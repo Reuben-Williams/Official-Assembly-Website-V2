@@ -1,7 +1,7 @@
 # Carousel studio and site-scoped staff access
 
 Date: 2026-10-01
-Status: User approved layout A and the behavior below; written-spec review pending.
+Status: Independent review passed. User approved the written specification and production implementation on October 1, 2026.
 Scope: The Morales website's attached Site Editor, not a redesign of the public hero.
 
 ## 1. Approved outcome

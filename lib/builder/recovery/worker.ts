@@ -1,4 +1,5 @@
 import type { EditableValue } from "@reuben-williams/core";
+import { validateCarouselDocument, type CarouselDocumentV1 } from '../../carousel/contract';
 
 import {
   canonicalRecoveryJson,
@@ -43,7 +44,10 @@ export interface RecoveryGenerationSource {
     readonly digest: string;
     readonly mimeType: string;
     readonly routePaths?: readonly string[];
+    readonly width?: number;
+    readonly height?: number;
   }[];
+  readonly carousel?: { readonly revisionId: string; readonly document: CarouselDocumentV1 };
 }
 
 export interface RecoveryWorkerRepository {
@@ -113,7 +117,32 @@ export async function runRecoveryWorkerOnce(input: {
       throw new Error("GENERATION_IDENTITY_MISMATCH");
     }
     if (!exactRoutes(source, input.configuredRoutes)) throw new Error("INCOMPLETE_ROUTES");
+    const pointer = await prepareRecoveryGeneration({ ...input, source });
+    await input.artifacts.advanceLatest(pointer);
+    const completed = await input.repository.complete({ ...claim, workerId: input.workerId });
+    return completed
+      ? { status: "completed" as const, generationId: source.generationId }
+      : { status: "stale_fence" as const, generationId: source.generationId };
+  } catch (error) {
+    const code = safeCode(error);
+    const status = await input.repository.retry({ ...claim, workerId: input.workerId, safeCode: code });
+    return { status, generationId: claim.generationId, safeCode: code };
+  }
+}
 
+// Prepares durable artifacts without publishing them. The caller activates its DB
+// revision under a site lock before advancing the recovery pointer.
+export async function prepareRecoveryGeneration(input: {
+  source: RecoveryGenerationSource; environment: RecoveryEnvironment;
+  configuredRoutes: readonly string[]; artifacts: RecoveryArtifactStore;
+}) {
+    const { source } = input;
+    if(source.siteKey !== input.artifacts.siteKey || input.environment !== input.artifacts.environment) throw new Error('GENERATION_IDENTITY_MISMATCH');
+    if(!exactRoutes(source,input.configuredRoutes))throw new Error('INCOMPLETE_ROUTES');
+    if(source.carousel) {
+      validateCarouselDocument(source.carousel.document,true);
+      for(const entry of source.carousel.document.entries)if(!source.media.some(media=>media.mediaId===entry.media.mediaId&&media.revisionId===entry.media.revisionId))throw new Error('CAROUSEL_MEDIA_MISSING');
+    }
     const namespace = `recovery/v1/${input.environment}/${source.siteKey}`;
     const mediaReferences: RecoveryMediaReference[] = [];
     for (const media of source.media) {
@@ -130,7 +159,8 @@ export async function runRecoveryWorkerOnce(input: {
         artifactPath,
         artifactDigest: media.digest,
         byteLength: media.bytes.byteLength,
-        mimeType: media.mimeType
+        mimeType: media.mimeType,
+        ...(media.width && media.height ? {width:media.width,height:media.height} : {})
       });
     }
 
@@ -145,6 +175,7 @@ export async function runRecoveryWorkerOnce(input: {
         globalVersionId: source.global.versionId,
         pageVersionId: page.versionId,
         values: recoveryValues({ ...source.global.values, ...page.values }),
+        ...(page.path === '/' && source.carousel ? {carousel:source.carousel} : {}),
         media: mediaReferences.filter((reference) => {
           const media = source.media.find((candidate) => candidate.revisionId === reference.revisionId);
           return !media?.routePaths || media.routePaths.includes(page.path);
@@ -159,7 +190,7 @@ export async function runRecoveryWorkerOnce(input: {
     }
 
     const manifest: RecoveryGenerationManifest = {
-      schemaVersion: 1,
+      schemaVersion: source.carousel ? 2 : 1,
       environment: input.environment,
       siteKey: source.siteKey,
       generationId: source.generationId,
@@ -167,7 +198,10 @@ export async function runRecoveryWorkerOnce(input: {
       globalVersionId: source.global.versionId,
       routes: routeReferences,
       media: mediaReferences,
-      createdAt: source.createdAt ?? new Date().toISOString()
+      createdAt: source.createdAt ?? new Date().toISOString(),
+      ...(source.carousel ? {carousel:{revisionId:source.carousel.revisionId,
+        artifactPath:routeReferences.find(route=>route.path==='/')!.artifactPath,
+        artifactDigest:routeReferences.find(route=>route.path==='/')!.artifactDigest}} : {})
     };
     validateGenerationManifest(manifest, {
       environment: input.environment,
@@ -179,22 +213,12 @@ export async function runRecoveryWorkerOnce(input: {
     const manifestDigest = await recoveryDigest(manifestBytes);
     const manifestPath = `${namespace}/generations/${source.generationId}/manifest-${manifestDigest}.json`;
     await input.artifacts.writeImmutableJson(manifestPath, manifest);
-    await input.artifacts.advanceLatest({
-      schemaVersion: 1,
+    return {
+      schemaVersion: 1 as const,
       environment: input.environment,
       siteKey: source.siteKey,
       generationId: source.generationId,
       manifestPath,
       manifestDigest
-    });
-
-    const completed = await input.repository.complete({ ...claim, workerId: input.workerId });
-    return completed
-      ? { status: "completed" as const, generationId: source.generationId }
-      : { status: "stale_fence" as const, generationId: source.generationId };
-  } catch (error) {
-    const code = safeCode(error);
-    const status = await input.repository.retry({ ...claim, workerId: input.workerId, safeCode: code });
-    return { status, generationId: claim.generationId, safeCode: code };
-  }
+    };
 }

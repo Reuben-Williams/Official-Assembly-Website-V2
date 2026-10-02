@@ -7,6 +7,7 @@ import {
 } from "./blob-store";
 import { validateGenerationManifest } from "./contracts";
 import { createRecoveryMediaGrant } from "./media-grant";
+import { validateCarouselDocument, type CarouselProjection } from '../../carousel/contract';
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -66,7 +67,25 @@ export function createRecoveryContentReader(input: {
           regions[regionId] = value;
         }
       }
-      return { regions };
+      let carousel: CarouselProjection | undefined;
+      if (pagePath === '/' && manifest.schemaVersion === 2) {
+        const saved = artifactValue.value.carousel;
+        if (!record(saved) || !manifest.carousel || saved.revisionId !== manifest.carousel.revisionId ||
+            manifest.carousel.artifactPath !== route.artifactPath || manifest.carousel.artifactDigest !== route.artifactDigest) return null;
+        const document = validateCarouselDocument(saved.document, true);
+        const refs = new Map(document.entries.map(entry => [`${entry.media.mediaId}:${entry.media.revisionId}`, entry.media]));
+        const images = [...refs.values()].map(ref => {
+          const media = manifest.media.find(item => item.mediaId === ref.mediaId && item.revisionId === ref.revisionId);
+          if (!media?.width || !media.height) throw new Error('CAROUSEL_MEDIA_MISSING');
+          const grant = createRecoveryMediaGrant({schemaVersion:1,environment:input.artifacts.environment,
+            siteKey:input.artifacts.siteKey,generationId:manifest.generationId,route:pagePath,
+            mediaDigest:media.artifactDigest,manifestPath:latest.pointer.manifestPath,expiresAt},input.grantSecret);
+          return {...ref,width:media.width,height:media.height,ready:true,
+            url:`/api/builder/recovery/media/${manifest.generationId}/${media.artifactDigest}?grant=${encodeURIComponent(grant)}`};
+        });
+        carousel = {revisionId:String(saved.revisionId),document,images};
+      }
+      return { regions, ...(carousel ? {carousel} : {}) };
     } catch {
       return null;
     }

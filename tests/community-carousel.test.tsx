@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CommunityCarousel } from "../app/ui/CommunityCarousel";
 import { communityPhotos } from "../app/data/community-photos";
+import { createCarouselBaseline } from '../lib/carousel/contract';
 
 vi.mock("next/image", () => ({ default: ({ preload: _preload, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { preload?: boolean }) => React.createElement("img", props) }));
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -34,6 +35,18 @@ afterEach(async () => {
 });
 
 describe("approved community carousel", () => {
+  it('uses an immutable supplied projection for captions, alt, framing and timing', async () => {
+    const refs=communityPhotos.map((_,i)=>({mediaId:`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,revisionId:`11111111-1111-4111-8111-${String(i+1).padStart(12,'0')}`}));
+    const document=createCarouselBaseline(refs); document.entries[0].en={title:'Published title',caption:'Published caption',alt:'Published accessible description'};
+    document.entries[0].seconds=5; document.entries[0].desktop.x=25;
+    const projection={revisionId:'published-revision',document,images:refs.map((ref,i)=>({...ref,url:communityPhotos[i].src,width:communityPhotos[i].width,height:communityPhotos[i].height,ready:true}))};
+    await act(async()=>root.render(<CommunityCarousel locale="en" projection={projection}/>));
+    expect(container.textContent).toContain('Published title');
+    expect(container.querySelector('img')?.alt).toBe('Published accessible description');
+    expect(container.querySelector('[data-community-carousel]')?.getAttribute('data-carousel-revision')).toBe('published-revision');
+    await click('Play photo carousel'); await act(async()=>vi.advanceTimersByTime(5100));
+    expect(container.textContent).toContain('Together at the stadium');
+  });
   it("applies narrow-screen face protection only to the two new landscape slides", async () => {
     await act(async () => root.render(<CommunityCarousel locale="es" />));
     for (let index = 0; index < 8; index++) {

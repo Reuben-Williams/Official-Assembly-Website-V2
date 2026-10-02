@@ -14,10 +14,12 @@ export interface RecoveryMediaReference extends RecoveryArtifactReference {
   readonly revisionId: string;
   readonly byteLength: number;
   readonly mimeType: string;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 export interface RecoveryGenerationManifest {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 1 | 2;
   readonly environment: RecoveryEnvironment;
   readonly siteKey: string;
   readonly generationId: number;
@@ -26,6 +28,7 @@ export interface RecoveryGenerationManifest {
   readonly routes: readonly RecoveryRouteReference[];
   readonly media: readonly RecoveryMediaReference[];
   readonly createdAt: string;
+  readonly carousel?: RecoveryArtifactReference & { readonly revisionId: string };
 }
 
 export interface RecoveryLatestPointer {
@@ -52,8 +55,8 @@ function assertIdentity(value: Record<string, unknown>, expected: {
   environment: RecoveryEnvironment;
   siteKey: string;
   expectedGenerationId?: number;
-}) {
-  if (value.schemaVersion !== 1 || value.environment !== expected.environment ||
+}, versions: readonly number[] = [1]) {
+  if (typeof value.schemaVersion !== 'number' || !versions.includes(value.schemaVersion) || value.environment !== expected.environment ||
       value.siteKey !== expected.siteKey) {
     throw new TypeError("Recovery manifest identity is invalid.");
   }
@@ -83,7 +86,12 @@ export function validateGenerationManifest(value: unknown, expected: {
   expectedGenerationId?: number;
 }): RecoveryGenerationManifest {
   if (!record(value)) throw new TypeError("Recovery generation manifest is invalid.");
-  assertIdentity(value, expected);
+  assertIdentity(value, expected, [1,2]);
+  if (value.schemaVersion === 2 && (!record(value.carousel) || typeof value.carousel.revisionId !== 'string' || !UUID.test(value.carousel.revisionId) ||
+      typeof value.carousel.artifactPath !== 'string' || !value.carousel.artifactPath || typeof value.carousel.artifactDigest !== 'string' || !SHA256.test(value.carousel.artifactDigest))) {
+    throw new TypeError('Carousel recovery reference is missing or invalid.');
+  }
+  if (value.schemaVersion === 1 && value.carousel !== undefined) throw new TypeError('Legacy generation cannot carry a carousel reference.');
   if (typeof value.commandId !== "string" || !UUID.test(value.commandId) ||
       typeof value.globalVersionId !== "string" || !UUID.test(value.globalVersionId) ||
       typeof value.createdAt !== "string" || !Number.isFinite(Date.parse(value.createdAt)) ||
@@ -102,6 +110,11 @@ export function validateGenerationManifest(value: unknown, expected: {
     actualRoutes.add(route.path);
   }
   const configured = new Set(expected.routes);
+  if (value.schemaVersion === 2) {
+    const home = value.routes.find(route => route.path === '/');
+    const carousel = value.carousel as Record<string,unknown>;
+    if (!home || home.artifactPath !== carousel.artifactPath || home.artifactDigest !== carousel.artifactDigest) throw new TypeError('Carousel recovery must reference the home artifact.');
+  }
   if (actualRoutes.size !== configured.size || [...configured].some((path) => !actualRoutes.has(path))) {
     throw new TypeError("Recovery generation routes are incomplete or unregistered.");
   }
@@ -119,6 +132,8 @@ export function validateGenerationManifest(value: unknown, expected: {
       throw new TypeError("Recovery generation media are invalid.");
     }
     mediaKeys.add(key);
+    if ((media.width !== undefined || media.height !== undefined) &&
+        (!Number.isSafeInteger(media.width) || Number(media.width)<1 || !Number.isSafeInteger(media.height) || Number(media.height)<1)) throw new TypeError('Recovery media dimensions are invalid.');
   }
   return value as unknown as RecoveryGenerationManifest;
 }

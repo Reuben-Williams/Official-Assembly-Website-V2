@@ -42,6 +42,7 @@ function readers(values: Partial<Record<HistorySource, readonly HistoryEventV1[]
     post: async () => values.post ?? [],
     form: async () => values.form ?? [],
     calendar: async () => values.calendar ?? [],
+    carousel: async () => values.carousel ?? [],
   };
 }
 

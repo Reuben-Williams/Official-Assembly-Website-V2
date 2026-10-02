@@ -27,6 +27,10 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
 import { BilingualReadinessWorkspace } from "./bilingual-readiness-workspace";
 import { CalendarWorkspace } from "./calendar-workspace";
+import dynamic from 'next/dynamic';
+import { createCarouselClient } from '../../../lib/carousel/client';
+import { readSiteHistory } from '../../../lib/builder/history-client';
+const CarouselStudio=dynamic(()=>import('./carousel-studio').then(module=>module.CarouselStudio),{loading:()=> <p>Loading Carousel Studio…</p>});
 import { FormsGuidanceWorkspace } from "./forms-guidance-workspace";
 import { NewsletterOperationsWorkspace } from "./newsletter-operations-workspace";
 import { resolveEditorPagePath } from "./editor-path";
@@ -44,6 +48,8 @@ type ManagedMediaChoice = {
   alt: string;
   mimeType: string;
   url: string;
+  width?: number;
+  height?: number;
   replicaStatus?: "pending" | "ready" | "failed";
 };
 
@@ -70,6 +76,8 @@ function managedMediaChoice(asset: unknown): ManagedMediaChoice | null {
     alt: value.alt as string,
     mimeType: value.mimeType as string,
     url: value.url as string,
+    width: typeof value.width==='number'?value.width:undefined,
+    height: typeof value.height==='number'?value.height:undefined,
     ...(["pending", "ready", "failed"].includes(String(replicaStatus))
       ? { replicaStatus: replicaStatus as ManagedMediaChoice["replicaStatus"] }
       : {}),
@@ -127,6 +135,8 @@ export function EditorClient({
   const [mediaAssets, setMediaAssets] = useState<ManagedMediaChoice[]>([]);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
+  const [historySource,setHistorySource]=useState("all");
+  const [workspaceShown,setWorkspaceShown]=useState(()=>typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("workspace") ?? "");
   useEffect(() => {
     const restorePageFromHistory = () => {
       const url = new URL(window.location.href);
@@ -155,13 +165,13 @@ export function EditorClient({
       baseUrl: "/api/builder",
       getCsrfToken: csrfCookie
     });
-    if (!mediaUpload) return attached;
     return {
       ...attached,
-      uploadMedia: mediaUpload.uploadMedia,
-      ...(role === "owner" ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
+      listHistory: (query: Parameters<typeof readSiteHistory>[0])=>readSiteHistory(query,historySource==="carousel"),
+      ...(mediaUpload?{uploadMedia: mediaUpload.uploadMedia}:{}),
+      ...(role === "owner" && mediaUpload ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
     };
-  }, [mediaUpload, role]);
+  }, [mediaUpload, role, historySource]);
   const refreshMedia = useCallback(async () => {
     try {
       const assets = await client.listMedia();
@@ -199,6 +209,13 @@ export function EditorClient({
     getCsrfToken: csrfCookie,
   }), []);
   const calendar = useMemo(() => createHttpCalendarClient({ getCsrfToken: csrfCookie }), []);
+  const carousel = useMemo(() => createCarouselClient(), []);
+  const uploadCarouselMedia=useCallback(async(file:File,metadata:{label:string;alt:string})=>{
+    if(!mediaUpload)throw new Error('Media upload is unavailable.');
+    const uploaded=managedMediaChoice(await mediaUpload.uploadMedia(file,metadata));await refreshMedia();
+    if(!uploaded)throw new Error('The uploaded media revision could not be confirmed.');
+    return {mediaId:uploaded.mediaId,revisionId:uploaded.revisionId};
+  },[mediaUpload,refreshMedia]);
   const calendarMediaAssets = useMemo(
     () => mediaAssets.map((asset) => ({ mediaId: asset.mediaId, label: asset.label })),
     [mediaAssets]
@@ -206,6 +223,10 @@ export function EditorClient({
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
     const workspaces: readonly RegisteredWorkspace[] = [
+      {
+        id:'website.carousel' as BuilderWorkspaceId,label:'Carousel',group:'website',icon:'images',mobilePriority:2,status:'active',
+        render:()=> <CarouselStudio role={role} client={carousel} mediaAssets={mediaAssets} mediaError={mediaError} onRefreshMedia={refreshMedia} onUploadMedia={mediaUpload?uploadCarouselMedia:undefined}/>
+      },
       {
         id: "growth.dashboard", label: "Overview", group: "growth", icon: "layout-dashboard",
         mobilePriority: 1, status: "active", render: () => <LiveDashboardWorkspace {...props} />
@@ -257,9 +278,9 @@ export function EditorClient({
     return {
       modules: [GROWTH_DASHBOARD_MODULE, growthLeadsModule, growthCustomersModule],
       workspaces,
-      globalHeader: <EditorOperationalHeader />
+      globalHeader: <><EditorOperationalHeader />{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
     };
-  }, [alerts, calendar, calendarMediaAssets, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role]);
+  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource]);
   const initialWorkspace = (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;
@@ -270,6 +291,7 @@ export function EditorClient({
       {...editorPageNavigation(currentPath, setCurrentPath)}
       initialWorkspace={initialWorkspace}
       onWorkspaceChange={(workspace) => {
+        setWorkspaceShown(workspace);
         const url = new URL(window.location.href);
         if (url.searchParams.get("workspace") === workspace) return;
         url.searchParams.set("workspace", workspace);

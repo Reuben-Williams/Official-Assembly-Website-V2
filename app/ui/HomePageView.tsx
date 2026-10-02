@@ -22,6 +22,7 @@ import type { VerifiedApprovedBrandAssets } from "../../lib/brand/assets";
 import { HomepageBrandBanner } from "./HomepageBrandBanner";
 import { PublicEventsSection } from "./PublicEventsSection";
 import { CommunityCarousel } from "./CommunityCarousel";
+import type { PublicCarouselLoad } from "../../lib/carousel/public-contract";
 import heroStyles from "./CommunityHero.module.css";
 
 // Checked-in values are used only when an authoritative server read confirms that
@@ -51,6 +52,7 @@ type HomePageViewProps = {
   content: BuilderServerContent;
   posts: readonly PublishedPost[];
   locale?: PublicLocale;
+  carousel?: PublicCarouselLoad;
 };
 
 export async function HomePageView({
@@ -59,6 +61,7 @@ export async function HomePageView({
   content,
   posts,
   locale = "en",
+  carousel,
 }: HomePageViewProps) {
   const contactCta = builderLink(content, "home.hero.primary-cta", {
     href: "/contact",
@@ -91,7 +94,11 @@ export async function HomePageView({
     <div className="editorial-home" data-editorial-page="home" data-builder-region="home.sections" data-builder-kind="sections">
       <section className={heroStyles.hero} data-community-hero="true" data-builder-item-id="hero" data-home-section="hero">
         <div className={heroStyles.brand}><HomepageBrandBanner assets={assets} content={content} locale={locale} /></div>
-        <CommunityCarousel locale={locale} />
+        {carousel?.status === "unavailable" ? (
+          <div className={heroStyles.unavailable} role="status">
+            {locale === "es" ? "Las fotografías no están disponibles temporalmente." : "Community photographs are temporarily unavailable."}
+          </div>
+        ) : <CommunityCarousel locale={locale} projection={carousel?.status==="ready"?carousel.projection:undefined} />}
         <div className={heroStyles.copyBand}>
           <div>
             <p

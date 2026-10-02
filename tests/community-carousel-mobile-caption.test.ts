@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("../app/ui/CommunityHero.module.css", import.meta.url), "utf8");
-const mobileCss = css.split("@media (max-width: 600px) {")[1].split("@media (max-width: 360px) {")[0];
+const mobileCss = css.split("@container carousel (max-width: 600px) {")[1].split("@media (max-width: 360px) {")[0];
 const portrait = '.carousel:has(.stage[data-format="portrait"])';
 
 function declarations(selector: string) {
@@ -14,13 +14,14 @@ function declarations(selector: string) {
 describe("mobile portrait carousel caption readability", () => {
   it("reserves caption space only for the new landscape photographs on narrow screens", () => {
     expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("height: calc(100% - 125px);");
-    expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("object-position: center 33%;");
+    expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("object-position: var(--photo-mobile-position,center 33%);");
     expect(declarations('.stage[data-mobile-framing="caption-safe"] .photo')).toContain("mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);");
   });
   it("backs wrapped portrait captions with navy without changing their dimensions", () => {
-    expect(declarations(`${portrait} .description`)).toContain("background: rgb(30 51 83 / 95%);");
-    expect(declarations(`${portrait} .description`)).toContain("box-shadow: 0 0 0 6px rgb(30 51 83 / 95%);");
-    expect(declarations(`${portrait} .description`)).not.toMatch(/(?:padding|margin|height):/);
+    const caption='.stage[data-format="portrait"] ~ .footer .description';
+    expect(declarations(caption)).toContain("background: rgb(30 51 83 / 95%);");
+    expect(declarations(caption)).toContain("box-shadow: 0 0 0 6px rgb(30 51 83 / 95%);");
+    expect(declarations(caption)).not.toMatch(/(?:padding|margin|height):/);
   });
 
   it("retains the approved viewport, portrait containment and navy fades without shrinking photos", () => {

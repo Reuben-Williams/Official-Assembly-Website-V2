@@ -1,16 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { createCarouselBaseline } from '../lib/carousel/contract';
+import { createRecoveryContentReader } from '../lib/builder/recovery/reader';
 
-import {
-  RecoveryStoreError,
-  createRecoveryArtifactStore,
-  runMediaReplicaWorkerOnce,
-  runRecoveryWorkerOnce,
-  type MediaReplicaClaim,
-  type MediaReplicaRepository,
-  type RecoveryGenerationSource,
-  type RecoveryObjectStore,
-  type RecoveryWorkerRepository
-} from "../lib/builder/recovery";
+import { RecoveryStoreError, createRecoveryArtifactStore, type RecoveryObjectStore } from '../lib/builder/recovery/blob-store';
+import { runRecoveryWorkerOnce, type RecoveryGenerationSource, type RecoveryWorkerRepository } from '../lib/builder/recovery/worker';
+import { runMediaReplicaWorkerOnce, type MediaReplicaClaim, type MediaReplicaRepository } from '../lib/builder/recovery/media-replica-worker';
 
 class MemoryObjects implements RecoveryObjectStore {
   readonly values = new Map<string, { bytes: Uint8Array; etag: string; contentType: string }>();
@@ -128,6 +122,21 @@ describe("managed media recovery worker", () => {
 });
 
 describe("published snapshot recovery worker", () => {
+  it('retains the explicit carousel revision in a version-two generation and home artifact', async () => {
+    const objects=new MemoryObjects();
+    const document=createCarouselBaseline(Array.from({length:8},()=>({mediaId:source.media[0].mediaId,revisionId:source.media[0].revisionId})));
+    const carousel={revisionId:'22222222-2222-4222-8222-222222222222',document};
+    const artifacts=createRecoveryArtifactStore({objects,environment:'preview',siteKey:source.siteKey});
+    const repo=repository({loadGeneration:async()=>({...source,carousel,media:source.media.map(media=>({...media,width:1600,height:900}))})});
+    const result=await runRecoveryWorkerOnce({environment:'preview',workerId:'test-worker',configuredRoutes:['/','/about'],repository:repo,artifacts});
+    expect(result.status).toBe('completed');
+    const latest=await artifacts.readLatest(); const manifest=await artifacts.readJson(latest!.pointer.manifestPath,{useCache:false});
+    expect(manifest!.value).toMatchObject({schemaVersion:2,carousel:{revisionId:carousel.revisionId}});
+    const homePath=(manifest!.value as any).routes.find((route:any)=>route.path==='/').artifactPath;
+    expect((await artifacts.readJson(homePath,{useCache:false}))!.value).toMatchObject({carousel});
+    const read=createRecoveryContentReader({artifacts,configuredRoutes:['/','/about'],grantSecret:'test-secret-that-is-at-least-32-characters',nowEpochSeconds:()=>1000});
+    expect(await read('/')).toMatchObject({carousel:{revisionId:carousel.revisionId,document,images:[{mediaId:source.media[0].mediaId,width:1600,height:900,ready:true}]}});
+  });
   it("replicates media, exact route snapshots, a manifest, and then advances latest", async () => {
     const objects = new MemoryObjects();
     const artifacts = createRecoveryArtifactStore({

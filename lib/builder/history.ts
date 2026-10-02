@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const HISTORY_SOURCES = ["page", "media", "post", "form", "calendar"] as const;
+export const HISTORY_SOURCES = ["page", "media", "post", "form", "calendar", "carousel"] as const;
 export const HISTORY_CATEGORIES = ["text", "media", "links", "sections", "posts", "forms", "events", "publishing"] as const;
 export type HistorySource = typeof HISTORY_SOURCES[number];
 export type HistoryCategory = typeof HISTORY_CATEGORIES[number];
@@ -149,6 +149,7 @@ function matches(event: HistoryEventV1, query: HistoryQueryV1) {
 }
 
 function currentRestore(event: HistoryEventV1, role: HistoryBuilderRole): HistoryEventV1["restore"] {
+  if (event.source === "carousel") return {allowed:false,operation:null,reason:"Restore this revision as a new draft in Carousel → History."};
   if (event.source === "calendar") {
     return {
       allowed: false,
@@ -429,5 +430,21 @@ export function createSupabaseHistoryReadersV1(client: SupabaseClient, siteId: s
       ...(await formEvents(client, siteId, query)),
     ],
     calendar: async (query) => currentEvents(client, siteId, "calendar", query),
+    carousel: async (query) => {
+      let builder=client.from("builder_carousel_audit").select("*").eq("site_id",siteId)
+        .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(pageSize(query));
+      builder=fixedSourceCursor(builder,"carousel","id",query);
+      const result=await builder;
+      if(result.error)throw result.error;
+      return (result.data ?? []).map(row=>{
+        const changes: {label:string;before:string;after:string}[]=Array.isArray(row.changes)?row.changes:[];
+        return eventBase({siteId,source:"carousel",sourceEventId:text(row.id),category:row.action==="publish"?"publishing":"sections",
+          action:`carousel.${text(row.action)}`,workspace:"website.carousel",pagePath:"/",targetId:text(row.result_revision_id),
+          targetLabel:"Homepage carousel",actorId:text(row.actor_id,"system"),actorLabel:row.actor_id?`Team member ${String(row.actor_id).slice(0,8)}`:"System",
+          createdAt:instant(row.created_at),parentVersionId:nullable(row.parent_revision_id),sourceVersionId:nullable(row.restored_from_id),resultVersionId:nullable(row.result_revision_id),
+          before:summary(changes.map(change=>`${change.label}: ${change.before}`).join("\n")),after:summary(changes.map(change=>`${change.label}: ${change.after}`).join("\n")),
+          changedFieldCount:changes.length,legacy:false,limited:false});
+      });
+    },
   };
 }

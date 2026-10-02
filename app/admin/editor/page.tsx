@@ -27,6 +27,7 @@ const EDITOR_WORKSPACES = new Set([
   "website.forms",
   "website.alerts",
   "website.calendar",
+  "website.carousel",
   "website.localization",
   "growth.dashboard",
   "growth.leads",
