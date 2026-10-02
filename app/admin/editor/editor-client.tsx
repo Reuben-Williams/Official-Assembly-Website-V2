@@ -117,6 +117,7 @@ export function EditorClient({
   initialAlertCollection,
   initialLinkablePosts,
   initialPath,
+  initialWorkspaceId,
   memberId,
   previewBaseUrl,
   role
@@ -124,6 +125,7 @@ export function EditorClient({
   initialAlertCollection?: AlertManagementCollectionV1 | null;
   initialLinkablePosts: LinkablePost[];
   initialPath: string;
+  initialWorkspaceId?: string;
   memberId: string;
   previewBaseUrl: string;
   role: "owner" | "editor" | "contributor" | "viewer";
@@ -136,7 +138,7 @@ export function EditorClient({
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const [historySource,setHistorySource]=useState("all");
-  const [workspaceShown,setWorkspaceShown]=useState(()=>typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("workspace") ?? "");
+  const [workspaceShown,setWorkspaceShown]=useState(()=>initialWorkspaceId ?? (typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("workspace") ?? ""));
   useEffect(() => {
     const restorePageFromHistory = () => {
       const url = new URL(window.location.href);
@@ -281,9 +283,9 @@ export function EditorClient({
       globalHeader: <><EditorOperationalHeader />{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
     };
   }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource]);
-  const initialWorkspace = (typeof window === "undefined"
+  const initialWorkspace = (initialWorkspaceId ?? (typeof window === "undefined"
     ? "growth.dashboard"
-    : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard") as BuilderWorkspaceId;
+    : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard")) as BuilderWorkspaceId;
 
   return (
     <AttachedSiteEditor

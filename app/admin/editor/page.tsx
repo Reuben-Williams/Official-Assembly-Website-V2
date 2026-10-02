@@ -54,6 +54,9 @@ function editorReturnPath(
 export default async function AdminEditorPage({ searchParams }: AdminEditorPageProps) {
   const query = await searchParams;
   const initialPath = resolveEditorPagePath(query.path, site.pages) ?? "/";
+  const requestedWorkspace = firstSearchValue(query.workspace);
+  const initialWorkspaceId = requestedWorkspace && EDITOR_WORKSPACES.has(requestedWorkspace)
+    ? requestedWorkspace : "growth.dashboard";
   const incoming = await headers();
   const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
   const protocol = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
@@ -87,6 +90,7 @@ export default async function AdminEditorPage({ searchParams }: AdminEditorPageP
       initialAlertCollection={initialAlertCollection}
       initialLinkablePosts={linkablePosts}
       initialPath={initialPath}
+      initialWorkspaceId={initialWorkspaceId}
       memberId={identity.userId}
       previewBaseUrl={origin}
       role={identity.role}

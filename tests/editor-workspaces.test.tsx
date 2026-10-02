@@ -7,6 +7,11 @@ import { EditorClient } from "../app/admin/editor/editor-client";
 import { BilingualReadinessWorkspace } from "../app/admin/editor/bilingual-readiness-workspace";
 
 describe("production editor workspace registration", () => {
+  it("server renders a direct Carousel workspace link instead of the dashboard",()=>{
+    const html=renderToStaticMarkup(<EditorClient initialWorkspaceId="website.carousel" initialLinkablePosts={[]} initialPath="/" memberId="member" previewBaseUrl="https://example.com" role="owner"/>);
+    expect(html).toContain("Carousel Studio");
+    expect(html).not.toContain("Loading dashboard");
+  });
   it("hosts the live workspaces without demo or setup placeholder data", () => {
     const html = renderToStaticMarkup(
       <EditorClient
