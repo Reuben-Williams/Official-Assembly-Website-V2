@@ -2,6 +2,7 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { CalendarWorkspace } from "../app/admin/editor/calendar-workspace";
 import { normalizeCalendarDraft } from "../lib/calendar/contract";
 import type { CalendarClient } from "../lib/calendar/client";
@@ -56,6 +57,12 @@ async function search(value: string) {
 }
 
 describe("visual event image selection", () => {
+  it("constrains image grid tracks so portrait flyers cannot overflow their preview frames", () => {
+    const css = readFileSync("app/admin/editor/calendar-image-picker.module.css", "utf8");
+    for (const selector of ["preview", "thumbnail"]) {
+      expect(css).toMatch(new RegExp(`\\.${selector} \\{[^}]*grid-template-rows:\\s*minmax\\(0,\\s*1fr\\)`));
+    }
+  });
   it("shows actual named image tiles instead of a filename dropdown", async () => {
     await render(); await chooseEvent();
     expect(host.querySelector('select[name="mediaAssetId"]')).toBeNull();
