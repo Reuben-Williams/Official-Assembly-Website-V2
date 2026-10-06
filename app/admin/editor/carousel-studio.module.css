@@ -196,7 +196,8 @@
   --hero-gold: #eac68c;
   background: var(--hero-navy);
   border-radius: 10px;
-  overflow: hidden;
+  /* Clip scaled layout overflow without allowing focus to scroll the preview. */
+  overflow: clip;
   max-width: 100%;
   margin: auto;
   container-type: inline-size;
