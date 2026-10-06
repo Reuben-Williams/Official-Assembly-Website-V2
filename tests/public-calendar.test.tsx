@@ -25,6 +25,21 @@ const events: PublicCalendarEvent[] = [
 ];
 
 describe("public calendar presentation", () => {
+  it.each(["home", "agenda"] as const)("preserves the flyer and calendar actions in the %s layout", (variant) => {
+    const html = renderToStaticMarkup(
+      <PublicEventsSection
+        calendar={{ status: "ready", events: [{ ...events[0], mediaUrl: "https://example.com/event-flyer.jpg" }] }}
+        content={{ regions: {} }}
+        locale="en"
+        variant={variant}
+      />,
+    );
+    expect(html).toContain('src="https://example.com/event-flyer.jpg"');
+    expect(html).toContain('alt="Constituent services evening — event image"');
+    expect(html).toContain("Google Calendar");
+    expect(html).toContain("Apple Calendar");
+    expect(html).toContain('data-public-event-id="11111111-1111-4111-8111-111111111111"');
+  });
   it("uses field-specific English fallback in Spanish and marks its actual language", () => {
     const html = renderToStaticMarkup(<PublicEventsSection calendar={{ status: "ready", events: [{ ...events[0], titleEs: " ", actionLabelEs: "" }] }} content={{ regions: {} }} locale="es" variant="agenda" />);
     expect(html).toContain('<h3 lang="en">Constituent services evening</h3>');
