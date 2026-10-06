@@ -134,7 +134,6 @@ describe("approved builder mapping", () => {
       ["about", "about-hero", "media.professional.about-primary"],
       ["news", "news-supporting", "media.professional.news-supporting"],
       ["community", "community-hero", "media.professional.community-primary"],
-      ["resources", "resources-supporting", "media.editorial.resources-supporting"],
     ] as const;
 
     for (const [slug, instance, region] of assignments) {

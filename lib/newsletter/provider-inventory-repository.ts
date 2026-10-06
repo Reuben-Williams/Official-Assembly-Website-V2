@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NewsletterProviderInventoryEvidence } from "./provider-inventory";
 import { NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION } from "./history-reconciliation";
 import { OWNER_LOGIN_POLICY_VERSION } from "./owner-login-evidence";
+import { validateDeliveryEvidence } from "./staff-auth-delivery";
+import { staffEvidenceRow, staffReceiptRow, staffRequestRow } from "./staff-auth-repository";
 
 const PAGE_SIZE = 1_000;
 const REQUIRED_MANUAL_CATEGORIES = [
@@ -205,6 +207,17 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         .eq("site_id", siteId)
         .order("created_at", { ascending: true })
         .range(from, to));
+      const staffAuthDeliveries = (await allRows((from, to) => client
+        .from("builder_staff_auth_delivery_evidence").select("*").eq("site_id", siteId)
+        .order("id", { ascending: true }).range(from, to))).map(staffEvidenceRow);
+      const staffAuthRequests = (await allRows((from, to) => client
+        .from("builder_staff_auth_requests").select("*").eq("site_id", siteId)
+        .order("id", { ascending: true }).range(from, to))).map(staffRequestRow);
+      // Do not filter disposition: a late unmatched/negative receipt invalidates evidence.
+      const allDeliveryReceipts = (await allRows((from, to) => client
+        .from("builder_newsletter_webhook_receipts")
+        .select("id,site_id,provider_message_id,provider_broadcast_id,provider_scope_id,disposition,event_type")
+        .eq("site_id", siteId).order("id", { ascending: true }).range(from, to))).map(staffReceiptRow);
 
       const attestation = await client
         .from("builder_newsletter_provider_inventory_attestations")
@@ -260,6 +273,19 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         ownerLoginEvidence,
         receipts
       );
+      const staffExcluded = new Set([
+        ...confirmationJobs, ...staffTests, ...authSmtpProofs, ...historyReconciliations
+      ].map((row) => text(row.provider_message_id)).filter(Boolean));
+      for (const receipt of allDeliveryReceipts) {
+        if (receipt.providerBroadcastId !== null) staffExcluded.add(receipt.providerMessageId);
+      }
+      const staffDeliveryEvidenceValid = staffAuthDeliveries.every((row) => validateDeliveryEvidence({
+        evidence: row, requests: staffAuthRequests, excluded: staffExcluded,
+        receipts: allDeliveryReceipts.filter((receipt) => receipt.providerMessageId === row.providerMessageId)
+      }));
+      if (staffDeliveryEvidenceValid) {
+        for (const row of staffAuthDeliveries) allowedProviderMessageIds.add(row.providerMessageId);
+      }
       if (ownerLoginEvidenceValid) {
         for (const row of ownerLoginEvidence) {
           const providerMessageId = text(row.provider_message_id);
@@ -289,7 +315,9 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         authSmtpPermissionAttested: replacementLoginProved,
         authSmtpLoginBeforeRevocationProved: replacementLoginProved,
         authSmtpLoginAfterRevocationProved: postRevocationLoginProved,
-        ownerLoginEvidenceValid
+        ownerLoginEvidenceValid,
+        staffDeliveryEvidenceValid,
+        staffAuthDeliveries
       };
     }
   };

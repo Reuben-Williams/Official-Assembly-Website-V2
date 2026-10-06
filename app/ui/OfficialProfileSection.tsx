@@ -36,6 +36,7 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
   }).format(new Date(`${profile.provenance.checkedAt}T00:00:00.000Z`));
   const portraitAsset = getImage("professional-home-official");
   const portraitContent: BuilderServerContent = {
+    showPhotoCaptions: content.showPhotoCaptions,
     regions: {
       ...content.regions,
       [portraitAsset.regionId]: {
@@ -83,7 +84,7 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
         <div className={styles.portrait} data-profile-portrait="true">
           <ImagePanel
             asset={portraitAsset}
-            caption="Official portrait of Assemblywoman Carmen Theresa Morales"
+            caption={portraitAsset.caption ?? "Official portrait of Assemblywoman Carmen Theresa Morales"}
             content={portraitContent}
             instance="home-official-portrait"
             locale={locale}

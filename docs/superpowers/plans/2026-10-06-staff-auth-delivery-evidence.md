@@ -1,0 +1,12 @@
+# Staff authentication delivery implementation plan
+
+The written design was approved by the owner. The writing-plans skill is unavailable; this plan follows the reviewed specification directly.
+
+1. Write failing pure-contract tests for metadata matching, all-receipt validation, digests, uncertainty, overlap and the exact-five manifest; implement focused server-only functions.
+2. Add failing sign-in controller/route and UI tests. Implement the bounded origin-checked server send, durable reservation/finalization, no signup/resend and usable retry state. Preserve SSR cookies and both callback flows; explicitly restrict owner occurrence recording to owners.
+3. Create the migration with the installed Supabase CLI. Test it in isolated in-memory PostgreSQL without Docker/WSL: membership and persistent/concurrent limits, immutable evidence/audit atomicity, exact-five backfill, uncertainty, leases/fencing, retries/recovery, receipt rechecks and service-only permissions. Implement the service-only request, evidence and accounting queue operations.
+4. Implement typed repositories and metadata-only accounting worker; add failing integration tests first. Wire accounting before ordinary protected cron work, without changing the existing owner queue or enabling outbound actions.
+5. Extend inventory validation to recognized delivery evidence and all receipts; leave preflight read-only. Cover late bad receipts and tampered evidence; maintain existing twenty-two category guards and owner proofs.
+6. Add checked-in dry-run/apply tooling for the approved management bootstrap. Verify actual owner identity, current provider metadata and all signed receipts. Apply backward-compatible schema, exact-five evidence and audit only after dry run/readback, using management provenance. Stop if authority or metadata is not verifiable.
+7. Run focused/full tests, type checks, implementation lint, migration lineage and security checks. Apply the already-approved optional-Spanish predicate migration. Stage the complete calendar/photo release without live-domain assignment; keep readiness guards enabled.
+8. Verify staged responsive/public/editor behavior, promote only when checks pass, publish the reviewed eight-slide carousel draft and verify production. Preserve the first three carousel slides and volunteer photo; create no test event, submission or outbound message in production. Record evidence and any remaining limitation.

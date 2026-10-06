@@ -35,9 +35,16 @@ afterEach(async () => {
 });
 
 describe("approved community carousel", () => {
+  it('hides slide titles and captions by default, retaining accessible descriptions and controls', async () => {
+    await act(async () => root.render(<CommunityCarousel locale="en"/>));
+    expect(container.textContent).not.toContain(communityPhotos[0].en.caption);
+    expect(container.querySelector('img')?.alt).toBeTruthy();
+    await click('Next photo');
+    expect(container.querySelector('[data-carousel-caption]')).toBeNull();
+  });
   it('uses an immutable supplied projection for captions, alt, framing and timing', async () => {
     const refs=communityPhotos.map((_,i)=>({mediaId:`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,revisionId:`11111111-1111-4111-8111-${String(i+1).padStart(12,'0')}`}));
-    const document=createCarouselBaseline(refs); document.entries[0].en={title:'Published title',caption:'Published caption',alt:'Published accessible description'};
+    const document=createCarouselBaseline(refs); document.defaults.showCaptions = true; document.entries[0].en={title:'Published title',caption:'Published caption',alt:'Published accessible description'};
     document.entries[0].seconds=5; document.entries[0].desktop.x=25;
     const projection={revisionId:'published-revision',document,images:refs.map((ref,i)=>({...ref,url:communityPhotos[i].src,width:communityPhotos[i].width,height:communityPhotos[i].height,ready:true}))};
     await act(async()=>root.render(<CommunityCarousel locale="en" projection={projection}/>));
@@ -59,7 +66,7 @@ describe("approved community carousel", () => {
     await act(async () => root.render(<CommunityCarousel locale="en" />));
     expect(container.querySelector('[data-community-carousel]')?.getAttribute("data-playing")).toBe("false");
     expect(container.querySelectorAll('[data-carousel-stage] img')).toHaveLength(1);
-    expect(container.textContent).toContain("Morales joins a group photo on a street, with parade floats behind them.");
+    expect(container.querySelector('img')?.alt).toBe(communityPhotos[0].en.caption);
     expect(container.textContent).not.toContain("Existing site collection");
     await act(async () => vi.advanceTimersByTime(15000));
     expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("src")).toContain("parade-group-desktop.webp");
@@ -81,9 +88,9 @@ describe("approved community carousel", () => {
   it("moves manually and changes captions and controls with the locale", async () => {
     await act(async () => root.render(<CommunityCarousel locale="en" />));
     await click("Next photo");
-    expect(container.textContent).toContain("Together at the stadium");
+    expect(container.querySelector('[data-carousel-stage]')?.getAttribute('aria-label')).toContain("Together at the stadium");
     await act(async () => root.render(<CommunityCarousel locale="es" />));
-    expect(container.textContent).toContain("Juntos en el estadio");
+    expect(container.querySelector('[data-carousel-stage]')?.getAttribute('aria-label')).toContain("Juntos en el estadio");
     expect(container.querySelector('[aria-label="Foto anterior"]')).not.toBeNull();
     expect(container.querySelector('[data-carousel-stage] img')?.getAttribute("alt")).toBe(communityPhotos[1].es.caption);
   });
@@ -93,10 +100,10 @@ describe("approved community carousel", () => {
     await act(async () => vi.advanceTimersByTime(3500));
     expect(container.querySelector<HTMLElement>('[data-carousel-progress]')?.style.transform).not.toBe("scaleX(0)");
     await act(async () => vi.advanceTimersByTime(3600));
-    expect(container.textContent).toContain("Together at the stadium");
+    expect(container.querySelector('[data-carousel-stage]')?.getAttribute('aria-label')).toContain("Together at the stadium");
     await click("Next photo");
     await act(async () => vi.advanceTimersByTime(15000));
-    expect(container.textContent).toContain("Backpacks and big smiles");
+    expect(container.querySelector('[data-carousel-stage]')?.getAttribute('aria-label')).toContain("Backpacks and big smiles");
     expect(container.querySelector('[data-community-carousel]')?.getAttribute("data-playing")).toBe("false");
   });
   it("opens a gallery, selects a portrait, closes and restores focus", async () => {
@@ -115,7 +122,7 @@ describe("approved community carousel", () => {
     await act(async () => root.render(<CommunityCarousel locale="en" />));
     expect(container.querySelector<HTMLButtonElement>('[aria-label="Play photo carousel"]')?.disabled).toBe(true);
     await click("Next photo");
-    expect(container.textContent).toContain("Together at the stadium");
+    expect(container.querySelector('[data-carousel-stage]')?.getAttribute('aria-label')).toContain("Together at the stadium");
   });
   it("pauses when the page becomes hidden", async () => {
     await act(async () => root.render(<CommunityCarousel locale="en" />));

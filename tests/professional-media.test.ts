@@ -42,8 +42,8 @@ type ApprovedMediaManifest = {
 const workspaceRoot = process.cwd();
 const manifestPath = path.join(workspaceRoot, "content", "approved-professional-media.json");
 const expectedPlacements = {
-  "media.professional.home-supporting": [["/", "home supporting"]],
-  "media.professional.home-official-portrait": [["/", "official profile portrait"], ["/about", "about primary"]],
+  "media.professional.home-supporting": [],
+  "media.professional.home-official-portrait": [],
   "media.professional.about-primary": [],
   "media.professional.news-supporting": [["/news", "news supporting"]],
   "media.professional.community-primary": [],
@@ -119,6 +119,10 @@ describe("approved professional media", () => {
         : asset.id.replace("media.professional.", "professional-");
       const siteAsset = getImage(imageKey);
       expect(siteAsset.regionId).toBe(asset.id);
+      if (["media.professional.home-supporting", "media.professional.home-official-portrait", "media.professional.about-primary"].includes(asset.id)) {
+        expect(siteAsset.src).toContain("/images/october-editorial/");
+        continue;
+      }
       expect(siteAsset.src).toBe(asset.derivatives.desktop.path);
       expect(siteAsset.mobileSrc).toBe(asset.derivatives.mobile.path);
       expect(siteAsset.alt).toBe(asset.alt.en);
@@ -127,9 +131,9 @@ describe("approved professional media", () => {
     const homePortrait = getImage("professional-home-official");
     expect(homePortrait).toMatchObject({
       regionId: "media.professional.home-official-portrait",
-      src: "/images/professional/home-official-portrait-desktop.webp",
-      mobileSrc: "/images/professional/home-official-portrait-mobile.webp",
-      alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
+      src: "/images/october-editorial/DSC01789-desktop.webp",
+      mobileSrc: "/images/october-editorial/DSC01789-mobile.webp",
+      fullFrame: true,
     });
   });
 });

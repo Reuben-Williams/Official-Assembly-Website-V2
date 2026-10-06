@@ -100,6 +100,23 @@ describe("staff auth callback", () => {
     );
   });
 
+  it.each(["editor", "contributor", "viewer"])("completes %s login without claiming an owner proof", async (role) => {
+    mocks.lookupBuilderMembership.mockResolvedValueOnce({ siteId: "site", role, previewGeneration: 3 });
+    const response = await GET(new Request("https://www.assemblywomanmorales.com/auth/callback?token_hash=secure-token-hash&type=email"));
+    expect(response.headers.get("location")).toContain("complete=1");
+    expect(mocks.recordOwnerLoginOccurrence).not.toHaveBeenCalled();
+  });
+
+  it("preserves PKCE exchange and session-completion cookies", async () => {
+    const exchange = vi.fn(async () => ({ data: { user: { id: "user" } }, error: null }));
+    mocks.createRequestSupabaseClient.mockResolvedValueOnce({ auth: { exchangeCodeForSession: exchange } });
+    const response = await GET(new Request("https://www.assemblywomanmorales.com/auth/callback?code=pkce-code&next=%2Fadmin%2Feditor"));
+    expect(exchange).toHaveBeenCalledWith("pkce-code");
+    expect(response.headers.get("location")).toContain("complete=1");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(mocks.recordOwnerLoginOccurrence).not.toHaveBeenCalled();
+  });
+
   it("keeps the successful redirect when durable occurrence recording is unavailable", async () => {
     mocks.recordOwnerLoginOccurrence.mockRejectedValueOnce(new Error("database detail"));
 

@@ -52,7 +52,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
     label: "Get Updates",
   });
   const heroAsset = slug === "about"
-    ? { ...getImage("professional-home-official"), regionId: getImage(page.imageKey).regionId }
+    ? getImage("professional-about-primary")
     : getEditorialPagePhoto(slug, "hero") ?? getImage(page.imageKey);
   const defaultSupportingAsset = getEditorialPagePhoto(slug, "supporting")
     ?? getImage(slug === "news" ? "professional-news-supporting" : page.imageKey);
@@ -201,7 +201,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
         </div>
       </section>
 
-      <section className="section section-muted" data-builder-item-id="supporting">
+      {slug !== "about" && slug !== "resources" ? <section className="section section-muted" data-builder-item-id="supporting">
         <div className="container split">
           <ImagePanel
             asset={supportingAsset}
@@ -227,7 +227,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
             </div>
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {page.secondaryCards?.length ? (
         <section className="section" data-builder-item-id="secondary">

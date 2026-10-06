@@ -75,6 +75,8 @@ let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.setAttribute("open", ""); });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.removeAttribute("open"); });
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -104,7 +106,7 @@ describe("Calendar editor workspace", () => {
 
     expect(host.textContent).toContain("Drafts");
     expect(host.textContent).toContain("Published");
-    expect(host.textContent).toContain("Archived");
+    expect(host.textContent).toContain("Deleted events");
     expect(host.textContent).toContain("Past");
     expect(host.textContent).toContain("Unpublished changes");
     for (const event of events) {
@@ -123,7 +125,8 @@ describe("Calendar editor workspace", () => {
     expect(host.textContent).toContain("Event image (optional)");
     expect(host.textContent).toContain("Official action URL (optional)");
     expect(host.querySelector('input[name="titleEn"]')?.getAttribute("aria-required")).toBe("true");
-    expect(host.querySelector('input[name="titleEs"]')?.getAttribute("aria-required")).toBe("true");
+    expect(host.querySelector('input[name="titleEs"]')?.getAttribute("aria-required")).not.toBe("true");
+    expect(host.textContent).toContain("English is shown when Spanish is blank");
     expect(host.querySelector('input[name="titleEn"]')).toHaveProperty("required", false);
 
     const set = async (selector: string, value: string) => {
@@ -188,8 +191,31 @@ describe("Calendar editor workspace", () => {
     const row = host.querySelector(`[data-calendar-event-id="${published.entity.id}"] button`)! as HTMLButtonElement;
     await act(async () => row.click());
     expect(Array.from(host.querySelectorAll("button")).map((button) => button.textContent?.trim())).toEqual(
-      expect.arrayContaining(["Save draft", "Publish", "Unpublish", "Archive"])
+      expect.arrayContaining(["Save draft", "Publish", "Unpublish", "Delete event"])
     );
+  });
+
+  it("requires explicit confirmation for recoverable deletion and offers restore", async () => {
+    const published = record("00000000-0000-4000-8000-000000000002", "changed");
+    const operations = client([published]);
+    vi.mocked(operations.command).mockImplementation(async (request) => ({ schemaVersion: 1, command: request.command, event: record(published.entity.id, request.command === "archive" ? "archived" : "draft") }));
+    await act(async () => root.render(<CalendarWorkspace client={operations} role="editor" />));
+    await settle();
+    await act(async () => (host.querySelector('[data-calendar-event-id] button') as HTMLButtonElement).click());
+    const button = (text: string) => Array.from(host.querySelectorAll("button")).find(b => b.textContent?.trim() === text)!;
+    await act(async () => button("Delete event").click());
+    expect(operations.command).not.toHaveBeenCalled();
+    expect(host.querySelector("dialog")?.textContent).toContain("saved revisions");
+    await act(async () => button("Cancel").click());
+    expect(operations.command).not.toHaveBeenCalled();
+    await act(async () => button("Delete event").click());
+    await act(async () => button("Confirm deletion").click());
+    await settle();
+    expect(operations.command).toHaveBeenCalledWith(expect.objectContaining({ command: "archive", expectedVersion: 2 }));
+    expect(host.textContent).toContain("Event deleted. Saved revisions are retained");
+    await act(async () => button("Restore to Drafts").click());
+    await settle();
+    expect(operations.command).toHaveBeenLastCalledWith(expect.objectContaining({ command: "restore_to_draft" }));
   });
 
   it("warns about unsaved changes and offers a safe refresh after a conflict", async () => {

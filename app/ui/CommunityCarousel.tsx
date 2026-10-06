@@ -168,7 +168,9 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
       <div className={styles.footer}>
         <div className={styles.description} aria-live={activePlayback ? "off" : "polite"} aria-atomic="true">
           <span className={styles.index}>{String(current + 1).padStart(2, "0")} / 08</span>
-          <div><strong>{text.title}</strong><p>{text.caption}</p></div>
+          {projection?.document.defaults.showCaptions === true && (
+            <div data-carousel-caption><strong>{text.title}</strong><p>{text.caption}</p></div>
+          )}
         </div>
         <div className={styles.controls}>
           <div className={styles.timeline} role="group" aria-label={copy.progress}>

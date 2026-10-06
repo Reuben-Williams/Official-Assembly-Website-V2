@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import type { NewsletterProviderInventoryConfigurationState } from "./types";
+import { validateCurrentStaffMetadata, type StaffDeliveryEvidence } from "./staff-auth-delivery";
 
 export const NEWSLETTER_INVENTORY_POLICY_VERSION =
   "resend-district-newsletter-v1" as const;
@@ -99,6 +100,8 @@ export type NewsletterProviderInventoryEvidence = {
   readonly authSmtpLoginBeforeRevocationProved: boolean;
   readonly authSmtpLoginAfterRevocationProved: boolean;
   readonly ownerLoginEvidenceValid: boolean;
+  readonly staffDeliveryEvidenceValid?: boolean;
+  readonly staffAuthDeliveries?: readonly StaffDeliveryEvidence[];
 };
 
 export type NewsletterInventoryCategory =
@@ -350,7 +353,8 @@ export function evaluateNewsletterProviderInventory(input: {
   const sentReady = sentBroadcasts.every((broadcast) =>
     evidence.allowedSentBroadcastIds.has(broadcast.id)
   );
-  const emailsReady = evidence.ownerLoginEvidenceValid && newsletterEmails.every((email) =>
+  const emailsReady = evidence.ownerLoginEvidenceValid && evidence.staffDeliveryEvidenceValid !== false &&
+    (evidence.staffAuthDeliveries ?? []).every((row) => validateCurrentStaffMetadata(row, snapshot.emails)) && newsletterEmails.every((email) =>
     evidence.allowedProviderMessageIds.has(email.id)
   );
   const authSmtpReady =

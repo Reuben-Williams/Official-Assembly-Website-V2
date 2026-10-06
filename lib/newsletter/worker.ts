@@ -82,7 +82,11 @@ export async function runNewsletterWorker(input: {
   readonly limit: number;
   readonly now: () => Date;
   readonly random?: () => number;
+  readonly maximumDurationMs?: number;
 }) {
+  const startedAt = Date.now();
+  const deadline = input.maximumDurationMs === undefined ? Infinity : startedAt + input.maximumDurationMs;
+  if (deadline - Date.now() < 5000) return { claimed: 0, completed: 0, failed: 0, blocked: 0 };
   const limit = Math.max(1, Math.min(25, Math.trunc(input.limit)));
   const jobs = await input.repository.claim({
     workerId: input.workerId,
@@ -95,6 +99,7 @@ export async function runNewsletterWorker(input: {
   let blocked = 0;
 
   for (const job of jobs.slice(0, limit)) {
+    if (deadline - Date.now() < 5000) { blocked += 1; continue; }
     const mutatesProvider = [
       "newsletter.confirmation.send",
       "newsletter.contact.sync",

@@ -105,7 +105,7 @@ describe("centered homepage banner release", () => {
       },
     });
 
-    expect(html).toContain("home-official-portrait-mobile.webp");
+    expect(html).toContain("DSC01789-mobile.webp");
     expect(html).not.toContain("about-primary-desktop.webp");
     expect(html).not.toContain("Previously published incorrect portrait");
   });

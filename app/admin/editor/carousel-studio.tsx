@@ -783,6 +783,16 @@ export function CarouselStudio({
               <>
                 <span className={styles.eyebrow}>DEFAULTS FOR ALL PHOTOS</span>
                 <h2>Whole carousel</h2>
+                <label className={styles.check}>
+                  <input type="checkbox" checked={document.defaults.showCaptions === true}
+                    onChange={(event) => updateDefaults({ showCaptions: event.target.checked })} />
+                  Show photo titles and captions across the website
+                </label>
+                <p>Off by default. This also controls captions on page photographs; accessibility descriptions remain available. Save, review, and publish to apply it.</p>
+                <p>
+                  Hidden by default for every slide. Descriptions remain saved in both languages,
+                  and accessibility descriptions are always available. Save, review and publish to update the live site.
+                </p>
                 <p>
                   Photos use these settings unless you choose an individual
                   override. Playback always starts still.

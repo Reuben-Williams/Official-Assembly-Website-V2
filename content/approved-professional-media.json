@@ -23,12 +23,7 @@
           "height": 500
         }
       },
-      "placements": [
-        {
-          "page": "/",
-          "region": "home supporting"
-        }
-      ],
+      "placements": [],
       "alt": {
         "en": "Assemblywoman Carmen Morales speaking with a legislative colleague in a State House committee room",
         "es": "La asambleísta Carmen Morales conversa con un colega legislativo en una sala de comités de la Casa del Estado"
@@ -178,16 +173,7 @@
           "height": 364
         }
       },
-      "placements": [
-        {
-          "page": "/",
-          "region": "official profile portrait"
-        },
-        {
-          "page": "/about",
-          "region": "about primary"
-        }
-      ],
+      "placements": [],
       "alt": {
         "en": "Official portrait of Assemblywoman Carmen Theresa Morales",
         "es": "Retrato oficial de la asambleísta Carmen Theresa Morales"

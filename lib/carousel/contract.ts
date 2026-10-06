@@ -27,6 +27,8 @@ export type CarouselDocumentV1 = {
     seconds: CarouselSeconds;
     speed: 350 | 700 | 1100;
     blend: CarouselBlend | null;
+    /** Omitted in older immutable revisions: photo captions are hidden. */
+    showCaptions?: boolean;
   };
   entries: CarouselEntry[];
 };
@@ -103,7 +105,10 @@ export function validateCarouselDocument(
   choice(value.schemaVersion, [1]);
   choice(value.key, ["home-community"]);
   const defaults = value.defaults;
-  record(defaults, ["transition", "seconds", "speed", "blend"]);
+  const defaultKeys = ["transition", "seconds", "speed", "blend"];
+  if (defaults && typeof defaults === "object" && "showCaptions" in defaults) defaultKeys.push("showCaptions");
+  record(defaults, defaultKeys);
+  if ("showCaptions" in defaults) choice(defaults.showCaptions, [false, true]);
   choice(defaults.transition, ["none", "fade", "slide"]);
   choice(defaults.seconds, [5, 7, 10]);
   choice(defaults.speed, [350, 700, 1100]);

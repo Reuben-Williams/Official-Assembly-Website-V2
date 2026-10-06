@@ -212,7 +212,7 @@ export async function HomePageView({
         <div className="container split">
           <ImagePanel
             asset={getImage("professional-home-supporting")}
-            caption="Community and small business engagement"
+            caption={getImage("professional-home-supporting").caption ?? "Community and small business engagement"}
             instance="home-workflow"
             content={content}
             locale={locale}

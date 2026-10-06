@@ -48,7 +48,10 @@ export const EXPECTED_PENDING_MIGRATIONS = Object.freeze([
   ["20260914232545_newsletter_reconciliation_epoch_restart.sql", "273c0199cb79da4bacba6a8b6092b7bf96526eb31c90c7af598b3f65106f5106"],
   ["20261002025302_carousel_studio.sql", "6cf403a43f8c48c584b21890c41b5083df717d2eebed1dcb8e13dccdff33f599"],
   ["20261002035726_fix_media_claim_required_description.sql", "fbf52b37451956ab8fb1b392a017e238f1ede80c3d7bf277f48cb37448351316"],
-  ["20261002041414_register_events_recovery_route.sql", "f1d5a89afe470d493a20d51be62a3b138d6041ea77c0a81cc22b13a02544deb1"]
+  ["20261002041414_register_events_recovery_route.sql", "f1d5a89afe470d493a20d51be62a3b138d6041ea77c0a81cc22b13a02544deb1"],
+  ["20261006034057_carousel_caption_visibility.sql", "56c86baa3cc19ce75b063a8df91c02c74be88cb3193f7f065b0c09f48e9f304a"],
+  ["20261006044819_staff_auth_delivery_evidence.sql", "90701f68d20ab0d2ab01715a5a42ec311faf82d96cfddd9633b748846c6a714d"],
+  ["20261006045047_calendar_optional_spanish.sql", "41908e047e9ad3dc6b1e6cfbabf25e82c674127d8b2cd1bc886f09807110acd1"]
 ]);
 
 function checksumCandidates(contents) {

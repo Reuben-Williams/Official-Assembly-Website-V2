@@ -25,6 +25,22 @@ const events: PublicCalendarEvent[] = [
 ];
 
 describe("public calendar presentation", () => {
+  it("uses field-specific English fallback in Spanish and marks its actual language", () => {
+    const html = renderToStaticMarkup(<PublicEventsSection calendar={{ status: "ready", events: [{ ...events[0], titleEs: " ", actionLabelEs: "" }] }} content={{ regions: {} }} locale="es" variant="agenda" />);
+    expect(html).toContain('<h3 lang="en">Constituent services evening</h3>');
+    expect(html).toContain('lang="es">Reúnase con el equipo');
+    expect(html).toContain("Información del evento disponible parcialmente en inglés");
+    expect(html).toContain("View official details");
+  });
+  it("provides bilingual Google and Apple event actions plus subscription instructions", () => {
+    const html = renderToStaticMarkup(<PublicEventsSection calendar={{ status: "ready", events }} content={{ regions: {} }} locale="es" variant="agenda" />);
+    expect(html).toContain("Google Calendar");
+    expect(html).toContain("Apple Calendar");
+    expect(html).toContain("calendar.ics?event=");
+    expect(html).toContain("locale=es");
+    expect(html).toContain("webcal://www.assemblywomanmorales.com/events/calendar.ics");
+    expect(html).toContain("Seguir todos los eventos");
+  });
   it("renders public event content, semantic time values, and the selected locale", () => {
     const html = renderToStaticMarkup(
       <PublicEventsSection

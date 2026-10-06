@@ -17,6 +17,14 @@ const refs = communityPhotos.map((_, index) => ({
 }));
 const baseline = () => createCarouselBaseline(refs);
 describe("carousel document", () => {
+  it("accepts an optional boolean caption visibility setting without changing legacy revisions", () => {
+    const legacy = baseline();
+    expect(validateCarouselDocument(legacy)).toEqual(legacy);
+    const visible = { ...legacy, defaults: { ...legacy.defaults, showCaptions: true } };
+    expect(validateCarouselDocument(visible).defaults).toMatchObject({ showCaptions: true });
+    expect(() => validateCarouselDocument({ ...legacy, defaults: { ...legacy.defaults, showCaptions: "yes" } })).toThrow();
+    expect(carouselDiff(legacy, visible)).toEqual(expect.arrayContaining([expect.objectContaining({ category: "appearance" })]));
+  });
   it("seeds exactly the approved eight images and original still/no-transition appearance", () => {
     const doc = validateCarouselDocument(baseline(), true);
     expect(doc.entries.map((entry) => entry.id)).toEqual(

@@ -27,6 +27,8 @@ import {
   createNewsletterContactSyncJobHandler
 } from "../../../../../lib/newsletter/subscription-jobs";
 import { NewsletterJobFailure, runNewsletterWorker } from "../../../../../lib/newsletter/worker";
+import { createStaffAccountingRepository } from "../../../../../lib/newsletter/staff-auth-repository";
+import { runStaffDeliveryAccounting } from "../../../../../lib/newsletter/staff-auth-worker";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function GET(request: Request) {
+  const startedAt = Date.now();
   return createNewsletterCronHandler({
     secret: process.env.CRON_SECRET,
     workerFactory: async () => {
@@ -141,6 +144,14 @@ export async function GET(request: Request) {
 
       return {
         run: async () => {
+          if (managementKey) {
+            // Metadata-only accounting must run even when newsletter outbound work is disabled.
+            await runStaffDeliveryAccounting({
+              repository: createStaffAccountingRepository(client, siteId),
+              provider: createProductionNewsletterOwnerLoginEmailReader(managementKey), workerId,
+              maximumDurationMs: Math.min(15000, Math.max(0, 28000 - (Date.now() - startedAt)))
+            });
+          }
           await reconciliationData.housekeeping();
           if (enabled) await reconciliationData.schedule();
           return runNewsletterWorker({
@@ -156,6 +167,7 @@ export async function GET(request: Request) {
             workerId,
             emailEnabled: enabled,
             limit: 10,
+            maximumDurationMs: Math.max(0, 28000 - (Date.now() - startedAt)),
             now: () => new Date()
           });
         }

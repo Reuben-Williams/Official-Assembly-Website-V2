@@ -86,6 +86,11 @@ function evidence(
 }
 
 describe("newsletter provider inventory policy", () => {
+  it("blocks invalid staff delivery evidence even with an otherwise allowed message ID", () => {
+    const result = evaluateNewsletterProviderInventory({ stage: "steady", configuration,
+      snapshot: snapshot(), evidence: evidence({ staffDeliveryEvidenceValid: false }) });
+    expect(result.categories.find((c) => c.category === "transactional_emails")?.status).toBe("blocked");
+  });
   it("blocks transactional inventory when ongoing owner-login evidence no longer revalidates", () => {
     const result = evaluateNewsletterProviderInventory({
       stage: "steady",

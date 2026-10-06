@@ -49,6 +49,6 @@ describe("server-rendered home route", () => {
     expect(html).toContain("Current resources title");
     expect(html).toContain('href="/news"');
     expect(html).toContain("Current resources action");
-    expect(html).toContain("Current resources media");
+    expect(html).not.toContain("Current resources media");
   });
 });

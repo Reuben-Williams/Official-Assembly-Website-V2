@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CalendarDays, Clock3, MapPin, RotateCcw } from "lucide-react";
+import { Trash2, CalendarDays, Clock3, MapPin, RotateCcw } from "lucide-react";
+import { CalendarDialog } from "./calendar-dialog";
+import { CalendarTranslation } from "./calendar-translation";
+import { localizedCalendarField } from "../../../lib/calendar/localization";
 
 import {
   calendarIsoToLocalInput,
@@ -153,7 +156,7 @@ function commandNotice(command: CalendarCommand) {
     save_draft: "Draft saved.",
     publish: "Event published.",
     unpublish: "Event unpublished and retained as a draft.",
-    archive: "Event archived.",
+    archive: "Event deleted. Saved revisions are retained and can be restored to Drafts.",
     restore_to_draft: "Event restored to Drafts."
   }[command];
 }
@@ -180,6 +183,7 @@ export function CalendarWorkspace({
   const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const newButtonRef = useRef<HTMLButtonElement>(null);
   const canEditDrafts = role !== "viewer";
   const canManageLifecycle = role === "owner" || role === "editor";
@@ -237,6 +241,7 @@ export function CalendarWorkspace({
   const evaluatedAt = now();
 
   function choose(event: CalendarManagementEvent) {
+    setDeleteConfirmation(false);
     setSelectedId(event.entity.id);
     setCreating(false);
     setForm(formFor(event));
@@ -309,6 +314,8 @@ export function CalendarWorkspace({
 
   const showEditor = creating || selected;
   const editorDisabled = !canEditDrafts || selected?.entity.lifecycleState === "archived" || Boolean(busy);
+  const spanishTitle = localizedCalendarField(form, "es", "title");
+  const spanishDescription = localizedCalendarField(form, "es", "description");
 
   return (
     <section className={styles.workspace} data-calendar-workspace>
@@ -316,7 +323,7 @@ export function CalendarWorkspace({
         <div>
           <p className={styles.eyebrow}>Website · public information</p>
           <h1>Community events calendar</h1>
-          <p>Create bilingual event drafts, review the public preview, and publish only approved office-hosted events.</p>
+          <p>Create event drafts, add optional Spanish text, and publish approved office-hosted events.</p>
         </div>
         {canEditDrafts ? (
           <button className={styles.primaryButton} onClick={beginCreate} ref={newButtonRef} type="button">
@@ -339,7 +346,7 @@ export function CalendarWorkspace({
           {([
             ["Drafts", groups.drafts],
             ["Published", groups.published],
-            ["Archived", groups.archived]
+            ["Deleted events", groups.archived]
           ] as const).map(([label, events]) => (
             <section className={styles.eventGroup} key={label}>
               <h2>{label} <span>{events.length}</span></h2>
@@ -384,7 +391,7 @@ export function CalendarWorkspace({
               </header>
 
               {selected?.entity.lifecycleState === "archived" ? (
-                <p className={styles.archivedNote}>Archived events are read-only until an editor restores them to Drafts.</p>
+                <p className={styles.archivedNote}>Deleted events retain their saved revisions. Restore to Drafts to edit; restoring does not republish the event.</p>
               ) : null}
 
               <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void run(creating ? "create_draft" : "save_draft"); }}>
@@ -396,8 +403,13 @@ export function CalendarWorkspace({
                 </fieldset>
                 <fieldset disabled={editorDisabled}>
                   <legend>Spanish content</legend>
-                  <label>Spanish title *<input aria-required="true" lang="es" maxLength={160} name="titleEs" onChange={(event) => update("titleEs", event.currentTarget.value)} value={form.titleEs} /></label>
-                  <label>Spanish description *<textarea aria-required="true" lang="es" maxLength={5_000} name="descriptionEs" onChange={(event) => update("descriptionEs", event.currentTarget.value)} rows={5} value={form.descriptionEs} /></label>
+                  <p className={styles.hint}>Optional. English is shown when Spanish is blank; it is identified as English, not a translation.</p>
+                  <CalendarTranslation disabled={Boolean(editorDisabled)} draftIdentity={creating ? "new" : selectedId ?? "none"}
+                    source={{ titleEn: form.titleEn, descriptionEn: form.descriptionEn, actionLabelEn: form.actionLabelEn }}
+                    spanish={{ titleEs: form.titleEs, descriptionEs: form.descriptionEs, actionLabelEs: form.actionLabelEs }}
+                    onApply={suggestion => { setForm(current => ({ ...current, ...suggestion })); setDirty(true); setNotice("Suggestion applied to draft. Review, save, and publish when ready."); }} />
+                  <label>Spanish title (optional)<input lang="es" maxLength={160} name="titleEs" onChange={(event) => update("titleEs", event.currentTarget.value)} value={form.titleEs} /></label>
+                  <label>Spanish description (optional)<textarea lang="es" maxLength={5_000} name="descriptionEs" onChange={(event) => update("descriptionEs", event.currentTarget.value)} rows={5} value={form.descriptionEs} /></label>
                 </fieldset>
                 <fieldset disabled={editorDisabled}>
                   <legend>Date and location</legend>
@@ -413,7 +425,7 @@ export function CalendarWorkspace({
                   <legend>Optional public action</legend>
                   <label>Official action URL (optional)<input inputMode="url" name="actionUrl" onChange={(event) => update("actionUrl", event.currentTarget.value)} placeholder="https://" value={form.actionUrl} /></label>
                   <div className={styles.twoColumns}>
-                    <label>English link label (optional)<input maxLength={120} name="actionLabelEn" onChange={(event) => update("actionLabelEn", event.currentTarget.value)} value={form.actionLabelEn} /></label>
+                    <label>English link label (required with a URL)<input maxLength={120} name="actionLabelEn" onChange={(event) => update("actionLabelEn", event.currentTarget.value)} value={form.actionLabelEn} /></label>
                     <label>Spanish link label (optional)<input lang="es" maxLength={120} name="actionLabelEs" onChange={(event) => update("actionLabelEs", event.currentTarget.value)} value={form.actionLabelEs} /></label>
                   </div>
                   <label>Event image (optional)
@@ -436,9 +448,10 @@ export function CalendarWorkspace({
                     </button>
                     {canManageLifecycle && selected?.entity.draftRevisionId ? <button disabled={Boolean(busy) || dirty} onClick={() => void run("publish")} type="button">Publish</button> : null}
                     {canManageLifecycle && selected?.entity.publishedRevisionId ? <button disabled={Boolean(busy)} onClick={() => void run("unpublish")} type="button">Unpublish</button> : null}
-                    {canManageLifecycle && selected ? <button className={styles.dangerButton} disabled={Boolean(busy)} onClick={() => void run("archive")} type="button"><Archive aria-hidden="true" /> Archive</button> : null}
+                    {canManageLifecycle && selected ? <button className={styles.dangerButton} disabled={Boolean(busy) || dirty} onClick={() => setDeleteConfirmation(true)} type="button"><Trash2 aria-hidden="true" /> Delete event</button> : null}
                   </div>
                 ) : null}
+                {dirty && canManageLifecycle && selected ? <p className={styles.hint}>Save or discard unsaved edits before deleting this event.</p> : null}
                 {canManageLifecycle && selected?.entity.lifecycleState === "archived" ? (
                   <div className={styles.actions}>
                     <button className={styles.primaryButton} disabled={Boolean(busy)} onClick={() => void run("restore_to_draft")} type="button"><RotateCcw aria-hidden="true" /> Restore to Drafts</button>
@@ -450,7 +463,7 @@ export function CalendarWorkspace({
                 <p className={styles.eyebrow}>Public preview</p>
                 <div className={styles.previewGrid}>
                   <article lang="en"><span>English</span><h3>{form.titleEn || "Untitled event"}</h3><p>{form.descriptionEn || "No English description yet."}</p></article>
-                  <article lang="es"><span>Español</span><h3>{form.titleEs || "Evento sin título"}</h3><p>{form.descriptionEs || "Aún no hay descripción en español."}</p></article>
+                  <article lang="es"><span>Español{spanishTitle.fallback || spanishDescription.fallback ? " · English fallback" : ""}</span><h3 lang={spanishTitle.lang}>{spanishTitle.text || "Untitled event"}</h3><p lang={spanishDescription.lang}>{spanishDescription.text || "No description yet."}</p></article>
                 </div>
                 <p><CalendarDays aria-hidden="true" /> {localEventDate(form.startLocal)}</p>
                 <p><MapPin aria-hidden="true" /> {[form.locationName, form.locationAddress].filter(Boolean).join(" · ") || "Location not set"}</p>
@@ -460,11 +473,19 @@ export function CalendarWorkspace({
             <div className={styles.emptyEditor}>
               <CalendarDays aria-hidden="true" />
               <h2>Select an event</h2>
-              <p>Choose an event from Drafts, Published, or Archived to review its details.</p>
+              <p>Choose an event from Drafts, Published, or Deleted events to review its details.</p>
             </div>
           )}
         </div>
       </div>
+      {deleteConfirmation && selected ? <CalendarDialog title="Delete this event?" onClose={() => setDeleteConfirmation(false)}>
+        <p><strong>{eventTitle(selected)}</strong> will be removed from the public calendar. Its saved revisions and history remain recoverable.</p>
+        <p>Restore to Drafts recovers the latest saved draft without publishing it. Previously imported calendar copies cannot be removed by this website.</p>
+        <div className={styles.actions}>
+          <button autoFocus type="button" onClick={() => setDeleteConfirmation(false)}>Cancel</button>
+          <button className={styles.dangerButton} type="button" onClick={() => { setDeleteConfirmation(false); void run("archive"); }}>Confirm deletion</button>
+        </div>
+      </CalendarDialog> : null}
     </section>
   );
 }

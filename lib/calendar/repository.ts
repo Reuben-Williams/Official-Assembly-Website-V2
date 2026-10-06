@@ -142,7 +142,7 @@ function repositoryErrorResponse(error: CalendarRepositoryError) {
   return errorResponse(error.status, error.code, messages[error.code]);
 }
 
-async function trustedIdentity(
+export async function trustedCalendarIdentity(
   request: Request,
   authenticate: AuthenticateCalendarRequest
 ): Promise<ActiveBuilderIdentity> {
@@ -167,7 +167,7 @@ function authorizationResponse(error: BuilderAuthorizationError) {
   return errorResponse(error.status, code, message);
 }
 
-async function readBoundedJson(request: Request): Promise<Record<string, unknown>> {
+export async function readBoundedCalendarJson(request: Request): Promise<Record<string, unknown>> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     throw new CalendarRepositoryError("VALIDATION", 400, "JSON_REQUIRED");
   }
@@ -201,7 +201,7 @@ export function createCalendarRouteHandlers(input: {
   return Object.freeze({
     async list(request: Request) {
       try {
-        const identity = await trustedIdentity(request, authenticate);
+        const identity = await trustedCalendarIdentity(request, authenticate);
         const collection = await input.repository.listManagement({
           siteId: identity.siteId,
           siteKey: identity.siteKey,
@@ -223,7 +223,7 @@ export function createCalendarRouteHandlers(input: {
       const command = rawCommand as CalendarCommand;
 
       try {
-        const identity = await trustedIdentity(request, authenticate);
+        const identity = await trustedCalendarIdentity(request, authenticate);
         assertRequestOrigin(
           request,
           input.allowedOrigins ?? allowedBuilderOrigins(new URL(request.url).origin)
@@ -245,7 +245,7 @@ export function createCalendarRouteHandlers(input: {
         if (!idempotencyPattern.test(idempotencyKey)) {
           return errorResponse(400, "IDEMPOTENCY_REQUIRED", "A valid idempotency key is required.");
         }
-        const body = await readBoundedJson(request);
+        const body = await readBoundedCalendarJson(request);
         const expectedVersion = body.expectedVersion;
         if (!Number.isSafeInteger(expectedVersion) || Number(expectedVersion) < 0) {
           return errorResponse(400, "INVALID_VERSION", "A valid event version is required.");

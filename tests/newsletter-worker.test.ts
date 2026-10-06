@@ -35,6 +35,20 @@ const ownerLoginJob = {
 };
 
 describe("newsletter durable worker", () => {
+  it("does not claim or start more jobs when the shared cron budget is exhausted", async () => {
+    let clock = 0; const now = vi.spyOn(Date, "now").mockImplementation(() => clock);
+    const repository = { claim: vi.fn(async () => [contactAuditJob, broadcastAuditJob]), complete: vi.fn(), fail: vi.fn() };
+    const handlers = { confirmationSend: vi.fn(), contactSync: vi.fn(), contactAudit: vi.fn(async () => {
+      clock = 6000; return { code: "audit_complete" };
+    }), segmentReconcile: vi.fn(), broadcastAudit: vi.fn(), ownerLoginReconcile: vi.fn() };
+    const input = { repository, handlers, workerId: "worker", emailEnabled: false, limit: 10, now: () => new Date() };
+    try {
+      expect(await runNewsletterWorker({ ...input, maximumDurationMs: 4000 })).toEqual({ claimed: 0, completed: 0, failed: 0, blocked: 0 });
+      expect(repository.claim).not.toHaveBeenCalled();
+      expect(await runNewsletterWorker({ ...input, maximumDurationMs: 10000 })).toEqual({ claimed: 2, completed: 1, failed: 0, blocked: 1 });
+      expect(handlers.broadcastAudit).not.toHaveBeenCalled(); expect(repository.fail).not.toHaveBeenCalled();
+    } finally { now.mockRestore(); }
+  });
   it.each(["reconciliation_restarted", "reconciliation_page_yielded", "segment_reconciled"])(
     "does not complete or fail a reconciliation lease already transitioned by %s",
     async (code) => {

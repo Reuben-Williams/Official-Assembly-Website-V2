@@ -49,15 +49,13 @@ describe("approved editorial public layout", () => {
 
   it("uses an official About portrait and a voting symbol instead of an unrelated photo", async () => {
     const about = await documentFor("about");
-    expect(about.querySelector('[data-builder-item-id="hero"] img')?.getAttribute("src")).toContain("home-official-portrait");
+    expect(about.querySelector('[data-builder-item-id="hero"] img')?.getAttribute("src")).toContain("DSC01789");
     const voting = await documentFor("voting");
     expect(voting.querySelector('[data-editorial-voting-symbol]')).not.toBeNull();
     expect(voting.querySelector('[data-builder-item-id="hero"] img')).toBeNull();
   });
 
   it.each([
-    ["about", "chamber-group"],
-    ["resources", "chamber-group"],
     ["contact", "office-group"],
     ["community", "parade-selfie"],
     ["voting", "hallway-portrait"],
@@ -68,9 +66,15 @@ describe("approved editorial public layout", () => {
     const panel = doc.querySelector('[data-builder-item-id="supporting"]');
     expect(panel?.querySelector("img")?.getAttribute("src")).toContain(photo);
     const caption = panel?.querySelector(".image-caption")?.textContent;
-    expect(caption).toBeTruthy();
-    expect(caption).not.toBe("Additional district media");
+    expect(caption).toBeUndefined();
     expect(doc.querySelector('img[src*="rosy-bagolie-coverage"]')).toBeNull();
+  });
+
+  it.each(["about", "resources"])("omits the requested photo-and-trust section on %s", async (slug) => {
+    const doc = await documentFor(slug);
+    expect(doc.querySelector('[data-builder-item-id="supporting"]')).toBeNull();
+    expect(doc.body.textContent).not.toContain("Official sources first");
+    expect(doc.querySelector('[data-builder-item-id="features"]')).not.toBeNull();
   });
 
   it.each([
@@ -87,20 +91,20 @@ describe("approved editorial public layout", () => {
     expect(doc.querySelector('[data-builder-item-id="supporting"] img')?.getAttribute("src")).toContain("news-supporting-desktop");
   });
 
-  it("does not let a retired compact-page hero default hide its new supporting photo", async () => {
+  it("keeps removed Resources media hidden even when old image edits exist", async () => {
     const page = pages.find((item) => item.slug === "resources")!;
     const doc = await documentFor("resources", undefined, { regions: {
       [getImage(page.imageKey).regionId]: {
         type: "image", src: "/images/professional/resources-supporting-desktop.webp", alt: "Retired default",
       },
     } });
-    expect(doc.querySelector('[data-builder-item-id="supporting"] img')?.getAttribute("src")).toContain("chamber-group");
+    expect(doc.querySelector('[data-builder-item-id="supporting"]')).toBeNull();
     expect(doc.querySelector('img[alt="Retired default"]')).toBeNull();
   });
 
   it("preserves a genuine office-published compact-page hero photograph", async () => {
-    const page = pages.find((item) => item.slug === "resources")!;
-    const doc = await documentFor("resources", undefined, { regions: {
+    const page = pages.find((item) => item.slug === "contact")!;
+    const doc = await documentFor("contact", undefined, { regions: {
       [getImage(page.imageKey).regionId]: {
         type: "image", src: "/images/office-published-community.jpg", alt: "Office-published community photograph",
       },
@@ -110,7 +114,6 @@ describe("approved editorial public layout", () => {
   });
 
   it.each([
-    ["resources", "media.editorial.resources-supporting"],
     ["contact", "media.editorial.contact-supporting"],
     ["voting", "media.editorial.voting-supporting"],
     ["news", "media.professional.news-supporting"],
@@ -145,5 +148,12 @@ describe("approved editorial public layout", () => {
     for (const card of cards) expect(card.querySelector("a[href]"), card.textContent ?? "").not.toBeNull();
     expect(cards[0].textContent).toContain("Official Legislative Contact Form");
     expect(cards[3].textContent).toContain("Votes by bill");
+  });
+  it("uses DSC01789 for the homepage portrait with a complete accessible frame", () => {
+    const doc = new DOMParser().parseFromString(renderToStaticMarkup(<OfficialProfileSection content={{ regions: {} }} />), "text/html");
+    const portrait = doc.querySelector('[data-profile-portrait]');
+    expect(portrait?.querySelector("img")?.src).toContain("DSC01789");
+    expect(portrait?.querySelector("img")?.alt).toContain("Morales");
+    expect(portrait?.querySelector(".image-caption")).toBeNull();
   });
 });

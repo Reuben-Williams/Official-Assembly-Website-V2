@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "approvedOn": "2026-10-06",
+  "basis": "User selected DSC01789 for About and the homepage portrait, approved the supplied community collection, and requested replacement of the Constituent guidance photo. Volunteer photo remains unchanged.",
+  "processing": "Responsive WebP derivatives preserve the complete authentic frame, without cropping, upscaling, or generative changes. Older sources and derivatives are retained.",
+  "assets": [
+    {
+      "key": "portrait-dsc01789",
+      "sourceUrl": "https://drive.google.com/open?id=1UbbHqtc1DdWNJAmeVr6vRHao9jF9KUGJ",
+      "source": { "path": "content/media-source/october-editorial/DSC01789.jpg", "sha256": "d45a56c8d8df67ad39a03525e04fd6d1b7d9188165af3a50aa8cb6c87a21fc55", "width": 5760, "height": 8640 },
+      "derivatives": {
+        "desktop": { "path": "/images/october-editorial/DSC01789-desktop.webp", "width": 1600, "height": 2400, "sha256": "4e803a0413b4f6c554d6367f510e3a3ba7509288c9a96fc26b884dec81171ef1" },
+        "mobile": { "path": "/images/october-editorial/DSC01789-mobile.webp", "width": 800, "height": 1200, "sha256": "e5a9c7fa50d55a452fa9d24f9b4916d38fa38d75d32b0a25d1f8184009d4c7da" }
+      },
+      "placements": ["media.professional.home-official-portrait", "media.professional.about-primary"],
+      "alt": { "en": "Official portrait of Assemblywoman Carmen Theresa Morales, wearing a navy suit, with United States and New Jersey flags behind her", "es": "Retrato oficial de la asambleísta Carmen Theresa Morales, vestida con un traje azul marino, con las banderas de Estados Unidos y Nueva Jersey detrás" },
+      "caption": { "en": "Assemblywoman Carmen Theresa Morales", "es": "Asambleísta Carmen Theresa Morales" }
+    },
+    {
+      "key": "guidance-dsc02321",
+      "sourceCollection": "User-provided Health Fair community photo collection",
+      "source": { "path": "content/media-source/october-editorial/DSC02321.jpg", "sha256": "30f432e0e7b3ec4d3985b066f0f53448730405247ed7d91a33f1b6235ddfdd13", "width": 8640, "height": 5760 },
+      "derivatives": {
+        "desktop": { "path": "/images/october-editorial/DSC02321-desktop.webp", "width": 2400, "height": 1600, "sha256": "c1267d385d5a6bd73deee54d681f7ab441a8be6f7ab4f4fe733b5f94bf338968" },
+        "mobile": { "path": "/images/october-editorial/DSC02321-mobile.webp", "width": 1200, "height": 800, "sha256": "809f338d37af4f3eeb8c5850fbf94efc6c882e277980c7481f40625ce3897638" }
+      },
+      "placements": ["media.professional.home-supporting"],
+      "alt": { "en": "Assemblywoman Carmen Morales, wearing a gray blazer, poses with a woman holding a community health information brochure", "es": "La asambleísta Carmen Morales, con una chaqueta gris, posa con una mujer que sostiene un folleto de información de salud comunitaria" },
+      "caption": { "en": "Connecting at the community health fair", "es": "Encuentros en la feria de salud comunitaria" }
+    }
+  ]
+}

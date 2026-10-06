@@ -201,9 +201,7 @@ export function assertCalendarPublishable(
 ): NormalizedCalendarDraft {
   const requiredText: Array<[string, string]> = [
     [draft.titleEn, "English title"],
-    [draft.titleEs, "Spanish title"],
     [draft.descriptionEn, "English description"],
-    [draft.descriptionEs, "Spanish description"],
     [draft.locationName, "Location name"],
     [draft.locationAddress, "Location address"]
   ];
@@ -215,8 +213,8 @@ export function assertCalendarPublishable(
   if (!draft.publicApproved) throw new TypeError("Public approval is required for publication.");
   if (!draft.hostedByOffice) throw new TypeError("Office-hosted confirmation is required for publication.");
 
-  if (draft.actionUrl && (!draft.actionLabelEn || !draft.actionLabelEs)) {
-    throw new TypeError("English and Spanish action labels are required when an action URL is present.");
+  if (draft.actionUrl && !draft.actionLabelEn) {
+    throw new TypeError("An English action label is required when an action URL is present.");
   }
   if (!draft.actionUrl && (draft.actionLabelEn || draft.actionLabelEs)) {
     throw new TypeError("An action URL is required when an action label is present.");

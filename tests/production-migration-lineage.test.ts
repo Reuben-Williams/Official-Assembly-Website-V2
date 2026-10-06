@@ -65,7 +65,7 @@ describe("production migration lineage", () => {
 
     expect(stderr).toBe("");
     expect(stdout).toBe(
-      "Verified 20 production migrations and 22 approved pending migrations.\n"
+      "Verified 20 production migrations and 25 approved pending migrations.\n"
     );
   });
 

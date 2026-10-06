@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { parseSafePublicUrl } from "../../lib/public-links/safe-public-url";
+import octoberPhotos from "../../content/approved-october-editorial-media.json";
 import {
   BadgeCheck,
   Bell,
@@ -580,6 +581,13 @@ export const pages: PageContent[] = [
 export function getImage(key: string) {
   const asset = imageAssets.find((item) => item.key === key);
   if (!asset) throw new Error(`Missing image asset: ${key}`);
+  const replacement = octoberPhotos.assets.find(photo => photo.placements.includes(asset.regionId));
+  if (replacement) return {
+    ...asset, src: replacement.derivatives.desktop.path, mobileSrc: replacement.derivatives.mobile.path,
+    width: replacement.derivatives.desktop.width, height: replacement.derivatives.desktop.height, fullFrame: true,
+    alt: replacement.alt.en, altEs: replacement.alt.es, caption: replacement.caption.en, captionEs: replacement.caption.es,
+    retiredSources: [asset.src, ...(asset.mobileSrc ? [asset.mobileSrc] : [])],
+  } satisfies ImageAsset;
   return asset;
 }
 

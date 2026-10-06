@@ -62,7 +62,9 @@ function commandResult(value: unknown): CalendarCommandResult {
 }
 
 function publicEvents(value: unknown): PublicCalendarEvent[] {
-  const candidate = payload(value);
+  // This RPC returns a JSON array, not a one-row SQL result wrapper. A single
+  // upcoming event must remain a list when older events expire.
+  const candidate = value;
   const events = Array.isArray(candidate)
     ? candidate
     : candidate && typeof candidate === "object" && Array.isArray((candidate as Record<string, unknown>).events)

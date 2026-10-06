@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import type { PublicCalendarEvent } from "../../lib/calendar/contract";
 import type { PublicCalendarLoad } from "../../lib/calendar/repository";
+import { googleCalendarEventUrl, PUBLIC_CALENDAR_URL } from "../../lib/calendar/integrations";
+import { localizedCalendarField } from "../../lib/calendar/localization";
 import { builderText, type BuilderServerContent } from "../../lib/builder/server-content";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
@@ -14,12 +16,6 @@ type PublicEventsSectionProps = Readonly<{
   locale: PublicLocale;
   variant: "home" | "agenda";
 }>;
-
-function eventText(event: PublicCalendarEvent, locale: PublicLocale, field: "title" | "description" | "actionLabel") {
-  if (field === "title") return locale === "es" ? event.titleEs : event.titleEn;
-  if (field === "description") return locale === "es" ? event.descriptionEs : event.descriptionEn;
-  return locale === "es" ? event.actionLabelEs : event.actionLabelEn;
-}
 
 function localDateKey(value: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -65,10 +61,14 @@ function EventAgenda({ events, locale }: { events: readonly PublicCalendarEvent[
   return (
     <ol className={styles.agenda} aria-label={locale === "es" ? "Próximos eventos" : "Upcoming events"}>
       {events.map((event) => {
-        const title = eventText(event, locale, "title");
+        const titleField = localizedCalendarField(event, locale, "title");
+        const descriptionField = localizedCalendarField(event, locale, "description");
+        const actionField = localizedCalendarField(event, locale, "actionLabel");
+        const title = titleField.text;
+        const fallback = titleField.fallback || descriptionField.fallback || Boolean(event.actionUrl && actionField.fallback);
         return (
           <li key={event.id}>
-            <article className={styles.eventCard} data-public-event-id={event.id}>
+            <article id={`event-${event.id}`} className={styles.eventCard} data-public-event-id={event.id}>
               {event.mediaUrl ? (
                 // Managed-media URLs are short-lived and server-resolved; preserving the original host avoids stale copies.
                 // eslint-disable-next-line @next/next/no-img-element
@@ -83,19 +83,29 @@ function EventAgenda({ events, locale }: { events: readonly PublicCalendarEvent[
                   <CalendarDays size={18} aria-hidden="true" />
                   <time dateTime={event.startAt}>{formatEventSchedule(event, locale)}</time>
                 </p>
-                <h3>{title}</h3>
-                <p>{eventText(event, locale, "description")}</p>
+                <h3 lang={titleField.lang}>{title}</h3>
+                <p lang={descriptionField.lang}>{descriptionField.text}</p>
+                {fallback ? <p className={styles.languageNote} lang="es">Información del evento disponible parcialmente en inglés</p> : null}
                 <p className={styles.location}>
                   <MapPin size={18} aria-hidden="true" />
                   <span>{event.locationName}<br />{event.locationAddress}</span>
                 </p>
                 {event.actionUrl ? (
                   <a className={styles.eventAction} href={event.actionUrl} target="_blank" rel="noopener noreferrer">
-                    {eventText(event, locale, "actionLabel")}
+                    <span lang={actionField.lang}>{actionField.text}</span>
                     <ArrowRight size={17} aria-hidden="true" />
                     <span className={styles.srOnly}>{locale === "es" ? " (se abre en una pestaña nueva)" : " (opens in a new tab)"}</span>
                   </a>
                 ) : null}
+                <div className={styles.calendarActions} aria-label={locale === "es" ? "Guardar este evento" : "Save this event"}>
+                  <a href={googleCalendarEventUrl(event, locale)} target="_blank" rel="noopener noreferrer">
+                    <CalendarDays size={16} aria-hidden="true" /> Google Calendar
+                    <span className={styles.srOnly}>{locale === "es" ? " (se abre en una pestaña nueva)" : " (opens in a new tab)"}</span>
+                  </a>
+                  <a href={`/events/calendar.ics?event=${event.id}&locale=${locale}`} download>
+                    <CalendarDays size={16} aria-hidden="true" /> Apple Calendar / .ics
+                  </a>
+                </div>
               </div>
             </article>
           </li>
@@ -147,6 +157,21 @@ export function PublicEventsSection({ calendar, content, locale, variant }: Publ
             </Link>
           ) : null}
         </header>
+        {calendar.status === "ready" && variant === "agenda" && (
+          <details className={styles.subscription}>
+            <summary><CalendarDays size={18} aria-hidden="true" />{locale === "es" ? "Seguir todos los eventos" : "Follow all events"}</summary>
+            <div>
+              <p>{locale === "es"
+                ? "Suscríbase para recibir las actualizaciones del calendario. Su aplicación determina cuándo se actualiza. Guardar un evento individual crea una copia que no se actualiza automáticamente."
+                : "Subscribe to receive calendar updates. Your calendar app controls its refresh timing. Saving an individual event creates a copy that does not update automatically."}</p>
+              <a className={styles.viewAll} href={`${PUBLIC_CALENDAR_URL.replace("https:", "webcal:")}?locale=${locale}`}>Apple Calendar · {locale === "es" ? "Suscribirse" : "Subscribe"}</a>
+              <p>{locale === "es"
+                ? "Google Calendar: en una computadora, abra Otros calendarios → + → Desde URL y pegue este enlace:"
+                : "Google Calendar: on a computer, open Other calendars → + → From URL and paste this link:"}</p>
+              <input readOnly aria-label={locale === "es" ? "Enlace de suscripción al calendario" : "Calendar subscription link"} value={`${PUBLIC_CALENDAR_URL}?locale=${locale}`} />
+            </div>
+          </details>
+        )}
 
         {calendar.status === "unavailable" ? (
           <div className={styles.state} data-calendar-state="unavailable" role="status">

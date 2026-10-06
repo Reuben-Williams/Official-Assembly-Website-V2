@@ -4,6 +4,25 @@ import { createOfficialAssemblyRecoveryRuntime } from "../builder/recovery/runti
 import { carouselProjection } from "./service";
 import { validateCarouselDocument } from "./contract";
 import { resolvePublicCarousel } from "./public-contract";
+import { cache } from "react";
+
+// Read only published settings, without resolving/signing eight full-size media URLs.
+// Captions are off for older documents. Recovery uses the verified published generation.
+export const loadPublishedPhotoCaptionVisibility = cache(async (): Promise<boolean> => {
+  try {
+    const client = getBuilderAdminClient();
+    if (!client) return false;
+    const siteId = await resolveBuilderSiteId(client);
+    if (!siteId) return false;
+    const aggregate = await client.from("builder_carousels").select("published_revision_id").eq("site_id", siteId).maybeSingle();
+    if (!aggregate.error && aggregate.data?.published_revision_id) {
+      const revision = await client.from("builder_carousel_revisions").select("document").eq("site_id", siteId).eq("id", aggregate.data.published_revision_id).single();
+      if (!revision.error && revision.data) return validateCarouselDocument(revision.data.document, true).defaults.showCaptions === true;
+    }
+    const recovered = await createOfficialAssemblyRecoveryRuntime().readContent("/");
+    return recovered?.carousel?.document.defaults.showCaptions === true;
+  } catch { return false; }
+});
 export async function loadPublishedCarousel(
   options: { imageRevisionId?: string } = {},
 ) {

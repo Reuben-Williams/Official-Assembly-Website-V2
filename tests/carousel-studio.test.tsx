@@ -82,6 +82,12 @@ describe("Carousel Studio A", () => {
     await act(async () => scope[1].click());
     expect(scope[1].getAttribute('aria-selected')).toBe('true');
     expect(host.textContent).toContain('DEFAULTS FOR ALL PHOTOS');
+    const captions = [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+      .find((input) => input.closest('label')?.textContent?.includes('Show photo titles and captions'));
+    expect(captions).toBeDefined();
+    expect(captions?.checked).toBe(false);
+    await act(async () => captions!.click());
+    expect(captions?.checked).toBe(true);
     await act(async () => host.querySelectorAll<HTMLButtonElement>('[data-carousel-slot] button')[1].click());
     expect(scope[0].getAttribute('aria-selected')).toBe('true');
   });

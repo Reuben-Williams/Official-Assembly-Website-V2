@@ -71,10 +71,10 @@ export function ImagePanel({
           }
         />
       </picture>
-      <div className="image-caption">
+      {content.showPhotoCaptions === true ? <div className="image-caption">
         <Camera size={18} aria-hidden="true" />
         <span>{photoCaption}</span>
-      </div>
+      </div> : null}
     </div>
   );
 }

@@ -19,6 +19,14 @@ function doc(content: BuilderServerContent = { regions: {} }, locale: "en" | "es
 }
 
 describe("approved full-frame editorial photographs", () => {
+  it("hides visible captions by default without removing image alt text", () => {
+    const view = doc();
+    expect(view.querySelector(".image-caption")).toBeNull();
+    expect(view.querySelector("img")?.alt).toBe(asset.alt);
+  });
+  it("restores captions only when the published site-wide toggle is enabled", () => {
+    expect(doc({ regions: {}, showPhotoCaptions: true }).querySelector(".image-caption")?.textContent).toBe(asset.caption);
+  });
   it("uses full-frame sizing and keeps a caption below rather than over faces", () => {
     const view = doc();
     expect(view.querySelector('[data-editorial-full-frame="true"]')).not.toBeNull();
@@ -27,7 +35,7 @@ describe("approved full-frame editorial photographs", () => {
     expect(view.querySelector("img")?.getAttribute("style")).not.toContain("position:absolute");
   });
   it("renders approved Spanish alt and caption text for the default photo", () => {
-    const view = doc(undefined, "es");
+    const view = doc({ regions: {}, showPhotoCaptions: true }, "es");
     expect(view.querySelector("img")?.alt).toBe(asset.altEs);
     expect(view.querySelector(".image-caption")?.textContent).toBe(asset.captionEs);
   });
@@ -42,7 +50,7 @@ describe("approved full-frame editorial photographs", () => {
     expect(view.querySelector("img")?.alt).toBe(asset.alt);
   });
   it("preserves a custom photo from a legacy region and drops the default caption", () => {
-    const view = doc({ regions: { "media.professional.community-primary": { type: "image", src: "/images/custom-office.webp", alt: "Office-published photograph" } } });
+    const view = doc({ showPhotoCaptions: true, regions: { "media.professional.community-primary": { type: "image", src: "/images/custom-office.webp", alt: "Office-published photograph" } } });
     expect(view.querySelector("img")?.getAttribute("src")).toContain("custom-office.webp");
     expect(view.querySelector("img")?.alt).toBe("Office-published photograph");
     expect(view.querySelector("source")).toBeNull();

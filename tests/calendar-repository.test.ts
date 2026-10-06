@@ -6,6 +6,9 @@ import {
   type CalendarRepository
 } from "../lib/calendar/repository";
 import { createSupabaseCalendarRepository } from "../lib/calendar/supabase-repository";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createElement } from "react";
+import { PublicEventsSection } from "../app/ui/PublicEventsSection";
 
 const siteId = "182c3a48-a024-452b-bc88-44e795c55b95";
 const siteKey = "official-assembly-website-v2";
@@ -35,6 +38,22 @@ function supabase(result: { data: unknown; error: unknown }) {
 }
 
 describe("Supabase calendar repository", () => {
+  it("renders exactly one database event through the loader on home and agenda", async () => {
+    const repository = createSupabaseCalendarRepository(supabase({ data: [publicEvent], error: null }) as never);
+    const calendar = await loadPublicCalendar(repository, { siteKey, evaluatedAt: "2026-09-01T14:00:00.000Z", limit: 100 });
+    for (const variant of ["home", "agenda"] as const) {
+      const html = renderToStaticMarkup(createElement(PublicEventsSection, { calendar, variant, locale: "en", content: { regions: {} } }));
+      expect(html).toContain("District meeting");
+      expect(html).toContain("calendar.ics?event=");
+      expect(html).not.toContain("temporarily unavailable");
+    }
+  });
+  it.each([0, 1, 2])("preserves a public JSON array with %i events", async (count) => {
+    const events = Array.from({ length: count }, (_, index) => ({ ...publicEvent, id: `${eventId}-${index}` }));
+    const repository = createSupabaseCalendarRepository(supabase({ data: events, error: null }) as never);
+    await expect(repository.readPublic({ siteKey, evaluatedAt: "2026-09-01T14:00:00.000Z", limit: 100 }))
+      .resolves.toEqual(events);
+  });
   it("uses site-scoped functions and returns bounded management records", async () => {
     const client = supabase({
       data: {

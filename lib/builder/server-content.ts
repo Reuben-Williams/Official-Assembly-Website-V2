@@ -11,11 +11,13 @@ import site from "../../builder.config";
 import { getBuilderAdminClient } from "../supabase/admin";
 import { createSiteKeyResolvingAdapter } from "./repositories";
 import { createOfficialAssemblyRecoveryRuntime } from "./recovery";
+import { loadPublishedPhotoCaptionVisibility } from "../carousel/server";
 
 const GLOBAL_CONTENT_PATH = "/__builder/global";
 
 export type BuilderServerContent = Readonly<{
   regions: Readonly<Record<string, EditableValue>>;
+  showPhotoCaptions?: boolean;
 }>;
 
 type LoaderDependencies = Readonly<{
@@ -92,17 +94,20 @@ export async function loadBuilderServerContent(
   dependencies: LoaderDependencies = {},
 ): Promise<BuilderServerContent> {
   const kinds = registeredKinds(pagePath);
+  const captionVisibility = dependencies.adapter || dependencies.recovery ? Promise.resolve(false) : loadPublishedPhotoCaptionVisibility();
   try {
-    const [global, page] = await Promise.all([
+    const [global, page, showPhotoCaptions] = await Promise.all([
       readPublishedScope(GLOBAL_CONTENT_PATH, dependencies),
       readPublishedScope(pagePath, dependencies),
+      captionVisibility,
     ]);
     const stored = { ...global.regions, ...page.regions };
-    return { regions: registeredValues(kinds, stored) };
+    return { regions: registeredValues(kinds, stored), ...(showPhotoCaptions ? { showPhotoCaptions } : {}) };
   } catch (cause) {
     if (cause instanceof BuilderPublishedContentUnavailableError) throw cause;
     const recovered = await readRecovery(pagePath, dependencies);
-    if (recovered) return { regions: registeredValues(kinds, recovered.regions) };
+    const showPhotoCaptions = await captionVisibility;
+    if (recovered) return { regions: registeredValues(kinds, recovered.regions), ...(showPhotoCaptions ? { showPhotoCaptions } : {}) };
     throw new BuilderPublishedContentUnavailableError(pagePath, {
       cause: cause instanceof Error ? cause : undefined,
     });
@@ -112,12 +117,14 @@ export async function loadBuilderServerContent(
 export async function loadBuilderGlobalContent(
   dependencies: LoaderDependencies = {},
 ): Promise<BuilderServerContent> {
+  const captionVisibility = dependencies.adapter || dependencies.recovery ? Promise.resolve(false) : loadPublishedPhotoCaptionVisibility();
   try {
-    const global = await readPublishedScope(GLOBAL_CONTENT_PATH, dependencies);
-    return { regions: registeredValues(globalKinds(), global.regions) };
+    const [global, showPhotoCaptions] = await Promise.all([readPublishedScope(GLOBAL_CONTENT_PATH, dependencies), captionVisibility]);
+    return { regions: registeredValues(globalKinds(), global.regions), ...(showPhotoCaptions ? { showPhotoCaptions } : {}) };
   } catch (cause) {
     const recovered = await readRecovery("/", dependencies);
-    if (recovered) return { regions: registeredValues(globalKinds(), recovered.regions) };
+    const showPhotoCaptions = await captionVisibility;
+    if (recovered) return { regions: registeredValues(globalKinds(), recovered.regions), ...(showPhotoCaptions ? { showPhotoCaptions } : {}) };
     throw new BuilderPublishedContentUnavailableError(GLOBAL_CONTENT_PATH, {
       cause: cause instanceof Error ? cause : undefined,
     });

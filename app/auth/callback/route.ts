@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   } catch {
     return NextResponse.redirect(new URL("/admin/login", url.origin));
   }
-  if (tokenHash && type === "email") {
+  if (membership.role === "owner" && tokenHash && type === "email") {
     const operatorId = data.user?.id ?? "";
     const authLastSignInAt = data.user?.last_sign_in_at ?? "";
     if (operatorId && authLastSignInAt) {

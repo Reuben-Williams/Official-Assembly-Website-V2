@@ -414,3 +414,20 @@
     scroll-behavior: auto;
   }
 }
+.dialog {
+  background: white;
+  color: #0b2b53;
+  border: 1px solid #b9c7d8;
+  border-radius: 1rem;
+  max-height: 85dvh;
+  max-width: min(40rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  overflow: auto;
+}
+.dialog::backdrop { background: rgb(5 23 45 / 65%); }
+.dialog p { line-height: 1.6; }
+.dialog :is(input, textarea) { width: 100%; color: inherit; font: inherit; padding: .7rem; }
+.dialog label { display: grid; gap: .5rem; margin: .75rem 0; }
+.dialog label.checkbox { display: flex; }
+.dialog .checkbox input { width: 1.2rem; }
+.dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f6fa; padding: .75rem; }

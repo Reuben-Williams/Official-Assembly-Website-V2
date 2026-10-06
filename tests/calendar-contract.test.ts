@@ -182,9 +182,7 @@ describe("calendar publication", () => {
 
   it.each([
     ["titleEn", ""],
-    ["titleEs", ""],
     ["descriptionEn", ""],
-    ["descriptionEs", ""],
     ["startAt", null],
     ["locationName", ""],
     ["locationAddress", ""],
@@ -198,12 +196,19 @@ describe("calendar publication", () => {
     })).toThrow();
   });
 
-  it("requires both localized link labels when an action URL is present", () => {
-    const draft = normalizeCalendarDraft({ ...completeDraft(), actionLabelEs: "" });
+  it("requires the English link label when an action URL is present", () => {
+    const draft = normalizeCalendarDraft({ ...completeDraft(), actionLabelEn: "" });
     expect(() => assertCalendarPublishable(draft, {
       siteId,
       mediaAsset: { id: mediaAssetId, siteId, status: "ready" }
     })).toThrow(/label/i);
+  });
+
+  it("publishes English-only content without inventing Spanish", () => {
+    const draft = normalizeCalendarDraft({ ...completeDraft(), titleEs: "   ", descriptionEs: "", actionLabelEs: "" });
+    expect(assertCalendarPublishable(draft, { siteId, mediaAsset: { id: mediaAssetId, siteId, status: "ready" } })).toBe(draft);
+    expect(draft.titleEs).toBe("");
+    expect(draft.descriptionEs).toBe("");
   });
 
   it.each([
