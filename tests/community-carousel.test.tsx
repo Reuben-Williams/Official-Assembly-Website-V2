@@ -6,7 +6,7 @@ import { CommunityCarousel } from "../app/ui/CommunityCarousel";
 import { communityPhotos } from "../app/data/community-photos";
 import { createCarouselBaseline } from '../lib/carousel/contract';
 
-vi.mock("next/image", () => ({ default: ({ preload: _preload, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { preload?: boolean }) => React.createElement("img", props) }));
+vi.mock("next/image", () => ({ default: ({ preload: _preload, unoptimized: _unoptimized, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { preload?: boolean; unoptimized?: boolean }) => React.createElement("img", props) }));
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root;
 let container: HTMLDivElement;
@@ -35,6 +35,12 @@ afterEach(async () => {
 });
 
 describe("approved community carousel", () => {
+  it("reserves unscaled control height inside the zoomed editor preview", async () => {
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(86);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 420, 28));
+    await act(async () => root.render(<CommunityCarousel locale="en" />));
+    expect(container.querySelector<HTMLElement>('[data-community-carousel]')?.style.getPropertyValue('--carousel-footer-height')).toBe('94px');
+  });
   it('hides slide titles and captions by default, retaining accessible descriptions and controls', async () => {
     await act(async () => root.render(<CommunityCarousel locale="en"/>));
     expect(container.textContent).not.toContain(communityPhotos[0].en.caption);

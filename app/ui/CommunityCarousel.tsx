@@ -131,7 +131,7 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
     const controls = footer.current;
     if (!carousel || !controls) return;
     // Complete photographs must clear the actual controls, including wrapped captions.
-    const measure = () => carousel.style.setProperty("--carousel-footer-height", `${Math.ceil(controls.getBoundingClientRect().height) + 8}px`);
+    const measure = () => carousel.style.setProperty("--carousel-footer-height", `${controls.offsetHeight + 8}px`);
     const resize = new ResizeObserver(measure);
     resize.observe(controls);
     measure();
