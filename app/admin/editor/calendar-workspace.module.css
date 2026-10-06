@@ -26,6 +26,10 @@
   margin: 0.3rem 0 0;
 }
 
+.hero h1 {
+  color: #fff;
+}
+
 .hero p:not(.eyebrow) {
   color: #dce9f7;
   line-height: 1.6;
