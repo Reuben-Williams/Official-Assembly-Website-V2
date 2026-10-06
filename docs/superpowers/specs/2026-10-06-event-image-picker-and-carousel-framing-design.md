@@ -1,7 +1,7 @@
 # Event image picker and complete carousel photographs
 
 Date: 2026-10-06
-Status: Conversational design approved; independent spec review passed; awaiting the user's written-spec approval.
+Status: Written spec approved by the user on 2026-10-06; implementation and verification in progress.
 
 ## 1. Approved outcome and boundaries
 

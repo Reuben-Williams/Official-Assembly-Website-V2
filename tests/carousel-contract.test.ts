@@ -100,6 +100,16 @@ describe("carousel document", () => {
     expect(entry.en).toEqual({ title: "", caption: "", alt: "" });
     expect(entry.es).toEqual(entry.en);
   });
+  it("starts replacements centered and uncropped on desktop and inherited mobile without changing the prior entry", () => {
+    const prior = baseline().entries[0];
+    prior.mobile = { fit: "cover", x: 12, y: 20 };
+    const snapshot = structuredClone(prior);
+    const next = replaceCarouselPhoto(prior, refs[3]);
+    expect(next.desktop).toEqual({ fit: "contain", x: 50, y: 50 });
+    expect(next.mobile).toBeNull();
+    expect(effectiveCarouselSettings(baseline(), next, "mobile", false).frame.fit).toBe("contain");
+    expect(prior).toEqual(snapshot);
+  });
   it("reset changes appearance only", () => {
     const entry = baseline().entries[0];
     entry.zoom = true;

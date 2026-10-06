@@ -1,0 +1,39 @@
+.picker { min-width: 0; border: 1px solid #d8e0e9; border-radius: .85rem; padding: 1rem; display: grid; gap: 1rem; }
+.heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.heading h3 { display: flex; align-items: center; gap: .5rem; font-size: 1rem; margin: 0; color: #0b2b53; }
+.heading p, .selectionInfo p { font-size: .85rem; line-height: 1.5; color: #53667d; margin: .45rem 0 0; }
+.picker button { font: inherit; cursor: pointer; touch-action: manipulation; }
+.refresh, .remove { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 44px; border: 1px solid #b9c7d8; border-radius: .65rem; background: #fff; color: #0b2b53; padding: .65rem .85rem; font-size: .85rem !important; font-weight: 700 !important; }
+.refresh { flex-shrink: 0; }
+.selected { display: flex; align-items: center; gap: 1rem; background: #f3f6fa; border: 1px solid #d8e0e9; border-radius: .75rem; padding: .8rem; min-width: 0; }
+.preview { flex: 0 0 min(44%, 240px); min-width: 0; height: 220px; display: grid; place-items: center; background: #e7edf4; border-radius: .5rem; overflow: hidden; }
+.preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.preview > span, .unavailable { display: grid; justify-items: center; gap: .5rem; font-size: .8rem; line-height: 1.5; color: #53667d; text-align: center; padding: .6rem; }
+.selectionInfo { min-width: 0; display: grid; justify-items: start; gap: .7rem; }
+.selectionInfo strong { overflow-wrap: anywhere; color: #17395f; }
+.selectedLabel { display: inline-flex; align-items: center; gap: .35rem; font-size: .75rem; font-weight: 800; color: #145c3a; }
+.noSelection { color: #53667d; font-size: .85rem; line-height: 1.5; margin: 0; display: flex; align-items: center; gap: .65rem; }
+.noSelection svg { flex-shrink: 0; }
+.picker .search { display: grid; gap: .45rem; font-size: .85rem; font-weight: 800; color: #27496d; }
+.searchField { position: relative; }
+.searchField > svg { position: absolute; top: 50%; left: .75rem; transform: translateY(-50%); pointer-events: none; color: #607188; }
+.picker .searchField input { width: 100%; min-height: 44px; padding: .7rem .7rem .7rem 2.4rem; color: #102f52; border: 1px solid #b9c7d8; border-radius: .65rem; background: #fff; font: inherit; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); gap: .75rem; max-height: 25rem; overflow-y: auto; overscroll-behavior: contain; padding: .3rem; scrollbar-gutter: stable; }
+.tile { min-width: 0; min-height: 44px; padding: 0; text-align: left; background: #fff; color: #17395f; border: 2px solid #d8e0e9; border-radius: .75rem; overflow: hidden; content-visibility: auto; contain-intrinsic-size: auto 190px; }
+.tile:hover:not(:disabled) { border-color: #6f9dce; background: #f3f7fc; }
+.tile[aria-pressed="true"] { border-color: #0d477f; box-shadow: 0 0 0 1px #0d477f; background: #eaf2fb; }
+.thumbnail { display: grid; place-items: center; position: relative; height: 140px; padding: .35rem; background: #eef2f7; }
+.thumbnail img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tile strong { display: block; padding: .6rem .7rem; font-size: .8rem; line-height: 1.4; overflow-wrap: anywhere; }
+.check { position: absolute; top: .5rem; right: .5rem; background: #0d477f; color: white; display: grid; place-items: center; border-radius: 50%; width: 25px; height: 25px; }
+.picker button:disabled { cursor: not-allowed; opacity: .65; }
+.picker :is(button, input):focus-visible { outline: 3px solid #e2ad32; outline-offset: 2px; }
+.message, .error { margin: 0; padding: .85rem; border-radius: .65rem; font-size: .85rem; line-height: 1.5; color: #53667d; background: #f3f6fa; }
+.error { color: #8f2027; background: #fff1f1; }
+@media (max-width: 620px) {
+  .heading { flex-direction: column; }
+  .selected { flex-direction: column; align-items: stretch; }
+  .preview { flex: none; width: 100%; height: 240px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .thumbnail { height: 125px; }
+}

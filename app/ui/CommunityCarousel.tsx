@@ -26,6 +26,7 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   const reduced = useSyncExternalStore(subscribeMotion, readMotion, serverMotion);
   const root = useRef<HTMLElement>(null);
+  const footer = useRef<HTMLDivElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const galleryButton = useRef<HTMLButtonElement>(null);
@@ -126,6 +127,18 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
   }, []);
 
   useEffect(() => {
+    const carousel = root.current;
+    const controls = footer.current;
+    if (!carousel || !controls) return;
+    // Complete photographs must clear the actual controls, including wrapped captions.
+    const measure = () => carousel.style.setProperty("--carousel-footer-height", `${Math.ceil(controls.getBoundingClientRect().height) + 8}px`);
+    const resize = new ResizeObserver(measure);
+    resize.observe(controls);
+    measure();
+    return () => resize.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!galleryOpen || !dialog.current) return;
     const modal = dialog.current;
     const overflow = document.body.style.overflow;
@@ -153,6 +166,7 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
         }
       }}>
       <div id={`${id}-stage`} className={styles.stage} data-carousel-stage data-format={photo.fit === 'contain' ? "portrait" : "landscape"}
+        data-fit={photo.fit} data-mobile-fit={photo.mobileFit}
         data-mobile-format={photo.mobileFit === 'contain' ? "portrait" : "landscape"}
         data-mobile-framing={photo.mobileFraming}
         role="group" aria-roledescription={copy.slide} aria-label={`${current + 1} ${copy.of} ${photos.length}: ${text.title || text.alt}`}>
@@ -165,7 +179,7 @@ export function CommunityCarousel({ locale, projection, initialIndex = 0, onSele
         </div>
         {failedPhoto === photo.id && <p className={styles.error} role="status">{copy.error}</p>}
       </div>
-      <div className={styles.footer}>
+      <div ref={footer} className={styles.footer}>
         <div className={styles.description} aria-live={activePlayback ? "off" : "polite"} aria-atomic="true">
           <span className={styles.index}>{String(current + 1).padStart(2, "0")} / 08</span>
           {projection?.document.defaults.showCaptions === true && (

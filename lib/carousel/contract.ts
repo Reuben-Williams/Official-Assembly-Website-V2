@@ -237,6 +237,7 @@ export function replaceCarouselPhoto(
 ): CarouselEntry {
   return {
     ...resetCarouselAppearance(entry),
+    desktop: { fit: "contain", x: 50, y: 50 },
     media: { ...media },
     en: { title: "", caption: "", alt: "" },
     es: { title: "", caption: "", alt: "" },

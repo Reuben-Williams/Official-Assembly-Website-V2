@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2, CalendarDays, Clock3, MapPin, RotateCcw } from "lucide-react";
 import { CalendarDialog } from "./calendar-dialog";
 import { CalendarTranslation } from "./calendar-translation";
+import { CalendarImagePicker, type CalendarMediaChoice } from "./calendar-image-picker";
 import { localizedCalendarField } from "../../../lib/calendar/localization";
 
 import {
@@ -25,11 +26,6 @@ import type {
 } from "../../../lib/calendar/repository";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import styles from "./calendar-workspace.module.css";
-
-type CalendarMediaChoice = {
-  mediaId: string;
-  label: string;
-};
 
 type CalendarFormState = {
   titleEn: string;
@@ -165,11 +161,17 @@ export function CalendarWorkspace({
   role,
   client,
   mediaAssets = emptyMediaAssets,
+  mediaLoading = false,
+  mediaError = "",
+  onRefreshMedia,
   now = currentDate
 }: {
   role: CalendarRole;
   client?: CalendarClient;
   mediaAssets?: readonly CalendarMediaChoice[];
+  mediaLoading?: boolean;
+  mediaError?: string;
+  onRefreshMedia?: () => Promise<void>;
   now?: () => Date;
 }) {
   const defaultClient = useMemo(() => createHttpCalendarClient({ getCsrfToken: csrfCookie }), []);
@@ -428,13 +430,9 @@ export function CalendarWorkspace({
                     <label>English link label (required with a URL)<input maxLength={120} name="actionLabelEn" onChange={(event) => update("actionLabelEn", event.currentTarget.value)} value={form.actionLabelEn} /></label>
                     <label>Spanish link label (optional)<input lang="es" maxLength={120} name="actionLabelEs" onChange={(event) => update("actionLabelEs", event.currentTarget.value)} value={form.actionLabelEs} /></label>
                   </div>
-                  <label>Event image (optional)
-                    <select name="mediaAssetId" onChange={(event) => update("mediaAssetId", event.currentTarget.value)} value={form.mediaAssetId}>
-                      <option value="">No image</option>
-                      {mediaAssets.map((asset) => <option key={asset.mediaId} value={asset.mediaId}>{asset.label}</option>)}
-                    </select>
-                  </label>
                 </fieldset>
+                <CalendarImagePicker value={form.mediaAssetId} onChange={value => update("mediaAssetId", value)}
+                  mediaAssets={mediaAssets} disabled={Boolean(editorDisabled)} loading={mediaLoading} error={mediaError} onRefresh={onRefreshMedia} />
                 <fieldset disabled={editorDisabled}>
                   <legend>Publication confirmations</legend>
                   <label className={styles.checkbox}><input checked={form.publicApproved} name="publicApproved" onChange={(event) => update("publicApproved", event.currentTarget.checked)} type="checkbox" />This event is approved for public display.</label>

@@ -137,6 +137,7 @@ export function EditorClient({
   const [mediaAssets, setMediaAssets] = useState<ManagedMediaChoice[]>([]);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
+  const [mediaLoading, setMediaLoading] = useState(true);
   const [historySource,setHistorySource]=useState("all");
   const [workspaceShown,setWorkspaceShown]=useState(()=>initialWorkspaceId ?? (typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("workspace") ?? ""));
   useEffect(() => {
@@ -175,12 +176,15 @@ export function EditorClient({
     };
   }, [mediaUpload, role, historySource]);
   const refreshMedia = useCallback(async () => {
+    setMediaLoading(true);
     try {
       const assets = await client.listMedia();
       setMediaAssets(assets.map(managedMediaChoice).filter((asset): asset is ManagedMediaChoice => Boolean(asset)));
       setMediaError("");
     } catch {
       setMediaError("The current private media gallery could not be loaded. Try again.");
+    } finally {
+      setMediaLoading(false);
     }
   }, [client]);
   useEffect(() => {
@@ -191,6 +195,8 @@ export function EditorClient({
       setMediaError("");
     }).catch(() => {
       if (active) setMediaError("The current private media gallery could not be loaded. Try again.");
+    }).finally(() => {
+      if (active) setMediaLoading(false);
     });
     return () => { active = false; };
   }, [client]);
@@ -219,7 +225,7 @@ export function EditorClient({
     return {mediaId:uploaded.mediaId,revisionId:uploaded.revisionId};
   },[mediaUpload,refreshMedia]);
   const calendarMediaAssets = useMemo(
-    () => mediaAssets.map((asset) => ({ mediaId: asset.mediaId, label: asset.label })),
+    () => mediaAssets.filter(asset => asset.mimeType.startsWith("image/")),
     [mediaAssets]
   );
   const registration = useMemo<BuilderShellRegistration>(() => {
@@ -261,6 +267,9 @@ export function EditorClient({
           <CalendarWorkspace
             client={calendar}
             mediaAssets={calendarMediaAssets}
+            mediaLoading={mediaLoading}
+            mediaError={mediaError}
+            onRefreshMedia={refreshMedia}
             role={role}
           />
         )
@@ -282,7 +291,7 @@ export function EditorClient({
       workspaces,
       globalHeader: <><EditorOperationalHeader />{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
     };
-  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource]);
+  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, mediaLoading, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource]);
   const initialWorkspace = (initialWorkspaceId ?? (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard")) as BuilderWorkspaceId;

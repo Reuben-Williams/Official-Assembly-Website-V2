@@ -156,3 +156,23 @@
   color: white;
   background: #1e3353;
 }
+
+/* Whole-image framing is independent of orientation. Fades remain behind the
+   complete photo; measured padding keeps controls and optional captions clear. */
+.stage[data-fit="contain"] { padding: 8px 16px var(--carousel-footer-height, 104px); }
+.stage[data-fit="contain"] .photoMotion { position: relative; z-index: 2; }
+.stage[data-fit="contain"] .photo { height: 100%; object-fit: contain; mask-image: none; animation: none; }
+@container carousel (max-width: 900px) {
+  .stage[data-fit="contain"] { padding-bottom: var(--carousel-footer-height, 148px); }
+}
+@container carousel (max-width: 600px) {
+  .stage[data-mobile-fit="cover"] { padding: 0; }
+  .stage[data-mobile-fit="cover"] .photoMotion { position: static; z-index: auto; }
+  .stage[data-mobile-fit="cover"] .photo { object-fit: cover; mask-image: none; }
+  .stage[data-mobile-fit="cover"][data-mobile-framing="caption-safe"] .photo { height: calc(100% - 125px); mask-image: linear-gradient(to bottom, #000 65%, transparent 100%); }
+  .stage[data-mobile-fit="cover"] .photoMotion[data-zoom="true"] .photo { animation: carouselZoom var(--photo-seconds) linear both; animation-play-state: paused; }
+  .carousel[data-playing="true"] .stage[data-mobile-fit="cover"] .photoMotion[data-zoom="true"] .photo { animation-play-state: running; }
+  .stage[data-mobile-fit="contain"] { padding: 8px 12px var(--carousel-footer-height, 190px); }
+  .stage[data-mobile-fit="contain"] .photoMotion { position: relative; z-index: 2; }
+  .stage[data-mobile-fit="contain"] .photo { height: 100%; object-fit: contain; mask-image: none; animation: none; }
+}
