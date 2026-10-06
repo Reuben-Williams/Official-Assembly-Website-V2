@@ -1,7 +1,7 @@
 # Event image picker and complete carousel photographs
 
 Date: 2026-10-06
-Status: Conversational design approved; written-spec review pending.
+Status: Conversational design approved; independent spec review passed; awaiting the user's written-spec approval.
 
 ## 1. Approved outcome and boundaries
 
@@ -39,7 +39,7 @@ Selecting an image updates the local event draft's `mediaAssetId`, preview, and 
 
 Distinguish loading, an empty media library, no search results, and a failed gallery read. Offer Refresh images for retry where applicable. Preserve the existing selection on loading/read failures or when search hides its tile. If a selected identifier is absent from the latest choices, show Image preview unavailable with that identifier retained; staff can explicitly replace or remove it. Never silently clear saved media.
 
-A failed thumbnail shows Preview unavailable and its library name rather than a broken-image icon. Its tile remains unavailable for a new selection until refreshed successfully; a previously selected image is retained. The same rule applies to a failed large preview without falsely declaring that the saved event image has been deleted. Viewer access, deleted-event editing restrictions, and in-progress command restrictions disable image mutation; searching and viewing do not grant editing permission.
+A failed thumbnail shows Preview unavailable and its library name rather than a broken-image icon. Its tile remains unavailable for a new selection until refreshed successfully; a previously selected image is retained. Clear failed-preview state when refresh supplies a different preview URL so renewed signed URLs can load normally. The same rule applies to a failed large preview without falsely declaring that the saved event image has been deleted. Viewer access, deleted-event editing restrictions, and in-progress command restrictions disable image mutation; searching and viewing do not grant editing permission.
 
 ## 4. Complete carousel photographs
 
@@ -68,7 +68,7 @@ Use normal draft/save/review/publish commands with their expected-version checks
 Use test-first implementation with observed failing tests before code changes.
 
 - Picker tests: actual image URLs and names render; thumbnail/large-preview framing is complete; search; selected highlight; selection and removal reach the existing save payload; selection remains on refresh/read failure; loading/empty/no-results states; broken images; missing selection; viewer/deleted/busy restrictions; native button keyboard behavior without accidental form submission.
-- Carousel tests: replacements default to complete framing without mutating input or old immutable revisions; explicit desktop/mobile Fill options remain respected; whole-image mode avoids masks, overlaid fades, and zoom cropping; editor preview and public component share behavior; original collection and caption/playback semantics stay intact.
+- Carousel tests: replacements default to complete framing without mutating input or old immutable revisions; explicit desktop/mobile Fill options remain respected, including mixed fits; whole-image mode avoids masks, overlaid fades, and zoom cropping, including when captions are visible or legacy caption-safe flags are retained; editor preview and public component share behavior; original collection and caption/playback semantics stay intact.
 - Run focused calendar and carousel suites, TypeScript and lint, followed by the broader application suite and the normal guarded production build. Report their actual scope; do not claim physical-device or provider-send certification.
 - In an authenticated staged preview, visually inspect portrait and landscape photographs in desktop and mobile containers, keyboard focus, grid scrolling, real event selection without saving unrelated content, and existing calendar links. Test caption toggle and playback only as non-persistent viewing actions.
 - Release through the existing staged Vercel workflow only when normal brand/newsletter readiness checks pass. Do not weaken guards to ship these UI changes. After deployment handover, publish only the approved recent-photo framing adjustment through the owner workflow and verify the current live homepage and Calendar workspace.
