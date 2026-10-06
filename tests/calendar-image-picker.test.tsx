@@ -57,6 +57,12 @@ async function search(value: string) {
 }
 
 describe("visual event image selection", () => {
+  it("keeps full-library rows at their content height rather than squeezing them into the scroll window", () => {
+    const css = readFileSync("app/admin/editor/calendar-image-picker.module.css", "utf8");
+    expect(css).toMatch(/\.grid \{[^}]*grid-auto-rows:\s*max-content/);
+    expect(css).toMatch(/\.grid \{[^}]*align-content:\s*start/);
+    expect(css).toMatch(/\.tile \{[^}]*min-height:\s*190px/);
+  });
   it("constrains image grid tracks so portrait flyers cannot overflow their preview frames", () => {
     const css = readFileSync("app/admin/editor/calendar-image-picker.module.css", "utf8");
     for (const selector of ["preview", "thumbnail"]) {
