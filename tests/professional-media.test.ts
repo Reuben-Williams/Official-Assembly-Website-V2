@@ -43,7 +43,7 @@ const workspaceRoot = process.cwd();
 const manifestPath = path.join(workspaceRoot, "content", "approved-professional-media.json");
 const expectedPlacements = {
   "media.professional.home-supporting": [],
-  "media.professional.home-official-portrait": [],
+  "media.professional.home-official-portrait": [["/", "official profile portrait"]],
   "media.professional.about-primary": [],
   "media.professional.news-supporting": [["/news", "news supporting"]],
   "media.professional.community-primary": [],
@@ -119,7 +119,7 @@ describe("approved professional media", () => {
         : asset.id.replace("media.professional.", "professional-");
       const siteAsset = getImage(imageKey);
       expect(siteAsset.regionId).toBe(asset.id);
-      if (["media.professional.home-supporting", "media.professional.home-official-portrait", "media.professional.about-primary"].includes(asset.id)) {
+      if (["media.professional.home-supporting", "media.professional.about-primary"].includes(asset.id)) {
         expect(siteAsset.src).toContain("/images/october-editorial/");
         continue;
       }
@@ -131,8 +131,10 @@ describe("approved professional media", () => {
     const homePortrait = getImage("professional-home-official");
     expect(homePortrait).toMatchObject({
       regionId: "media.professional.home-official-portrait",
-      src: "/images/october-editorial/DSC01789-desktop.webp",
-      mobileSrc: "/images/october-editorial/DSC01789-mobile.webp",
+      src: "/images/professional/home-official-portrait-desktop.webp",
+      mobileSrc: "/images/professional/home-official-portrait-mobile.webp",
+      width: 500,
+      height: 728,
       fullFrame: true,
     });
   });

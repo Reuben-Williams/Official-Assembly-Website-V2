@@ -149,10 +149,11 @@ describe("approved editorial public layout", () => {
     expect(cards[0].textContent).toContain("Official Legislative Contact Form");
     expect(cards[3].textContent).toContain("Votes by bill");
   });
-  it("uses DSC01789 for the homepage portrait with a complete accessible frame", () => {
+  it("keeps the official state headshot on the homepage with a complete accessible frame", () => {
     const doc = new DOMParser().parseFromString(renderToStaticMarkup(<OfficialProfileSection content={{ regions: {} }} />), "text/html");
     const portrait = doc.querySelector('[data-profile-portrait]');
-    expect(portrait?.querySelector("img")?.src).toContain("DSC01789");
+    expect(portrait?.querySelector("img")?.src).toContain("home-official-portrait-desktop.webp");
+    expect(portrait?.querySelector("[data-editorial-full-frame]")).not.toBeNull();
     expect(portrait?.querySelector("img")?.alt).toContain("Morales");
     expect(portrait?.querySelector(".image-caption")).toBeNull();
   });

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "approvedOn": "2026-10-06",
-  "basis": "User selected DSC01789 for About and the homepage portrait, approved the supplied community collection, and requested replacement of the Constituent guidance photo. Volunteer photo remains unchanged.",
+  "basis": "User selected DSC01789 for About, approved the supplied community collection, and requested replacement of the Constituent guidance photo. On 2026-10-07 the user restored the original official state headshot on the homepage. Volunteer photo remains unchanged.",
   "processing": "Responsive WebP derivatives preserve the complete authentic frame, without cropping, upscaling, or generative changes. Older sources and derivatives are retained.",
   "assets": [
     {
@@ -12,7 +12,7 @@
         "desktop": { "path": "/images/october-editorial/DSC01789-desktop.webp", "width": 1600, "height": 2400, "sha256": "4e803a0413b4f6c554d6367f510e3a3ba7509288c9a96fc26b884dec81171ef1" },
         "mobile": { "path": "/images/october-editorial/DSC01789-mobile.webp", "width": 800, "height": 1200, "sha256": "e5a9c7fa50d55a452fa9d24f9b4916d38fa38d75d32b0a25d1f8184009d4c7da" }
       },
-      "placements": ["media.professional.home-official-portrait", "media.professional.about-primary"],
+      "placements": ["media.professional.about-primary"],
       "alt": { "en": "Official portrait of Assemblywoman Carmen Theresa Morales, wearing a navy suit, with United States and New Jersey flags behind her", "es": "Retrato oficial de la asambleísta Carmen Theresa Morales, vestida con un traje azul marino, con las banderas de Estados Unidos y Nueva Jersey detrás" },
       "caption": { "en": "Assemblywoman Carmen Theresa Morales", "es": "Asambleísta Carmen Theresa Morales" }
     },

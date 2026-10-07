@@ -167,7 +167,11 @@ export const imageAssets: ImageAsset[] = [
     regionId: "media.professional.home-official-portrait",
     src: "/images/professional/home-official-portrait-desktop.webp",
     mobileSrc: "/images/professional/home-official-portrait-mobile.webp",
-    alt: "Official portrait of Assemblywoman Carmen Theresa Morales"
+    width: 500,
+    height: 728,
+    fullFrame: true,
+    alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
+    altEs: "Retrato oficial de la asambleísta Carmen Theresa Morales"
   },
   {
     key: "professional-about-primary",

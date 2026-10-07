@@ -173,7 +173,7 @@
           "height": 364
         }
       },
-      "placements": [],
+      "placements": [{ "page": "/", "region": "official profile portrait" }],
       "alt": {
         "en": "Official portrait of Assemblywoman Carmen Theresa Morales",
         "es": "Retrato oficial de la asambleísta Carmen Theresa Morales"

@@ -94,19 +94,22 @@ describe("centered homepage banner release", () => {
     expect(html).toContain("Retrato oficial de la asambleísta Carmen Theresa Morales");
   });
 
-  it("replaces a previously published incorrect portrait with the protected official image", async () => {
+  it.each([
+    "/images/professional/about-primary-desktop.webp",
+    "/images/october-editorial/DSC01789-desktop.webp",
+  ])("replaces the previously published portrait %s with the protected official state headshot", async (previousSrc) => {
     const html = await renderHome("en", {
       regions: {
         "media.professional.home-official-portrait": {
           type: "image",
-          src: "/images/professional/about-primary-desktop.webp",
+          src: previousSrc,
           alt: "Previously published incorrect portrait",
         },
       },
     });
 
-    expect(html).toContain("DSC01789-mobile.webp");
-    expect(html).not.toContain("about-primary-desktop.webp");
+    expect(html).toContain("home-official-portrait-mobile.webp");
+    expect(html).not.toContain(previousSrc);
     expect(html).not.toContain("Previously published incorrect portrait");
   });
 });
