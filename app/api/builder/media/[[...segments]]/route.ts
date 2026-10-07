@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import site from "../../../../../builder.config";
+import { createPageMediaRepository, pageMediaIsPublished } from "../../../../../lib/builder/page-media-repository";
+import { deliverPageMedia } from "../../../../../lib/builder/page-media-delivery";
+import { PAGE_MEDIA_UUID } from "../../../../../lib/builder/page-media";
 
 import {
   BuilderAuthorizationError,
@@ -16,7 +20,7 @@ import {
 } from "../../../../../lib/builder/media-upload";
 import { authenticateBuilderRequest } from "../../../../../lib/builder/request-auth";
 import { listNormalizedMediaAssets } from "../../../../../lib/builder/repositories";
-import { getBuilderAdminClient } from "../../../../../lib/supabase/admin";
+import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -449,4 +453,32 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
   } catch (error) {
     return errorResponse(error);
   }
+}
+
+// Keep delivery alongside uploads: a sibling dynamic route would intercept
+// single-segment POST commands such as /plans and /manifests.
+export async function GET(request: Request, context: { params: Promise<{ segments?: string[] }> }) {
+  const segments = (await context.params).segments ?? [];
+  const missing = () => new Response(null, { status: 404, headers: { "cache-control": "no-store" } });
+  if (segments.length !== 1 || !PAGE_MEDIA_UUID.test(segments[0]!)) return missing();
+  try {
+    const admin = getBuilderAdminClient();
+    const siteId = admin ? await resolveBuilderSiteId(admin) : null;
+    if (!admin || !siteId) return missing();
+    const repo = createPageMediaRepository(admin, siteId);
+    return await deliverPageMedia(request, segments[0]!, {
+      byRevision: repo.byRevision,
+      isPublished: ref => pageMediaIsPublished(admin, siteId, site, repo, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", ref),
+      async authorizePreview() {
+        await authorizeBuilderRequest({ request, operation: "content.readDraft",
+          allowedOrigins: allowedBuilderOrigins(new URL(request.url).origin),
+          authenticate: () => authenticateBuilderRequest(request) });
+      },
+      async download(ref) {
+        const result = await admin.storage.from("builder-media").download(ref.objectKey);
+        if (result.error || !result.data) throw new Error("PAGE_MEDIA_DOWNLOAD_FAILED");
+        return new Uint8Array(await result.data.arrayBuffer());
+      },
+    });
+  } catch { return missing(); }
 }

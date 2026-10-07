@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCarouselBaseline } from '../lib/carousel/contract';
 import { createRecoveryContentReader } from '../lib/builder/recovery/reader';
 
-import { RecoveryStoreError, createRecoveryArtifactStore, type RecoveryObjectStore } from '../lib/builder/recovery/blob-store';
+import { RecoveryStoreError, createRecoveryArtifactStore, recoveryDigest, type RecoveryObjectStore } from '../lib/builder/recovery/blob-store';
 import { runRecoveryWorkerOnce, type RecoveryGenerationSource, type RecoveryWorkerRepository } from '../lib/builder/recovery/worker';
 import { runMediaReplicaWorkerOnce, type MediaReplicaClaim, type MediaReplicaRepository } from '../lib/builder/recovery/media-replica-worker';
 
@@ -82,6 +82,24 @@ function mediaRepository(overrides: Partial<MediaReplicaRepository> = {}): Media
 }
 
 describe("managed media recovery worker", () => {
+  it('restores the exact page revision when one asset has two revisions, including shared images',async()=>{
+    const objects=new MemoryObjects();
+    const artifacts=createRecoveryArtifactStore({objects,environment:'preview',siteKey:source.siteKey});
+    const bytes=new TextEncoder().encode('second-photo');
+    const second={...source.media[0],revisionId:'22222222-2222-4222-8222-222222222222',bytes,digest:await recoveryDigest(bytes)};
+    const pageImage={type:'image' as const,mediaId:second.mediaId,src:`/api/builder/media/${second.revisionId}`,alt:'Approved photo'};
+    const updated={...source,global:{...source.global,values:{'shared.photo':pageImage}},media:[source.media[0],second]};
+    const repo=repository({loadGeneration:vi.fn(async()=>updated)});
+    expect((await runRecoveryWorkerOnce({environment:'preview',workerId:'test',configuredRoutes:['/','/about'],repository:repo,artifacts})).status).toBe('completed');
+    const latest=await artifacts.readLatest();const manifest=await artifacts.readJson(latest!.pointer.manifestPath,{useCache:false});
+    const path=(manifest!.value as any).routes.find((route:any)=>route.path==='/about').artifactPath;
+    const artifact=await artifacts.readJson(path,{useCache:false});
+    expect((artifact!.value as any).values['shared.photo'].src).toBe(pageImage.src);
+    const read=createRecoveryContentReader({artifacts,configuredRoutes:['/','/about'],grantSecret:'test-secret-that-is-at-least-32-characters',nowEpochSeconds:()=>1000});
+    const restored=(await read('/about'))?.regions['shared.photo'];
+    expect(restored).toMatchObject({type:'image',alt:'Approved photo'});
+    expect(restored?.type==='image' && restored.src).toContain(second.digest);
+  });
   it("verifies and writes an immutable media revision before marking it ready", async () => {
     const objects = new MemoryObjects();
     const artifacts = createRecoveryArtifactStore({ objects, environment: "preview", siteKey: source.siteKey });

@@ -3,6 +3,8 @@ import { createInMemoryAdapter } from "@reuben-williams/core";
 import { describe, expect, it, vi } from "vitest";
 
 import { BuilderAuthorizationError } from "../lib/builder/authorization";
+import { HOME_OFFICIAL_PORTRAIT_VALUE, validateProtectedBrandSnapshot } from "../lib/brand/assets";
+import { approvedBrandAssets } from "../lib/brand/approved-assets";
 import {
   createHistoryResponseV1,
   createHistoryEventId,
@@ -35,6 +37,98 @@ function historyReaders(values: Partial<Record<HistorySource, readonly HistoryEv
 }
 
 describe("secured builder route handlers", () => {
+  it("adds private preview URLs only after draft authorization and keeps the response uncached", async () => {
+    const base=createInMemoryAdapter();
+    const read=vi.fn(async()=>({path:'/',versionId:'draft',regions:{'home.hero.title':{type:'text' as const,value:'Title'},
+      'home.photo':{type:'image' as const,src:'/api/builder/media/11111111-1111-4111-8111-111111111111',alt:'Photo'}}}));
+    const authorize=vi.fn(async()=>undefined);
+    const handlers=createSecuredBuilderHandlers({site,adapter:{...base,getDraftContent:read},authorize,getUserId:async()=> 'test-user'});
+    const request=new Request('http://localhost:3000/api/builder?mode=draft&path=%2F');
+    const response=await handlers.GET(request);
+    expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toContain('no-store');
+    expect((await response.json()).regions['home.photo'].src).toBe('/api/builder/media/11111111-1111-4111-8111-111111111111?preview=1');
+    expect(authorize.mock.invocationCallOrder[0]).toBeLessThan(read.mock.invocationCallOrder[0]!);
+    read.mockClear();authorize.mockRejectedValue(new BuilderAuthorizationError('AUTH_REQUIRED',401,'Login required'));
+    expect((await handlers.GET(request)).status).toBe(401);expect(read).not.toHaveBeenCalled();
+  });
+
+  it("authorizes publication status before reading private saved state", async () => {
+    const base=createInMemoryAdapter();const read=vi.fn(base.getDraftContent);
+    const handlers=createSecuredBuilderHandlers({site,adapter:{...base,getDraftContent:read},
+      authorize:async()=>{throw new BuilderAuthorizationError('AUTH_REQUIRED',401,'Login required');},getUserId:async()=> 'test-user'});
+    const response=await handlers.GET(new Request('http://localhost:3000/api/builder?resource=publication-status&path=%2F'));
+    expect(response.status).toBe(401);expect(response.headers.get('cache-control')).toContain('no-store');expect(read).not.toHaveBeenCalled();
+  });
+
+  it("normalizes all saved scope values before publishing an expired gallery image", async () => {
+    const base = createInMemoryAdapter();
+    const execute = vi.fn(async (_key: string, command: Record<string, unknown>) => ({
+      commandId: String(command.commandId), operation: "publish" as const, scopes: [], siteGenerationId: 1,
+    }));
+    const handlers = createSecuredBuilderHandlers({
+      site, adapter: { ...base,
+        getDraftContent: async (_key, path) => ({ path, regions: { "media.test": { type: "image", src: "expired-preview", alt: "Photo" } }, versionId: "draft" }),
+        getPublishedContent: async (_key, path) => ({ path, regions: {}, versionId: "published" }),
+      },
+      authorize: async () => undefined, getUserId: async () => "user-1", contentCommands: { execute },
+      normalizeContentSnapshot: async (input: { regions: Record<string, EditableValue> }) => ({ ...input.regions,
+        "media.test": { type: "image", src: "/api/builder/media/11111111-1111-4111-8111-111111111111", alt: "Photo", mediaId: "asset" },
+      }),
+    } as Parameters<typeof createSecuredBuilderHandlers>[0]);
+    const response = await handlers.PUT(new Request("http://localhost:3000/api/builder", {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ pagePath: "/" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(execute.mock.calls[0]?.[1]).toMatchObject({ scopes: [{ values: { "media.test": {
+      src: "/api/builder/media/11111111-1111-4111-8111-111111111111", mediaId: "asset",
+    } } }] });
+  });
+
+  it("publishes News with the approved portrait in the registered global snapshot", async () => {
+    const base = createInMemoryAdapter();
+    const execute = vi.fn(async (_key: string, command: Record<string, unknown>) => ({
+      commandId: String(command.commandId), operation: "publish" as const, scopes: [], siteGenerationId: 1,
+    }));
+    const handlers = createSecuredBuilderHandlers({
+      site: { ...site, pages: [...site.pages, { path: "/news", label: "News", regions: [] }],
+        globalRegions: [{ id: "media.professional.home-official-portrait", kind: "image" }] },
+      adapter: { ...base,
+        getDraftContent: async (_key, path) => ({ path, versionId: "draft", regions: path === "/__builder/global"
+          ? { "media.professional.home-official-portrait": HOME_OFFICIAL_PORTRAIT_VALUE } : {} as Record<string,EditableValue> }),
+        getPublishedContent: async (_key, path) => ({ path, regions: {}, versionId: "published" }),
+      },
+      authorize: async () => undefined, getUserId: async () => "user-1", contentCommands: { execute },
+      validateContentSnapshot: async (input) => validateProtectedBrandSnapshot(input, approvedBrandAssets),
+    });
+    const result = await handlers.PUT(new Request("http://localhost:3000/api/builder", {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ pagePath: "/news" }),
+    }));
+    expect(result.status).toBe(200);
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  it("returns a safe actionable error without publishing a substitute official portrait", async () => {
+    const base = createInMemoryAdapter();
+    const execute = vi.fn();
+    const handlers = createSecuredBuilderHandlers({
+      site: { ...site, globalRegions: [{ id: "media.professional.home-official-portrait", kind: "image" }] },
+      adapter: { ...base,
+        getDraftContent: async (_key, path) => ({ path, regions: { "media.professional.home-official-portrait":
+          { ...HOME_OFFICIAL_PORTRAIT_VALUE, src: "/wrong.webp" } }, versionId: "draft" }),
+        getPublishedContent: async (_key, path) => ({ path, regions: {}, versionId: "published" }),
+      },
+      authorize: async () => undefined, getUserId: async () => "user-1", contentCommands: { execute },
+      validateContentSnapshot: async (input) => validateProtectedBrandSnapshot(input, approvedBrandAssets),
+    });
+    const response = await handlers.PUT(new Request("http://localhost:3000/api/builder", {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ pagePath: "/" }),
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "PROTECTED_IMAGE_INVALID",
+      message: "Keep the approved single-person portrait for the homepage. Other photos can be changed separately." } });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it("normalizes protected values before saving a V2 draft snapshot", async () => {
     const base = createInMemoryAdapter();
     const normalizeEditableValue = vi.fn(async (input: { value: EditableValue }) => ({

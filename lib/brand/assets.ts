@@ -1,6 +1,7 @@
 import type { EditableValue, MediaAsset } from "@reuben-williams/core";
 
 import { districtConnections } from "../../app/data/district-connections";
+import { BuilderContentValidationError } from "../builder/content-errors";
 
 export const HOME_BRAND_BANNER_REGION_ID = "media.home-brand-banner";
 export const HOME_BRAND_BANNER_ALT_EN = "Assemblywoman Carmen T. Morales — Legislative District 34";
@@ -234,11 +235,12 @@ export function validateProtectedBrandSnapshot(
   const portrait = input.regions[HOME_OFFICIAL_PORTRAIT_REGION_ID];
   if (portrait !== undefined) {
     if (
-      input.pagePath !== "/"
+      !["/", "/__builder/global"].includes(input.pagePath)
       || portrait.type !== "image"
       || portrait.src !== HOME_OFFICIAL_PORTRAIT_VALUE.src
     ) {
-      invalid("select the approved single-person portrait.");
+      throw new BuilderContentValidationError("PROTECTED_IMAGE_INVALID",
+        "Keep the approved single-person portrait for the homepage. Other photos can be changed separately.");
     }
   }
 }

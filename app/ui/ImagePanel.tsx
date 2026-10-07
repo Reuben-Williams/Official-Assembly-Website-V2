@@ -59,6 +59,7 @@ export function ImagePanel({
         {mobileSrc ? <source media="(max-width: 640px)" srcSet={mobileSrc} /> : null}
         <Image
           src={src}
+          unoptimized={resolved.src.startsWith('/api/builder/media/') && resolved.src.endsWith('?preview=1')}
           alt={alt}
           fill={!fullFrame}
           width={fullFrame ? asset.width : undefined}

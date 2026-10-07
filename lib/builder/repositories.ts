@@ -1,5 +1,6 @@
 import {
   createSupabaseAdapter,
+  normalizeRegionDefinitions,
   type BuilderContentAdapter,
   type BuilderSiteConfig,
   type EditableValue,
@@ -9,6 +10,10 @@ import { createBuilderRouteHandlers } from "@reuben-williams/next/routes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { BuilderAuthorizationError } from "./authorization";
+import { BuilderContentValidationError } from "./content-errors";
+import { normalizePageMediaRegions, privatePageMediaPreview } from './page-media';
+import { createPageMediaRepository } from './page-media-repository';
+import { readPagePublicationStatus } from './page-publication-status';
 import { approvedBrandAssets } from "../brand/approved-assets";
 import { brandBannerSeedAssets } from "../brand/assets";
 
@@ -56,6 +61,11 @@ type ContentSnapshotValidator = (input: Readonly<{
   pagePath: string;
   regions: Readonly<Record<string, EditableValue>>;
 }>) => void | Promise<void>;
+type ContentSnapshotNormalizer = (input: Readonly<{
+  operation: "save" | "publish";
+  pagePath: string;
+  regions: Readonly<Record<string, EditableValue>>;
+}>) => Record<string, EditableValue> | Promise<Record<string, EditableValue>>;
 
 type RestoreVersionValidator = (input: Readonly<{
   pagePath: string;
@@ -88,6 +98,8 @@ export class BuilderContentCommandError extends Error {
 }
 
 function mapContentCommandError(error: { code?: string; message?: string }) {
+  if(error.message==='PAGE_IMAGE_NOT_READY') return new BuilderContentValidationError('PAGE_IMAGE_NOT_READY','This photo is still being backed up. Wait a moment, then publish again.',409);
+  if(error.message==='PAGE_IMAGE_INVALID') return new BuilderContentValidationError('PAGE_IMAGE_INVALID','The selected photo is unavailable. Choose it again from the media gallery.');
   if (error.code === "40001" || /STALE_REVISION/i.test(error.message ?? "")) {
     return new BuilderContentCommandError("STALE_REVISION", 409);
   }
@@ -284,6 +296,9 @@ async function safeCall(action: () => Promise<Response>): Promise<Response> {
   try {
     return secured(await action());
   } catch (error) {
+    if (error instanceof BuilderContentValidationError) {
+      return jsonError(error.status, error.code, error.message);
+    }
     if (error instanceof BuilderAuthorizationError) {
       return jsonError(error.status, error.code, error.message);
     }
@@ -351,10 +366,15 @@ export function createSiteKeyResolvingAdapter(input: {
     })();
     return siteIdPromise;
   };
+  const project = async (content: Awaited<ReturnType<BuilderContentAdapter['getPublishedContent']>>) => ({
+    ...content,
+    regions: await normalizePageMediaRegions(content.regions,createPageMediaRepository(input.client,await siteId()),
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', 'read'),
+  });
 
   return {
-    getPublishedContent: async (_site, path) => base.getPublishedContent(await siteId(), path),
-    getDraftContent: async (_site, path) => base.getDraftContent(await siteId(), path),
+    getPublishedContent: async (_site, path) => project(await base.getPublishedContent(await siteId(), path)),
+    getDraftContent: async (_site, path) => project(await base.getDraftContent(await siteId(), path)),
     saveDraft: async (value) => base.saveDraft({ ...value, siteId: await siteId() }),
     publishVersion: async (value) => base.publishVersion({ ...value, siteId: await siteId() }),
     rollbackToVersion: async (value) => base.rollbackToVersion({ ...value, siteId: await siteId() }),
@@ -379,13 +399,35 @@ export function createSecuredBuilderHandlers(input: {
   validateLinkedPost?: (entryId: string) => Promise<boolean>;
   contentCommands?: BuilderContentCommandExecutor;
   normalizeEditableValue?: EditableValueNormalizer;
+  normalizeContentSnapshot?: ContentSnapshotNormalizer;
   validateContentSnapshot?: ContentSnapshotValidator;
   validateRestoreVersion?: RestoreVersionValidator;
 }) {
   const base = createBuilderRouteHandlers(input);
 
   return {
-    GET: (request: Request) => safeCall(() => base.GET(request)),
+    GET: (request: Request) => safeCall(async () => {
+      const url=new URL(request.url);
+      if(url.searchParams.get('resource')==='publication-status') {
+        await input.authorize?.(request,'content.readDraft');
+        const path=url.searchParams.get('path');
+        if(!path || !input.site.pages.some(page=>page.path===path)) throw new TypeError('Unregistered page');
+        return Response.json(await readPagePublicationStatus(path,async(scope,mode)=>{
+          const content=await (mode==='draft' ? input.adapter.getDraftContent(input.site.siteId,scope) : input.adapter.getPublishedContent(input.site.siteId,scope));
+          const definitions=scope===GLOBAL_CONTENT_PATH ? input.site.globalRegions ?? [] : input.site.pages.find(page=>page.path===scope)?.regions ?? [];
+          const registered=normalizeRegionDefinitions(definitions);
+          return {...content,regions:Object.fromEntries(registered.filter(region=>content.regions[region.id]?.type===region.kind)
+            .map(region=>[region.id,content.regions[region.id]]))};
+        }));
+      }
+      const response=await base.GET(request);
+      if(response.ok && url.searchParams.get('mode')==='draft' && (url.searchParams.get('resource') ?? 'content')==='content') {
+        const value=await response.json();
+        if(value.regions) return Response.json({...value,regions:privatePageMediaPreview(value.regions)});
+        return Response.json(value);
+      }
+      return response;
+    }),
     async POST(request: Request) {
       return safeCall(async () => {
         const resource = new URL(request.url).searchParams.get("resource") ?? "draft";
@@ -399,6 +441,7 @@ export function createSecuredBuilderHandlers(input: {
             (body.expectedVersionId !== undefined && typeof body.expectedVersionId !== "string")) {
           throw new TypeError("Invalid draft request");
         }
+        await input.authorize?.(request, "content.editDraft");
 
         if (body.expectedVersionId !== undefined) {
           const current = await input.adapter.getDraftContent(input.site.siteId, body.pagePath);
@@ -427,7 +470,6 @@ export function createSecuredBuilderHandlers(input: {
           return jsonError(409, "POST_UNAVAILABLE", "The selected post is no longer available to link.");
         }
         if (input.contentCommands) {
-          await input.authorize?.(request, "content.editDraft");
           const actorId = await input.getUserId(request);
           const globalIds = new Set((input.site.globalRegions ?? []).map((region) =>
             typeof region === "string" ? region : region.id));
@@ -436,6 +478,9 @@ export function createSecuredBuilderHandlers(input: {
             input.adapter.getDraftContent(input.site.siteId, pagePath),
             input.adapter.getPublishedContent(input.site.siteId, pagePath)
           ]);
+          const values = { ...draft.regions, [String(body.regionId)]: editableValue };
+          const normalized = input.normalizeContentSnapshot
+            ? await input.normalizeContentSnapshot({ operation: "save", pagePath, regions: values }) : values;
           const command = await createBuilderContentCommand({
             siteId: input.site.siteId,
             actorId,
@@ -444,7 +489,7 @@ export function createSecuredBuilderHandlers(input: {
               scope: { kind: pagePath === GLOBAL_CONTENT_PATH ? "global" : "page", path: pagePath },
               expectedDraftVersionId: draft.versionId ?? null,
               expectedPublishedVersionId: published.versionId ?? null,
-              values: { ...draft.regions, [String(body.regionId)]: editableValue }
+              values: normalized
             }]
           });
           return Response.json(await input.contentCommands.execute(input.site.siteId, command));
@@ -468,16 +513,18 @@ export function createSecuredBuilderHandlers(input: {
           input.adapter.getDraftContent(input.site.siteId, pagePath),
           input.adapter.getPublishedContent(input.site.siteId, pagePath)
         ]);
+        const regions = input.normalizeContentSnapshot
+          ? await input.normalizeContentSnapshot({ operation: "publish", pagePath, regions: draft.regions }) : draft.regions;
         await input.validateContentSnapshot?.({
           operation: "publish",
           pagePath,
-          regions: draft.regions,
+          regions,
         });
         return {
           scope: { kind: pagePath === GLOBAL_CONTENT_PATH ? "global" : "page", path: pagePath },
           expectedDraftVersionId: draft.versionId ?? null,
           expectedPublishedVersionId: published.versionId ?? null,
-          values: draft.regions
+          values: regions
         };
       }));
       const command = await createBuilderContentCommand({

@@ -26,6 +26,8 @@ import {
   normalizeNewsletterEditableValue,
   validateNewsletterLayoutSnapshot,
 } from "../../../lib/builder/newsletter-layout";
+import { normalizePageMediaValue, normalizePageMediaRegions } from '../../../lib/builder/page-media';
+import { createPageMediaRepository } from '../../../lib/builder/page-media-repository';
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,6 +43,11 @@ function createHandlers(request: Request) {
   const admin = getBuilderAdminClient();
   if (!admin) return null;
   const adapter = createSiteKeyResolvingAdapter({ client: admin, siteKey: site.siteId });
+  const mediaRepository=async()=>{
+    const siteId=await resolveBuilderSiteId(admin);
+    if(!siteId) throw new Error('SITE_UNAVAILABLE');
+    return createPageMediaRepository(admin,siteId);
+  };
   return createSecuredBuilderHandlers({
     site,
     adapter,
@@ -69,16 +76,17 @@ function createHandlers(request: Request) {
         .maybeSingle();
       return !result.error && Boolean(result.data?.entry_id);
     },
-    normalizeEditableValue: async (input) => normalizeNewsletterEditableValue({
+    normalizeEditableValue: async (input) => normalizePageMediaValue(normalizeNewsletterEditableValue({
       ...input,
       value: normalizeProtectedBrandValue(input, approvedBrandAssets),
-    }),
+    }),await mediaRepository(),process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', 'save'),
+    normalizeContentSnapshot: async input=>normalizePageMediaRegions(input.regions,await mediaRepository(),
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', input.operation),
     validateContentSnapshot: async (input) => {
       validateProtectedBrandSnapshot(input, approvedBrandAssets);
       validateNewsletterLayoutSnapshot(input);
     },
     validateRestoreVersion: async ({ pagePath, versionId }) => {
-      if (pagePath !== "/" || !approvedBrandAssets) return;
       const siteId = await resolveBuilderSiteId(admin);
       if (!siteId) throw new TypeError("The site is not provisioned.");
       const result = await admin
@@ -98,9 +106,11 @@ function createHandlers(request: Request) {
       if (!regions || typeof regions !== "object" || Array.isArray(regions)) {
         throw new TypeError("The restore source is invalid.");
       }
+      const normalized=await normalizePageMediaRegions(regions as Record<string,import('@reuben-williams/core').EditableValue>,
+        await mediaRepository(),process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', 'restore');
       validateProtectedBrandSnapshot({
         pagePath,
-        regions: regions as Record<string, import("@reuben-williams/core").EditableValue>,
+        regions: normalized,
       }, approvedBrandAssets);
     },
   });

@@ -25,6 +25,8 @@ import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { EditorOperationalHeader } from "./editor-operational-header";
+import { withPublicationFeedback,type PublicationFeedback } from '../../../lib/builder/page-publication-status';
+import { PagePublicationStatusPanel } from './page-publication-status';
 import { BilingualReadinessWorkspace } from "./bilingual-readiness-workspace";
 import { CalendarWorkspace } from "./calendar-workspace";
 import dynamic from 'next/dynamic';
@@ -139,6 +141,11 @@ export function EditorClient({
   const [mediaError, setMediaError] = useState("");
   const [mediaLoading, setMediaLoading] = useState(true);
   const [historySource,setHistorySource]=useState("all");
+  const [publicationRevision,setPublicationRevision]=useState(0);
+  const [publicationResult,setPublicationResult]=useState<PublicationFeedback|null>(null);
+  const publicationFeedback=useCallback((result:PublicationFeedback)=>{
+    setPublicationResult(result);setPublicationRevision(value=>value+1);
+  },[]);
   const [workspaceShown,setWorkspaceShown]=useState(()=>initialWorkspaceId ?? (typeof window==="undefined"?"":new URLSearchParams(window.location.search).get("workspace") ?? ""));
   useEffect(() => {
     const restorePageFromHistory = () => {
@@ -164,17 +171,17 @@ export function EditorClient({
     }) : null;
   }, []);
   const client = useMemo(() => {
-    const attached = createHttpAttachedSiteEditorClient({
+    const attached = withPublicationFeedback(createHttpAttachedSiteEditorClient({
       baseUrl: "/api/builder",
       getCsrfToken: csrfCookie
-    });
+    }),publicationFeedback);
     return {
       ...attached,
       listHistory: (query: Parameters<typeof readSiteHistory>[0])=>readSiteHistory(query,historySource==="carousel"),
       ...(mediaUpload?{uploadMedia: mediaUpload.uploadMedia}:{}),
       ...(role === "owner" && mediaUpload ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
     };
-  }, [mediaUpload, role, historySource]);
+  }, [mediaUpload, role, historySource,publicationFeedback]);
   const refreshMedia = useCallback(async () => {
     setMediaLoading(true);
     try {
@@ -289,9 +296,9 @@ export function EditorClient({
     return {
       modules: [GROWTH_DASHBOARD_MODULE, growthLeadsModule, growthCustomersModule],
       workspaces,
-      globalHeader: <><EditorOperationalHeader />{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
+      globalHeader: <><EditorOperationalHeader />{workspaceShown==='website.pages' ? <PagePublicationStatusPanel path={currentPath} revision={publicationRevision} result={publicationResult} /> : null}{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
     };
-  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, mediaLoading, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource]);
+  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, mediaLoading, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource,publicationRevision,publicationResult]);
   const initialWorkspace = (initialWorkspaceId ?? (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard")) as BuilderWorkspaceId;

@@ -8,6 +8,7 @@ import {
 import { validateGenerationManifest } from "./contracts";
 import { createRecoveryMediaGrant } from "./media-grant";
 import { validateCarouselDocument, type CarouselProjection } from '../../carousel/contract';
+import { pageMediaRevisionId } from '../page-media';
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -47,7 +48,11 @@ export function createRecoveryContentReader(input: {
         if (!record(unknownValue) || typeof unknownValue.type !== "string") continue;
         const value = unknownValue as unknown as EditableValue;
         if (value.type === "image" && value.mediaId) {
-          const media = manifest.media.find((candidate) => candidate.mediaId === value.mediaId);
+          const revisionId=pageMediaRevisionId(value.src);
+          const candidates=manifest.media.filter(candidate=>candidate.mediaId===value.mediaId && (!revisionId || candidate.revisionId===revisionId));
+          const media=candidates.length===1 ? candidates[0] : undefined;
+          const routeMedia=artifactValue.value.media;
+          if(!Array.isArray(routeMedia) || !routeMedia.some(item=>record(item) && item.mediaId===media?.mediaId && item.revisionId===media?.revisionId)) return null;
           if (!media) return null;
           const grant = createRecoveryMediaGrant({
             schemaVersion: 1,

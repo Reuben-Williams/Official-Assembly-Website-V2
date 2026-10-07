@@ -1,5 +1,6 @@
 import type { EditableValue } from "@reuben-williams/core";
 import { validateCarouselDocument, type CarouselDocumentV1 } from '../../carousel/contract';
+import { pageMediaRevisionId, PAGE_MEDIA_PREFIX } from '../page-media';
 
 import {
   canonicalRecoveryJson,
@@ -83,7 +84,8 @@ function exactRoutes(source: RecoveryGenerationSource, configuredRoutes: readonl
 function recoveryValues(values: Record<string, EditableValue>) {
   return Object.fromEntries(Object.entries(values).map(([regionId, value]) => [
     regionId,
-    value.type === "image" && value.mediaId ? { ...value, src: "" } : value
+    value.type === "image" && value.mediaId ? { ...value,
+      src:pageMediaRevisionId(value.src) ? `${PAGE_MEDIA_PREFIX}${pageMediaRevisionId(value.src)}` : '' } : value
   ]));
 }
 

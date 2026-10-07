@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   brandBannerSeedAssets,
+  HOME_OFFICIAL_PORTRAIT_VALUE,
   normalizeProtectedBrandValue,
   validateProtectedBrandSnapshot,
   validateHomeBrandBannerValue,
@@ -232,5 +233,24 @@ describe("approved brand asset contract", () => {
         },
       },
     }, verified)).toThrow(/approved single-person portrait/i);
+  });
+
+  it("accepts the approved official portrait in its registered shared scope", () => {
+    expect(() => validateProtectedBrandSnapshot({
+      pagePath: "/__builder/global",
+      regions: { "media.professional.home-official-portrait": HOME_OFFICIAL_PORTRAIT_VALUE },
+    }, verifyApprovedBrandAssets(definition()))).not.toThrow();
+  });
+
+  it("rejects substitute portraits in shared content and portraits in unrelated page scopes", () => {
+    const verified = verifyApprovedBrandAssets(definition());
+    expect(() => validateProtectedBrandSnapshot({
+      pagePath: "/__builder/global",
+      regions: { "media.professional.home-official-portrait": { ...HOME_OFFICIAL_PORTRAIT_VALUE, src: "/wrong.webp" } },
+    }, verified)).toThrow(/approved single-person portrait/i);
+    expect(() => validateProtectedBrandSnapshot({
+      pagePath: "/news",
+      regions: { "media.professional.home-official-portrait": HOME_OFFICIAL_PORTRAIT_VALUE },
+    }, verified)).toThrow();
   });
 });

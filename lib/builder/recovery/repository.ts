@@ -132,7 +132,7 @@ export function createSupabaseRecoveryWorkerRepository(
             digest: String(revision.sha256),
             mimeType: String(revision.mime_type),
             width: Number(revision.width), height:Number(revision.height),
-            routePaths: sourcePages.filter((page) => referencedVersions.has(page.versionId) || (page.path==='/' && carouselMedia.has(String(revision.id)))).map((page) => page.path)
+            routePaths: sourcePages.filter((page) => referencedVersions.has(String(generation.global_version_id)) || referencedVersions.has(page.versionId) || (page.path==='/' && carouselMedia.has(String(revision.id)))).map((page) => page.path)
           };
         }));
       }
