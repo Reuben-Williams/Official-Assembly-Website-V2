@@ -1,0 +1,14 @@
+# Page-image publishing repair implementation plan
+
+Approved scope: the matching October 7 repair design, plus the verified protected-portrait shared-scope bug. Work in `morales-carousel-release`; do not start Docker/WSL or publish staff editorial drafts.
+
+1. Add regression tests for valid global protected-portrait publishing, rejected substitute portraits, and safe actionable validation errors. Observe failures, correct the registered-scope check, and re-run related tests.
+2. Add resolver tests for expired gallery URLs, exact same-site immutable revisions, canonical routes, unknown/archived assets, static compatibility, and preserved image metadata. Implement a site-local page-media contract/repository; normalize complete save/publish snapshots and restore sources before creating commands. Authorize before lookup/signing.
+3. Test authenticated draft projections and public media delivery independently. Serve canonical same-origin references only for currently published registered image regions; preview freshly signed URLs privately. Never expose draft-only or cross-site media. Preserve current published-content recovery behavior.
+4. Add a service-scoped, additive migration retaining page-version image references inside the existing command transaction. Validate canonical asset/revision mappings and publish replica readiness in the database. Test with PGlite and existing transaction/retention fixtures, including retry, stale-state, failure rollback, and restore. Run advisors before/after release; do not change legacy snapshots.
+5. Test and correct recovery artifact revision identity and global/page route association. Verify exact revision recovery for two versions of the same asset and safe legacy handling.
+6. Test server publication status comparisons and a responsive site-local status panel: saved draft not live, matching published state, shared draft warning, uncertain/error state, refresh, navigation races, and safe server error detail. Keep unsaved field state distinct and existing carousel review semantics intact.
+7. Run focused and full tests, type check, lint, production build/readiness checks, and isolated browser save/publish/expiry checks with synthetic data. Perform no production test publications. Request owner sign-in if private production UI verification needs it.
+8. Commit scoped changes; apply only the tested additive schema migration and release through the verified Vercel project. Confirm final alias Ready, read-only production routes/images/editor status, unchanged official headshot, and no unintended draft publication. Report exact coverage and any remaining owner-browser limitation.
+
+Each implementation step starts with failing tests. UI verification uses regular Playwright because the Browser plugin/skill is not listed; CUA is available for user-session inspection if needed. Package versions stay pinned and installed package sources are not edited.

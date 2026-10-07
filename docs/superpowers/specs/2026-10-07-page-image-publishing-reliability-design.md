@@ -4,7 +4,7 @@
 
 Damon can select a gallery photo, save it as a private draft, and explicitly publish it. The published photo must remain usable after the gallery preview link expires. The editor must explain which saved changes are not live yet. Saving a draft must never publish it automatically.
 
-The user approved repairing image handling and clarifying draft/published status before Damon retries. This document is the written-spec review checkpoint; implementation and release have not occurred.
+The user approved repairing image handling and clarifying draft/published status before Damon retries, then instructed us to proceed with fixing the confirmed publish blocker and ensuring it works. Implementation and release verification follow this reviewed design.
 
 ### Workflow tasks
 
@@ -12,7 +12,7 @@ The user approved repairing image handling and clarifying draft/published status
 - [x] Establish the cause and obtain approval for the recommended repair.
 - [x] Write the bounded design.
 - [x] Complete independent spec review (approved; advisory recovery checks incorporated).
-- [ ] Obtain user review of this written spec.
+- [x] Obtain user approval to proceed with the written repair scope and confirmed validation correction.
 - [ ] Create the implementation plan, implement with regression tests, and verify the release.
 
 ## Verified problem
@@ -22,6 +22,8 @@ The October 7 audit found that Damon has the site owner role. His recent page-im
 The News draft contains `DSC02485.jpg` as a one-hour signed Supabase Storage URL. That URL has expired, but its original object and immutable media revision still exist, with a ready recovery replica. The page save/publish path currently stores image URLs unchanged and does not retain page-version media references. The gallery picker also loses media identifiers when constructing the editable image value. Publishing alone therefore does not repair the expired URL.
 
 The existing carousel uses immutable revision references and fresh delivery URLs. Page photos need equivalent durability without depending on a photo also being published in the carousel.
+
+The follow-up audit reproduced an additional publish blocker in the deployed code: the approved official portrait is a registered global image, but the protected-brand validator accepts it only in a homepage snapshot. A publish checks the global snapshot first and therefore rejects that valid saved portrait before any completed publish command is recorded. Correct this scope mismatch without allowing a replacement portrait. Failed validation must produce an actionable, safe message instead of a generic invalid-request message.
 
 ## Recommended approach and alternatives
 
@@ -48,6 +50,8 @@ Authorization and CSRF checks occur before media lookup or signing. The existing
 ## Atomic publication, history, and recovery
 
 Keep the existing content-command transaction, expected-version checks, idempotency, and global-plus-current-page publish semantics. Within that transaction, every managed image in a new version records its exact asset/revision/region/alt in `builder_page_version_media`. Validate same-site membership and publication readiness before changing published pointers; if any image fails, publish nothing and preserve the saved draft.
+
+Protected official-portrait validation accepts the canonical asset in its registered global scope as well as the existing homepage context. Other page scopes and substitute assets remain rejected. Add a regression test proving a News publish can include the valid global portrait, and that a substitute still fails before the command executor runs.
 
 An additive migration integrates page-media retention with new save, publish, and restore versions. It must not weaken RLS, allow anonymous writes, rewrite previous snapshots, or remove carousel-generation retention. Database changes are tested without restarting Docker/WSL.
 
