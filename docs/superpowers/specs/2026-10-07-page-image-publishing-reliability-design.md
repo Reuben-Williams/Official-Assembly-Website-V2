@@ -11,7 +11,7 @@ The user approved repairing image handling and clarifying draft/published status
 - [x] Inspect current permissions, content history, image handling, and release workspace.
 - [x] Establish the cause and obtain approval for the recommended repair.
 - [x] Write the bounded design.
-- [ ] Complete independent spec review.
+- [x] Complete independent spec review (approved; advisory recovery checks incorporated).
 - [ ] Obtain user review of this written spec.
 - [ ] Create the implementation plan, implement with regression tests, and verify the release.
 
@@ -51,7 +51,7 @@ Keep the existing content-command transaction, expected-version checks, idempote
 
 An additive migration integrates page-media retention with new save, publish, and restore versions. It must not weaken RLS, allow anonymous writes, rewrite previous snapshots, or remove carousel-generation retention. Database changes are tested without restarting Docker/WSL.
 
-Complete-generation recovery then includes these page images through the existing retention table. Recovery lookup must match the exact immutable revision encoded in the canonical reference, not just the asset ID. Two versions of one asset must not cause recovery to return the wrong photo. Legacy media-ID-only recovery is accepted only when its reference is unambiguous in the verified manifest.
+Complete-generation recovery then includes these page images through the existing retention table. The recovery writer currently clears managed-image `src`; preserve the canonical, non-secret revision reference in the verified route artifact instead of clearing its only revision identity. No delivery token belongs in that artifact. Recovery lookup must match the exact immutable revision encoded in the canonical reference, not just the asset ID. Two versions of one asset must not cause recovery to return the wrong photo. Legacy media-ID-only recovery is accepted only when its reference is unambiguous in the verified manifest. Retain correct route associations for shared/global images as well as page-specific images.
 
 Read-only compatibility conversion can resolve legacy URLs for preview. Durable conversion happens through normal, audited save/publish/restore commands. The repair will not publish or overwrite Damon's current drafts as a release step.
 
@@ -74,7 +74,7 @@ Use a supported site-local attached-client wrapper and the editor's global-heade
 
 The panel reports saved server state, not unsaved input fields. Clearly label it accordingly, preserve the editor's existing dirty-field behavior, and never imply that clicking Publish saves an unsaved quick-edit field. The workflow remains choose/edit → Save draft → Publish.
 
-An authenticated, no-store status read compares normalized semantic global/page values, not only version IDs or expiring delivery URLs. Existing brand/newletter protections and registered-region filtering remain applied. Re-fetch after mutations and navigation; discard responses for an older selected page. On refresh the panel must reflect the stored state rather than an earlier optimistic success message.
+An authenticated, no-store status read compares normalized semantic global/page values, not only version IDs or expiring delivery URLs. Existing brand/newsletter protections and registered-region filtering remain applied. Re-fetch after mutations and navigation; discard responses for an older selected page. On refresh the panel must reflect the stored state rather than an earlier optimistic success message.
 
 Because a page publish includes saved shared/global changes, show a notice when such changes are pending. Do not imply that only one selected image will be published. Preserve the existing separate carousel review/publish workflow, with consistent saved-draft wording where a site-local label is available.
 
@@ -90,7 +90,7 @@ Because a page publish includes saved shared/global changes, show a notice when 
 
 Write a failing reproduction test for the expired legacy gallery URL before implementing the resolver. Cover trusted-origin/key validation, deduplicated object paths, exact revision selection, same-site checks, archived selection rules, preserved alt/link metadata, and static-image compatibility. No test fixture contains a real signed token.
 
-Exercise transaction retention, idempotent retries, stale-version rejection, atomic failure, restore, and complete-generation recovery with two revisions of one asset. Verify that a published page photo need not also appear in the carousel, and that draft-only and cross-site revisions cannot be obtained anonymously. Check signing/storage outages fail safely.
+Exercise transaction retention, idempotent retries, stale-version rejection, atomic failure, restore, and complete-generation recovery with two revisions of one asset, including artifact revision identity and shared/global route associations. Verify that a published page photo need not also appear in the carousel, and that draft-only and cross-site revisions cannot be obtained anonymously. Check signing/storage outages fail safely.
 
 Test the editor status on initial load, save, publish, failure, refresh, rapid page navigation, shared pending changes, and expired preview-link renewal. Status tests must distinguish unsaved input from a saved draft and confirm that Save draft never publishes. Check desktop and narrow mobile layouts, both site locales, and the actual Next image path after simulated preview expiry.
 
