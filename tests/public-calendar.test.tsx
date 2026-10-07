@@ -25,19 +25,26 @@ const events: PublicCalendarEvent[] = [
 ];
 
 describe("public calendar presentation", () => {
-  it.each(["home", "agenda"] as const)("preserves the flyer and calendar actions in the %s layout", (variant) => {
+  it.each([
+    ["home", "en"], ["agenda", "en"], ["home", "es"], ["agenda", "es"],
+  ] as const)("preserves the flyer and only Google Calendar actions in the %s layout (%s)", (variant, locale) => {
     const html = renderToStaticMarkup(
       <PublicEventsSection
         calendar={{ status: "ready", events: [{ ...events[0], mediaUrl: "https://example.com/event-flyer.jpg" }] }}
         content={{ regions: {} }}
-        locale="en"
+        locale={locale}
         variant={variant}
       />,
     );
     expect(html).toContain('src="https://example.com/event-flyer.jpg"');
-    expect(html).toContain('alt="Constituent services evening — event image"');
+    expect(html).toContain(locale === "es"
+      ? 'alt="Noche de servicios para residentes — imagen del evento"'
+      : 'alt="Constituent services evening — event image"');
     expect(html).toContain("Google Calendar");
-    expect(html).toContain("Apple Calendar");
+    expect(html).toContain("https://calendar.google.com/calendar/render?action=TEMPLATE");
+    expect(html).not.toContain("Apple Calendar");
+    expect(html).not.toContain("calendar.ics?event=");
+    expect(html).not.toContain("webcal:");
     expect(html).toContain('data-public-event-id="11111111-1111-4111-8111-111111111111"');
   });
   it("uses field-specific English fallback in Spanish and marks its actual language", () => {
@@ -47,13 +54,15 @@ describe("public calendar presentation", () => {
     expect(html).toContain("Información del evento disponible parcialmente en inglés");
     expect(html).toContain("View official details");
   });
-  it("provides bilingual Google and Apple event actions plus subscription instructions", () => {
+  it("keeps Spanish Google subscription instructions without Apple actions", () => {
     const html = renderToStaticMarkup(<PublicEventsSection calendar={{ status: "ready", events }} content={{ regions: {} }} locale="es" variant="agenda" />);
     expect(html).toContain("Google Calendar");
-    expect(html).toContain("Apple Calendar");
-    expect(html).toContain("calendar.ics?event=");
+    expect(html).not.toContain("Apple Calendar");
+    expect(html).not.toContain("calendar.ics?event=");
     expect(html).toContain("locale=es");
-    expect(html).toContain("webcal://www.assemblywomanmorales.com/events/calendar.ics");
+    expect(html).not.toContain("webcal:");
+    expect(html).toContain("Google Calendar: en una computadora");
+    expect(html).toContain("https://www.assemblywomanmorales.com/events/calendar.ics?locale=es");
     expect(html).toContain("Seguir todos los eventos");
   });
   it("renders public event content, semantic time values, and the selected locale", () => {

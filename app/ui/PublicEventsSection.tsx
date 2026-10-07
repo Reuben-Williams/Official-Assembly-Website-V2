@@ -102,9 +102,6 @@ function EventAgenda({ events, locale }: { events: readonly PublicCalendarEvent[
                     <CalendarDays size={16} aria-hidden="true" /> Google Calendar
                     <span className={styles.srOnly}>{locale === "es" ? " (se abre en una pestaña nueva)" : " (opens in a new tab)"}</span>
                   </a>
-                  <a href={`/events/calendar.ics?event=${event.id}&locale=${locale}`} download>
-                    <CalendarDays size={16} aria-hidden="true" /> Apple Calendar / .ics
-                  </a>
                 </div>
               </div>
             </article>
@@ -164,7 +161,6 @@ export function PublicEventsSection({ calendar, content, locale, variant }: Publ
               <p>{locale === "es"
                 ? "Suscríbase para recibir las actualizaciones del calendario. Su aplicación determina cuándo se actualiza. Guardar un evento individual crea una copia que no se actualiza automáticamente."
                 : "Subscribe to receive calendar updates. Your calendar app controls its refresh timing. Saving an individual event creates a copy that does not update automatically."}</p>
-              <a className={styles.viewAll} href={`${PUBLIC_CALENDAR_URL.replace("https:", "webcal:")}?locale=${locale}`}>Apple Calendar · {locale === "es" ? "Suscribirse" : "Subscribe"}</a>
               <p>{locale === "es"
                 ? "Google Calendar: en una computadora, abra Otros calendarios → + → Desde URL y pegue este enlace:"
                 : "Google Calendar: on a computer, open Other calendars → + → From URL and paste this link:"}</p>

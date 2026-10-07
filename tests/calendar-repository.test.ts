@@ -44,7 +44,8 @@ describe("Supabase calendar repository", () => {
     for (const variant of ["home", "agenda"] as const) {
       const html = renderToStaticMarkup(createElement(PublicEventsSection, { calendar, variant, locale: "en", content: { regions: {} } }));
       expect(html).toContain("District meeting");
-      expect(html).toContain("calendar.ics?event=");
+      expect(html).toContain("https://calendar.google.com/calendar/render?action=TEMPLATE");
+      expect(html).not.toContain("Apple Calendar");
       expect(html).not.toContain("temporarily unavailable");
     }
   });
