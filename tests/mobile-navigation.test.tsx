@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppHeader } from "../app/ui/AppHeader";
+import builderConfig from "../builder.config";
 import type { BuilderServerContent } from "../lib/builder/server-content";
 
 let pathname = "/news/district-update";
@@ -82,6 +83,33 @@ afterEach(async () => {
 });
 
 describe("mobile off-canvas navigation", () => {
+  it.each(["en", "es"] as const)("shows the requested primary order on desktop and mobile in %s", async (locale) => {
+    await renderHeader(undefined, locale);
+    const expectedSlugs = ["home", "about", "resources", "events", "news", "voting"];
+    const expectedLabels = locale === "es"
+      ? ["Inicio", "Acerca de", "Recursos", "Eventos", "Noticias", "Votación"]
+      : ["Home", "About", "Resources", "Events", "News", "Voting"];
+    const desktopLinks = [...container.querySelectorAll<HTMLAnchorElement>('.nav-links a')];
+    expect(desktopLinks.map((link) => link.getAttribute("data-builder-item-id"))).toEqual(expectedSlugs);
+    expect(desktopLinks.map((link) => link.textContent?.trim())).toEqual(expectedLabels);
+    expect(desktopLinks.map((link) => link.getAttribute("href")))
+      .toEqual(["/", "/about", "/resources", "/events", "/news", "/voting"]);
+    await click(menuTrigger());
+    const mobileLinks = [...dialog()!.querySelectorAll<HTMLAnchorElement>('nav a')];
+    const primaryLinks = mobileLinks.filter((link) => link.getAttribute("data-mobile-contact") !== "true");
+    expect(primaryLinks.map((link) => link.getAttribute("data-builder-item-id"))).toEqual(expectedSlugs);
+    expect(primaryLinks.map((link) => link.textContent?.trim())).toEqual(expectedLabels);
+    expect(mobileLinks.at(-1)?.getAttribute("href")).toBe("/contact");
+    expect(mobileLinks.filter((link) => link.getAttribute("data-mobile-contact") === "true")).toHaveLength(1);
+  });
+
+  it("registers the Events navigation link and label for the site editor", () => {
+    expect(builderConfig.globalRegions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "global.navigation.events.label", kind: "text" }),
+      expect.objectContaining({ id: "global.navigation.events.link", kind: "link" }),
+    ]));
+  });
+
   it.each(["en", "es"] as const)("uses compact built-in News labels in both %s navigation surfaces", async (locale) => {
     const expected = locale === "es" ? "Noticias" : "News";
     for (const label of [undefined, "News & Updates", "News", "Noticias y novedades", "Noticias"]) {

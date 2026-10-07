@@ -17,7 +17,7 @@ The owner explicitly requests Home, About, Resources, Events, News, Voting, in t
 ## Implementation and verification plan
 
 1. Add failing component tests for exact desktop/mobile order in both languages, exclusion of Community from default primary navigation, and registration of editable Events regions. Retain existing custom-order and accessibility tests.
-2. Build the default list from an explicit ordered sequence rather than filtering the page catalog. Append Contact only to the default mobile list; do not append it to a published custom list.
+2. In app/ui/AppHeader.tsx, build the default list from an explicit ordered sequence rather than filtering the page catalog. Remove the obsolete Events navigation exclusion in app/data/site.ts. Append Contact only to the default mobile list; do not append it to a published custom list.
 3. Add the two Events navigation regions to builder.config.ts. No schema, provider, credential, email, or database writes.
 4. Run focused navigation/config tests, full unit suite, TypeScript, and lint. Stage a production-environment build without changing the live domain; the existing newsletter readiness guard must pass.
 5. Verify staged header and Events route, then release the tested build and push only scoped commits. Verify the final canonical domain, both languages, desktop and narrow mobile navigation, link activation, console health, and no horizontal overflow.

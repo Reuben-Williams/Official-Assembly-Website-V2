@@ -53,8 +53,8 @@ describe("public Events page", () => {
     expect(metadata.openGraph?.title).toBe("Community Events");
   });
 
-  it("keeps Events out of primary and mobile site navigation", () => {
+  it("includes Events in primary and mobile site navigation", () => {
     const html = renderToStaticMarkup(<AppHeader content={{ regions: {} }} locale="en" />);
-    expect(html).not.toContain('href="/events"');
+    expect(html.match(/href="\/events"/g)).toHaveLength(2);
   });
 });

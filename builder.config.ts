@@ -276,6 +276,16 @@ export default {
       "label": "events metadata description"
     },
     {
+      "id": "global.navigation.events.label",
+      "kind": "text",
+      "label": "events navigation label"
+    },
+    {
+      "id": "global.navigation.events.link",
+      "kind": "link",
+      "label": "events navigation link"
+    },
+    {
       "id": "metadata.community.title",
       "kind": "text",
       "label": "community metadata title"

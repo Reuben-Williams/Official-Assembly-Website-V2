@@ -360,7 +360,6 @@ export const pages: PageContent[] = [
     eyebrow: "District 34 Calendar",
     description: "Find upcoming public events hosted by the District 34 office. Event details are published only after office review.",
     imageKey: "eventGroup",
-    includeInNavigation: false,
     cards: []
   },
   {

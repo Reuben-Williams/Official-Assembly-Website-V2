@@ -13,24 +13,21 @@ import {
   type BuilderServerContent,
 } from "../../lib/builder/server-content";
 
-const navPages = pages.filter((page) =>
-  ["/", "/about", "/resources", "/news", "/community", "/voting"].includes(page.href)
-);
+const PRIMARY_NAVIGATION_SLUGS = ["home", "about", "resources", "events", "news", "voting"];
+const pagesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
 
 const EMPTY_CONTENT: BuilderServerContent = { regions: {} };
 
 function NavigationLinks({
   instance,
-  all = false,
   content,
   locale,
 }: {
   instance: string;
-  all?: boolean;
   content: BuilderServerContent;
   locale: PublicLocale;
 }) {
-  const entries = navigationEntries({ all, content, locale });
+  const entries = navigationEntries({ content, locale });
   return (
     <>
       {entries.map((entry) => (
@@ -57,22 +54,20 @@ function NavigationLinks({
 }
 
 function navigationEntries({
-  all = false,
+  includeContact = false,
   content,
   locale,
 }: {
-  all?: boolean;
+  includeContact?: boolean;
   content: BuilderServerContent;
   locale: PublicLocale;
 }): MobileNavigationItem[] {
-  const fallbackEntries = all ? pages.filter((page) => page.includeInNavigation !== false) : navPages;
-  const entriesBySlug = new Map(pages.map((page) => [page.slug ?? "home", page]));
   return builderSectionIds(
     content,
     "global.navigation",
-    fallbackEntries.map((page) => page.slug ?? "home"),
+    includeContact ? [...PRIMARY_NAVIGATION_SLUGS, "contact"] : PRIMARY_NAVIGATION_SLUGS,
   ).flatMap((slug) => {
-    const page = entriesBySlug.get(slug);
+    const page = pagesBySlug.get(slug);
     if (!page || page.includeInNavigation === false) return [];
     const link = builderLink(content, `global.navigation.${slug}.link`, {
       href: page.href,
@@ -145,7 +140,7 @@ export function AppHeader({
           <MobileNavigation
             brandLabel={brandLabel}
             closeLabel={publicCopy(locale, "global.header.close-menu", "Close menu")}
-            items={navigationEntries({ all: true, content, locale })}
+            items={navigationEntries({ includeContact: true, content, locale })}
             navigationLabel={mobileNavigationLabel}
             openLabel={publicCopy(locale, "global.header.open-menu", "Open menu")}
           />
