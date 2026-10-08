@@ -5,7 +5,12 @@ import { searchPublicEntries } from "../lib/public-search";
 import { OfficialProfileSection } from "../app/ui/OfficialProfileSection";
 import config from "../builder.config";
 import { pages } from "../app/data/site";
+import { SiteSearchForm } from "../app/ui/SiteSearchForm";
 describe("public navigation and staff editing", () => {
+  it("keeps the search action named when its visible text is hidden on mobile", () => {
+    expect(renderToStaticMarkup(<SiteSearchForm />)).toContain('aria-label="Search"');
+    expect(renderToStaticMarkup(<SiteSearchForm locale="es" />)).toContain('aria-label="Buscar"');
+  });
   it("provides all primary menu groups and makes orphan public pages reachable", () => {
     const groups = ["home", "about", "resources", "events", "news", "voting"].flatMap(slug => {
       const children = navigationChildren(slug, "en"); expect(children?.length).toBeGreaterThan(1); return children!;
