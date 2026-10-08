@@ -7,6 +7,7 @@ import { createProductionNewsletterBroadcastProvider } from "../../../../lib/new
 import { handleResendNewsletterWebhook } from "../../../../lib/newsletter/webhook";
 import { createNewsletterWebhookRepository } from "../../../../lib/newsletter/webhook-repository";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../../../../lib/supabase/admin";
+import { reconcileVerifiedTeamNotice } from "../../../../lib/team-notices/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
     : null;
   const operations = createNewsletterBroadcastRepository(client, siteId);
   return handleResendNewsletterWebhook(request, {
+    verifiedNotice: (event) => reconcileVerifiedTeamNotice(client, siteId, "resend-team-production", event),
     siteId,
     providerScopeId: "resend-team-production",
     verify: (input) => resend.webhooks.verify({ ...input, webhookSecret }),

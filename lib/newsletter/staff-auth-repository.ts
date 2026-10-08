@@ -1,4 +1,5 @@
 import "server-only";
+import { readTeamNoticeMessageIds } from "../team-notices/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { StaffAccountingRepository } from "./staff-auth-worker";
 import type { StaffAuthRequest, DeliveryReceipt, StaffDeliveryEvidence } from "./staff-auth-delivery";
@@ -53,7 +54,7 @@ export function createStaffAccountingRepository(client: SupabaseClient, siteId: 
       ]);
       const requests = requestRows.map(staffRequestRow);
       const receipts = receiptRows.map(staffReceiptRow);
-      const excluded = new Set<string>();
+      const excluded = await readTeamNoticeMessageIds(client, siteId);
       // Owner-login evidence is intentionally NOT an exclusion: redemption and delivery are distinct claims.
       for (const row of exclusionRows.flat()) if (text(row.provider_message_id)) excluded.add(text(row.provider_message_id));
       for (const row of historyRows) excluded.add(text(row.provider_message_id));

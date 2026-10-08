@@ -333,7 +333,7 @@ export function EditorClient({
         role={role}
         newsletterOperations={<NewsletterOperationsWorkspace role={role} />}
       />}
-      postsWorkspace={<ManagedPostsWorkspace
+      postsWorkspace={<><aside className="builder-forms-guidance" aria-label="Press Releases publishing guidance"><p>Publishing a press release? Enter <code>press-releases</code> in the post’s <strong>Categories</strong> field, then save and publish. Published, unexpired posts in that category appear on <a href="/news/press-releases" target="_blank" rel="noreferrer">Press Releases</a>. Use a unique release title for the post address; <code>press-releases</code> is reserved for the listing page.</p></aside><ManagedPostsWorkspace
         client={posts}
         mediaAssets={mediaAssets}
         mediaUploading={mediaUploading}
@@ -348,7 +348,7 @@ export function EditorClient({
             .catch(() => setMediaError("The image could not be uploaded. Check the file and try again."))
             .finally(() => setMediaUploading(false));
         }}
-      />}
+      /></>}
       previewBaseUrl={previewBaseUrl}
       registration={registration}
       site={site}

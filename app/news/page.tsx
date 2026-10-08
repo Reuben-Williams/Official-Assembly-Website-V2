@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { listPublishedPosts } from "../../lib/builder/published-posts";
 import { getBuilderAdminClient } from "../../lib/supabase/admin";
@@ -66,6 +67,7 @@ export default async function NewsPage() {
             <p>{localizedBuilderText(locale, "news.feed.body", "Posts published by authorized office staff appear here.")}</p>
           </div>
           <PublishedPostList posts={posts} locale={locale} />
+          <p><Link className="text-link" href="/news/press-releases">{locale === "es" ? "Ver comunicados de prensa →" : "View Press Releases →"}</Link></p>
         </div>
       </section>
       {newsletterSignup}

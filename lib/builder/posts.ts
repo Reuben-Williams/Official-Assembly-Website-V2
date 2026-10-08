@@ -186,6 +186,7 @@ export function editablePostToSnapshot(
   if (validation[0]) throw new TypeError(validation[0].message);
   const title = draft.title.trim();
   const slug = draft.slug.trim();
+  if (slug === "press-releases") throw new TypeError("This post slug is reserved for the Press Releases page. Choose a specific release title.");
   const authorName = draft.authorName.trim();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     throw new TypeError("The post slug must use lowercase letters, numbers, and hyphens.");

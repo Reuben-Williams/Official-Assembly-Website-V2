@@ -9,6 +9,7 @@ import {
   type NewsletterOperationsStatus
 } from "../../../lib/newsletter/operations-client";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
+import { TeamNoticeStatus } from "./team-notice-status";
 
 type Role = "owner" | "editor" | "contributor" | "viewer";
 
@@ -164,6 +165,7 @@ export function NewsletterOperationsWorkspace({
       </header>
 
       {!owner ? <p className="newsletter-readonly">Read-only access · operational changes require the site owner.</p> : null}
+      {owner ? <TeamNoticeStatus /> : null}
       {loading ? <p className="newsletter-loading" role="status">Loading live newsletter status…</p> : null}
       {error ? <p className="newsletter-operation-error" role="alert">{error}</p> : null}
       {notice ? <p className="newsletter-operation-notice" role="status">{notice}</p> : null}

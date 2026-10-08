@@ -12,11 +12,14 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { NewsNavigation, type NewsNavigationItem } from "./NewsNavigation";
 
 export type MobileNavigationItem = Readonly<{
   slug: string;
   href: string;
   label: string;
+  children?: readonly NewsNavigationItem[];
+  disclosureLabel?: string;
 }>;
 
 type MobileNavigationProps = Readonly<{
@@ -214,7 +217,7 @@ export function MobileNavigation({
         >
           {items.map((item) => {
             const current = isMobileNavigationItemCurrent(item.href, pathname, origin);
-            return (
+            const link = (
               <Link
                 aria-current={current ? "page" : undefined}
                 data-builder-instance="mobile"
@@ -247,6 +250,8 @@ export function MobileNavigation({
                 </span>
               </Link>
             );
+            return item.children ? <NewsNavigation key={item.slug} mobile enabled={open} id="mobile-news-navigation-submenu"
+              items={item.children} label={item.disclosureLabel!} onNavigate={() => closeMenu(false)}>{link}</NewsNavigation> : link;
           })}
         </nav>
       </section>

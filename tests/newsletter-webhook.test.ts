@@ -26,6 +26,13 @@ function request(body = rawBody, headers: Record<string, string> = {}) {
 }
 
 describe("verified Resend newsletter webhooks", () => {
+  it("never binds notice IDs before signature verification and retries failed binding without suppressing evidence", async () => {
+    const notice=vi.fn(async()=>true), classify=vi.fn(async()=>({disposition:'matched' as const,digest:'a'.repeat(64)})), reconcile=vi.fn(async()=>({disposition:'matched' as const,replayed:false}));
+    const dependencies={siteId:'site',providerScopeId:'resend-team-production',verifiedNotice:notice,classify,reconcile,verify:()=>{throw new Error('invalid signature');}};
+    expect((await handleResendNewsletterWebhook(request(),dependencies)).status).toBe(400);expect(notice).not.toHaveBeenCalled();
+    notice.mockRejectedValue(new Error('ledger unavailable'));
+    expect((await handleResendNewsletterWebhook(request(),{...dependencies,verify:()=>JSON.parse(rawBody)})).status).toBe(503);expect(reconcile).not.toHaveBeenCalled();
+  });
   it("verifies the exact raw body before parsing and persists only bounded normalized evidence", async () => {
     const order: string[] = [];
     const verify = vi.fn((input: { payload: string }) => {

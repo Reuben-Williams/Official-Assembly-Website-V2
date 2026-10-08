@@ -83,6 +83,21 @@ afterEach(async () => {
 });
 
 describe("mobile off-canvas navigation", () => {
+  it("offers the same News disclosure with keyboard recovery on desktop and mobile", async () => {
+    await renderHeader();
+    const desktop = container.querySelector<HTMLButtonElement>('[aria-controls="news-navigation-submenu"]')!;
+    await click(desktop);
+    expect(container.querySelector('#news-navigation-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
+    await act(async () => desktop.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
+    expect(desktop.getAttribute('aria-expanded')).toBe('false');expect(document.activeElement).toBe(desktop);
+    await click(menuTrigger());
+    const mobile = dialog()!.querySelector<HTMLButtonElement>('[aria-controls="mobile-news-navigation-submenu"]')!;
+    await click(mobile);
+    expect(dialog()!.querySelector('#mobile-news-navigation-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
+    await act(async () => mobile.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
+    expect(mobile.getAttribute('aria-expanded')).toBe('false');expect(menuTrigger()?.getAttribute('aria-expanded')).toBe('true');
+    await click(dialog()!.querySelector<HTMLButtonElement>('[data-mobile-menu-close]'));
+  });
   it.each(["en", "es"] as const)("shows the requested primary order on desktop and mobile in %s", async (locale) => {
     await renderHeader(undefined, locale);
     const expectedSlugs = ["home", "about", "resources", "events", "news", "voting"];

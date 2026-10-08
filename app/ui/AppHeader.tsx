@@ -6,6 +6,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { localizedNavigationLabel, publicCopy } from "../i18n/catalog.public";
 import type { PublicLocale } from "../i18n/locale";
 import { MobileNavigation, type MobileNavigationItem } from "./MobileNavigation";
+import { NewsNavigation } from "./NewsNavigation";
 import {
   builderLink,
   builderSectionIds,
@@ -30,7 +31,8 @@ function NavigationLinks({
   const entries = navigationEntries({ content, locale });
   return (
     <>
-      {entries.map((entry) => (
+      {entries.map((entry) => {
+        const link = (
         <Link
           data-builder-instance={instance}
           data-builder-item-id={entry.slug}
@@ -48,7 +50,9 @@ function NavigationLinks({
             {entry.label}
           </span>
         </Link>
-      ))}
+        );
+        return entry.children ? <NewsNavigation key={entry.slug} items={entry.children} label={entry.disclosureLabel!}>{link}</NewsNavigation> : link;
+      })}
     </>
   );
 }
@@ -83,6 +87,13 @@ function navigationEntries({
       label: compactNews
         ? publicCopy(locale, "global.header.news", "News")
         : localizedNavigationLabel(locale, slug, label),
+      ...(slug === "news" ? {
+        disclosureLabel: locale === "es" ? "Abrir navegación de Noticias" : "Open News navigation",
+        children: [
+          { href: "/news", label: locale === "es" ? "Todas las noticias" : "All News" },
+          { href: "/news/press-releases", label: locale === "es" ? "Comunicados de prensa" : "Press Releases" },
+        ],
+      } : {}),
     }];
   });
 }

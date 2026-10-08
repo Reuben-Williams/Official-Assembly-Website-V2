@@ -7,6 +7,7 @@ import { NEWSLETTER_HISTORY_RECONCILIATION_POLICY_VERSION } from "./history-reco
 import { OWNER_LOGIN_POLICY_VERSION } from "./owner-login-evidence";
 import { validateDeliveryEvidence } from "./staff-auth-delivery";
 import { staffEvidenceRow, staffReceiptRow, staffRequestRow } from "./staff-auth-repository";
+import { readTeamNoticeMessageIds } from "../team-notices/service";
 
 const PAGE_SIZE = 1_000;
 const REQUIRED_MANUAL_CATEGORIES = [
@@ -130,6 +131,7 @@ export function createNewsletterProviderInventoryEvidenceRepository(
     },
 
     async read(): Promise<NewsletterProviderInventoryEvidence> {
+      const noticeIds = await readTeamNoticeMessageIds(client, siteId);
       const subscriptions = await allRows((from, to) => client
         .from("builder_newsletter_subscriptions")
         .select("contact_id,status,provider_contact_id")
@@ -273,9 +275,11 @@ export function createNewsletterProviderInventoryEvidenceRepository(
         ownerLoginEvidence,
         receipts
       );
+      for (const id of noticeIds) allowedProviderMessageIds.add(id);
       const staffExcluded = new Set([
         ...confirmationJobs, ...staffTests, ...authSmtpProofs, ...historyReconciliations
       ].map((row) => text(row.provider_message_id)).filter(Boolean));
+      for (const id of noticeIds) staffExcluded.add(id);
       for (const receipt of allDeliveryReceipts) {
         if (receipt.providerBroadcastId !== null) staffExcluded.add(receipt.providerMessageId);
       }

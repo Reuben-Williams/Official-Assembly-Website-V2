@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readTeamNoticeMessageIds } from "../team-notices/service";
 
 import type { NewsletterOwnerLoginReconciliationData } from "./owner-login-handler";
 
@@ -58,6 +59,7 @@ export function createSupabaseNewsletterOwnerLoginData(
 
     async excludedProviderMessageIds() {
       const sets = await Promise.all([
+        readTeamNoticeMessageIds(client, siteId),
         allMessageIds((from, to) => client.from("builder_newsletter_jobs")
           .select("provider_message_id").eq("site_id", siteId)
           .not("provider_message_id", "is", null).order("id", { ascending: true }).range(from, to)),

@@ -48,6 +48,7 @@ export async function handleResendNewsletterWebhook(
       readonly payload: string;
       readonly headers: { readonly id: string; readonly timestamp: string; readonly signature: string };
     }) => unknown;
+    readonly verifiedNotice?: (event: { svixId: string; type: string; createdAt: string; data: Record<string, unknown> }) => Promise<boolean>;
     readonly classify: (input: {
       readonly svixId: string;
       readonly eventType: string;
@@ -112,6 +113,7 @@ export async function handleResendNewsletterWebhook(
   let classification: Classification | null = null;
   if (relevant(event.type)) {
     try {
+      await dependencies.verifiedNotice?.({ svixId: values[0]!, ...event });
       classification = await dependencies.classify({
         svixId: values[0]!,
         eventType: event.type,

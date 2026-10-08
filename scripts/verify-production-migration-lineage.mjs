@@ -52,7 +52,9 @@ export const EXPECTED_PENDING_MIGRATIONS = Object.freeze([
   ["20261006034057_carousel_caption_visibility.sql", "56c86baa3cc19ce75b063a8df91c02c74be88cb3193f7f065b0c09f48e9f304a"],
   ["20261006044819_staff_auth_delivery_evidence.sql", "90701f68d20ab0d2ab01715a5a42ec311faf82d96cfddd9633b748846c6a714d"],
   ["20261006045047_calendar_optional_spanish.sql", "41908e047e9ad3dc6b1e6cfbabf25e82c674127d8b2cd1bc886f09807110acd1"],
-  ["20261007233605_page_media_publish_reliability.sql", "5664075a633a5d23f194e3c9877969a818c0fbcafaa7f38bfa36eb155bcba1cd"]
+  ["20261007233605_page_media_publish_reliability.sql", "5664075a633a5d23f194e3c9877969a818c0fbcafaa7f38bfa36eb155bcba1cd"],
+  ["20261008021107_website_team_notices.sql", "7c90dde508e290e2cd106ede0f5a9202d8a6b5769fb190650c1f49beb6eb4259"],
+  ["20261008021727_press_releases_route_reservation.sql", "f8af31f115da77b92604c184106da3cb6b57cb7754cb75cf1ad223a8f24f0385"]
 ]);
 
 function checksumCandidates(contents) {

@@ -18,6 +18,11 @@ const publishedQuery = {
   orderDirection: "desc" as const
 };
 
+export const PRESS_RELEASES_QUERY = Object.freeze({
+  ...publishedQuery,
+  categoryKeys: ["press-releases"],
+});
+
 export const HOMEPAGE_PUBLISHED_QUERY = Object.freeze({
   categoryKeys: [],
   tagKeys: [],
@@ -30,8 +35,13 @@ export const HOMEPAGE_PUBLISHED_QUERY = Object.freeze({
 });
 
 export function publicPostHref(slug: string) {
+  if (slug === "press-releases") throw new TypeError("This post slug is reserved for the Press Releases page.");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new TypeError("A valid post slug is required.");
   return `/news/${slug}`;
+}
+
+export async function listPublishedPressReleases(client: SupabaseClient): Promise<PublishedPost[]> {
+  return createSupabaseContentRepository(client).listPublishedPosts(BUILDER_SITE_KEY, PRESS_RELEASES_QUERY);
 }
 
 export function toLinkablePosts(
