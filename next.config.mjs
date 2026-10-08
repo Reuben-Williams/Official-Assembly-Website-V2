@@ -3,6 +3,11 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   webpack(config) {
+    // The pinned editor has a checked compatibility patch. Do not reuse the
+    // package's unpatched immutable-module cache from an earlier deployment.
+    if (config.cache && typeof config.cache === "object") {
+      config.cache.version = `${config.cache.version ?? ""}:morales-media-workspace-v1`;
+    }
     config.resolve.extensionAlias = {
       ...(config.resolve.extensionAlias ?? {}),
       ".js": [".ts", ".tsx", ".js"],
