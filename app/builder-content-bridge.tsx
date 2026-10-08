@@ -18,10 +18,17 @@ export function BuilderContentBridge() {
     const query=new URLSearchParams({mode:'draft',path:pathname});
     void fetch(`/api/builder?${query}`,{credentials:'same-origin',cache:'no-store',signal:abort.signal})
       .then(async response=>{if(!response.ok)throw new Error('draft-unavailable');return response.json() as Promise<PageContent>;})
-      .then(content=>{if(!abort.signal.aborted){applyDraftPageImages(document,content.regions);setPreviewError(false);}})
+      .then(async content=>{
+        const {applyDraftPageText}=await import('../lib/builder/page-text-preview');
+        if(!abort.signal.aborted){
+          applyDraftPageImages(document,content.regions);
+          applyDraftPageText(document,content.regions);
+          setPreviewError(false);
+        }
+      })
       .catch(()=>{if(!abort.signal.aborted)setPreviewError(true);});
     return ()=>abort.abort();
   },[pathname]);
   return <><BuilderPreviewBridge siteId={BUILDER_SITE_KEY} />{previewError ?
-    <p role="alert">Saved photos could not be loaded. Refresh the staff portal before editing.</p> : null}</>;
+    <p role="alert">Saved draft content could not be loaded. Refresh the staff portal before editing.</p> : null}</>;
 }

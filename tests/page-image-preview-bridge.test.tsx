@@ -2,10 +2,11 @@
 import {act} from 'react';
 import {createRoot,type Root} from 'react-dom/client';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({path:vi.fn(),apply:vi.fn()}));
+const mocks=vi.hoisted(()=>({path:vi.fn(),apply:vi.fn(),applyText:vi.fn()}));
 vi.mock('next/navigation',()=>({usePathname:mocks.path}));
 vi.mock('@reuben-williams/next',()=>({BuilderPreviewBridge:()=>null}));
 vi.mock('../lib/builder/page-image-preview',()=>({applyDraftPageImages:mocks.apply}));
+vi.mock('../lib/builder/page-text-preview',()=>({applyDraftPageText:mocks.applyText}));
 import {BuilderContentBridge} from '../app/builder-content-bridge';
 let root:Root;
 const originalParent=window.parent;
@@ -25,17 +26,20 @@ it('does not expose private drafts from a top-level preview URL',async()=>{
  window.history.replaceState(null,'','/news?builderPreview=1&builderSiteId=official-assembly-website-v2');
  await act(async()=>root.render(<BuilderContentBridge/>));expect(fetcher).not.toHaveBeenCalled();
 });
-it('loads authenticated saved photos only within the correct editor preview',async()=>{
+it('loads authenticated saved photos and text only within the correct editor preview',async()=>{
  Object.defineProperty(window,'parent',{configurable:true,value:{}});
  window.history.replaceState(null,'','/news?builderPreview=1&builderSiteId=official-assembly-website-v2');
  await act(async()=>root.render(<BuilderContentBridge/>));
+ await act(async()=>{await vi.dynamicImportSettled();});
  expect(fetcher).toHaveBeenCalledWith('/api/builder?mode=draft&path=%2Fnews',expect.objectContaining({credentials:'same-origin',cache:'no-store'}));
  expect(mocks.apply).toHaveBeenCalledWith(document,expect.objectContaining({photo:expect.objectContaining({src:expect.stringContaining('preview=1')})}));
+ expect(mocks.applyText).toHaveBeenCalledWith(document,expect.any(Object));
 });
 it('reports unavailable private previews without modifying the public fallback',async()=>{
  Object.defineProperty(window,'parent',{configurable:true,value:{}});
  window.history.replaceState(null,'','/news?builderPreview=1&builderSiteId=official-assembly-website-v2');
  fetcher.mockResolvedValue(new Response(null,{status:401}));
  await act(async()=>root.render(<BuilderContentBridge/>));expect(mocks.apply).not.toHaveBeenCalled();
- expect(document.querySelector('[role="alert"]')?.textContent).toContain('Saved photos could not be loaded');
+ expect(mocks.applyText).not.toHaveBeenCalled();
+ expect(document.querySelector('[role="alert"]')?.textContent).toContain('Saved draft content could not be loaded');
 });
