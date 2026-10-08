@@ -1,4 +1,3 @@
-import Script from "next/script";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { UnavailableFormFallback } from "@reuben-williams/next/forms";
@@ -138,10 +137,6 @@ export async function ResidentForm({ type, locale = "en", presentation = "card",
 
   return (
     <PublicFormCard type={type} locale={locale} presentation={presentation} labelledBy={labelledBy}>
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        strategy="afterInteractive"
-      />
       {type === "newsletter" ? (
         <aside className="newsletter-consent-context" aria-label={localizedBuilderText(locale, "forms.newsletter.context-label", "Newsletter confirmation and privacy notice")}>
           <strong>{localizedBuilderText(locale, "forms.newsletter.confirmation-required", "Confirmation is required")}</strong>

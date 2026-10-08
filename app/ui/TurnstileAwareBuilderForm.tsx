@@ -12,6 +12,7 @@ import {
   type BuilderFormProps
 } from "@reuben-williams/next/forms";
 import type { PublicLocale } from "../i18n/locale";
+import { useFormVerification } from "./useFormVerification";
 
 const VERIFICATION_GUIDANCE =
   "Verification runs automatically. Wait for it to finish before submitting.";
@@ -136,6 +137,8 @@ export function TurnstileAwareBuilderForm({
   const [verificationMessage, setVerificationMessage] = useState(verificationGuidance);
   const [formState, setFormState] = useState<PublicFormState>("idle");
   const hostRef = useRef<HTMLDivElement>(null);
+  const verification = useFormVerification(hostRef, projection.turnstile.siteKey, projection.turnstile.action, locale);
+  const retryVerification = verification.retry;
   const formStateRef = useRef<PublicFormState>("idle");
   const resetSeenRef = useRef(false);
   const pendingStatusRef = useRef<string | null>(null);
@@ -174,6 +177,7 @@ export function TurnstileAwareBuilderForm({
         && (status.textContent ?? "") !== pendingStatusRef.current
       ) {
         updateFormState("error");
+        retryVerification();
       }
     }
 
@@ -186,7 +190,7 @@ export function TurnstileAwareBuilderForm({
       subtree: true
     });
     return () => observer.disconnect();
-  }, []);
+  }, [retryVerification]);
 
   function showInvalidField(event: FormEvent<HTMLDivElement>) {
     const control = formControl(event.target);
@@ -239,6 +243,7 @@ export function TurnstileAwareBuilderForm({
     resetSeenRef.current = true;
     clearFieldErrors(form);
     updateFormState("success");
+    retryVerification();
   }
 
   return (
@@ -254,8 +259,21 @@ export function TurnstileAwareBuilderForm({
     >
       <BuilderForm {...props} projection={presentationProjection} />
       <p role="status" aria-live="polite" data-turnstile-status="true">
-        {verificationMessage}
+        {verification.state === "ready"
+          ? locale === "es" ? "Verificación completa. Puede enviar el formulario." : "Verification complete. You can submit the form."
+          : verification.state === "failed"
+            ? locale === "es" ? "No se pudo completar la verificación. Reinténtelo; sus datos se conservarán." : "Verification could not complete. Retry below; your entered information will be kept."
+            : verification.state === "expired"
+              ? locale === "es" ? "La verificación venció. Verifique de nuevo antes de enviar." : "Verification expired. Please verify again before submitting."
+              : verificationMessage}
       </p>
+      {verification.state === "failed" || verification.state === "expired" || formState === "verification-needed" ? (
+        <button type="button" className="verification-retry" onClick={() => {
+          setVerificationMessage(verificationGuidance);
+          updateFormState("idle");
+          retryVerification();
+        }}>{locale === "es" ? "Reintentar verificación" : "Retry verification"}</button>
+      ) : null}
       {variant === "newsletter" && formState === "success" ? (
         <p className="newsletter-success-guidance" data-newsletter-success-guidance="true">
           {locale === "es"

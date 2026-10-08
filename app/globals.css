@@ -2009,6 +2009,23 @@ h3 {
   display: none;
 }
 
+.public-form-card .verification-retry {
+  min-height: 44px;
+  margin-top: 0.6rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: white;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.public-form-card .verification-retry:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
 .public-form-card .builder-public-form button[type="submit"] {
   width: 100%;
   min-height: 50px;
