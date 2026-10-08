@@ -16,6 +16,7 @@ import { ImagePanel } from "./ImagePanel";
 import styles from "./official-profile-section.module.css";
 import { localizedBuilderText } from "../i18n/catalog.server";
 import type { PublicLocale } from "../i18n/locale";
+import { editorPlainText } from "../../lib/builder/editor-text";
 
 function ExternalAction({ href, children, locale, region, content }: { href: string; children: string; locale: PublicLocale; region: string; content: BuilderServerContent }) {
   const link = builderLink(content, region, { href, label: children });
@@ -31,7 +32,7 @@ function ExternalAction({ href, children, locale, region, content }: { href: str
 
 function CardDetails({ content, region, children, list = false }: { content: BuilderServerContent; region: string; children: React.ReactNode; list?: boolean }) {
   const value = content.regions[region];
-  const lines = value?.type === "text" ? value.value.split(/\r?\n/).filter(line => line.trim()) : null;
+  const lines = value?.type === "text" ? editorPlainText(value.value).split(/\r?\n/).filter(line => line.trim()) : null;
   return <div data-builder-region={region} data-builder-kind="text">{lines
     ? list ? <ul>{lines.map((line, i) => <li key={i}>{line}</li>)}</ul> : lines.map((line, i) => <p key={i}>{line}</p>)
     : children}</div>;
@@ -45,7 +46,7 @@ export function OfficialProfileSection({ content, locale = "en" }: { content: Bu
     timeZone: "UTC",
   }).format(new Date(`${profile.provenance.checkedAt}T00:00:00.000Z`));
   const portraitAsset = getImage("professional-home-official");
-  const text = (key: string, fallback: string) => builderText(content, key, localizedBuilderText(locale, key, fallback));
+  const text = (key: string, fallback: string) => editorPlainText(builderText(content, key, localizedBuilderText(locale, key, fallback)));
   const phone = builderLink(content, "home.official.identity.phone", { href: profile.office.phoneHref, label: profile.office.phoneDisplay });
 
   return (

@@ -33,6 +33,15 @@ describe("public navigation and staff editing", () => {
       expect(config.globalRegions.some(region => region.id === `home.official.${card}.details`)).toBe(true);
     }
   });
+  it("renders the actual formatted-editor payload as readable card text", () => {
+    const html = renderToStaticMarkup(<OfficialProfileSection content={{ regions: {
+      "home.official.education.details": { type: "text", value: "<ul><li>First &amp; second</li><li>Additional qualification</li></ul>" },
+      "home.official.education.heading": { type: "text", value: "<p>Education &amp; service</p>" },
+    } }} />);
+    expect(html).toContain('<li>First &amp; second</li><li>Additional qualification</li>');
+    expect(html).not.toContain('&lt;ul&gt;');
+    expect(html).not.toContain('&lt;p&gt;');
+  });
   it("returns matching text with page and section context, including accent-insensitive Spanish", () => {
     const entries = [{ title: "Voter registration", page: "Voting", section: "County resources", href: "/voting#features", text: "Find registration forms and orientación." }];
     expect(searchPublicEntries(entries, "orientacion")[0]).toMatchObject({ page: "Voting", section: "County resources", href: "/voting#features" });

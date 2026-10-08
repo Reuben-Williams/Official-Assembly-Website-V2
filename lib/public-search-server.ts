@@ -10,6 +10,7 @@ import { localizedBuilderText } from "../app/i18n/catalog.server";
 import type { PublicLocale } from "../app/i18n/locale";
 import type { PublicSearchEntry } from "./public-search";
 import { publishedDocumentText } from "./public-search";
+import { editorPlainText } from "./builder/editor-text";
 
 // Only public, published content is read. Never search drafts, media metadata,
 // staff accounts, form submissions, or newsletter subscribers.
@@ -17,7 +18,7 @@ export async function loadPublicSearchEntries(locale: PublicLocale) {
   const results = await Promise.allSettled(pages.map(async page => {
     const content = await loadBuilderServerContent(page.href);
     const slug = page.slug ?? "home";
-    const text = (key: string, fallback: string) => localizedBuilderText(locale, key, builderText(content, key, fallback));
+    const text = (key: string, fallback: string) => editorPlainText(localizedBuilderText(locale, key, builderText(content, key, fallback)));
     const title = text(`${slug}.hero.title`, page.title);
     const entries: PublicSearchEntry[] = [{ title, page: title, section: locale === "es" ? "Página" : "Page", href: page.href, text: text(`${slug}.hero.body`, page.description) }];
     const sections = builderSectionIds(content, `${slug}.sections`, ["hero", "features", "secondary", "official-profile", "workflow"]);
