@@ -1,3 +1,4 @@
+import { editorFetch } from '../builder/editor-fetch';
 import type {
   CalendarCommandRequest,
   CalendarCommandResult,
@@ -24,7 +25,7 @@ export function createHttpCalendarClient(input: {
   const baseUrl = input.baseUrl ?? "/api/builder/calendar";
   return Object.freeze({
     async list(): Promise<CalendarManagementCollection> {
-      const response = await fetch(baseUrl, {
+      const response = await editorFetch(baseUrl, {
         cache: "no-store",
         credentials: "same-origin",
         headers: { accept: "application/json" }
@@ -37,7 +38,7 @@ export function createHttpCalendarClient(input: {
     async command(command: CalendarBrowserCommand): Promise<CalendarCommandResult> {
       const csrf = input.getCsrfToken();
       if (!csrf) throw new Error("The editor session must be refreshed.");
-      const response = await fetch(`${baseUrl}/${command.command}`, {
+      const response = await editorFetch(`${baseUrl}/${command.command}`, {
         method: "POST",
         cache: "no-store",
         credentials: "same-origin",

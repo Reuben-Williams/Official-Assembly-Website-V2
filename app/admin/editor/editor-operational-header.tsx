@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from '../../../lib/builder/editor-fetch';
 
 import { useState } from "react";
 
@@ -10,7 +11,7 @@ export function EditorOperationalHeader() {
     setEndingSession(true);
     setError("");
     try {
-      const response = await fetch("/api/builder/session", {
+      const response = await editorFetch("/api/builder/session", {
         method: "DELETE",
         credentials: "same-origin",
         cache: "no-store"

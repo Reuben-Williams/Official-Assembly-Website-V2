@@ -19,7 +19,9 @@ import { useCallback, useEffect, useMemo, useState, type ComponentProps, type Co
 
 import site from "../../../builder.config";
 import { createHttpPostsClient } from "../../../lib/builder/posts-client";
-import { createHttpMediaUploadClient } from "../../../lib/builder/media-client";
+import { createHttpMediaUploadClient, type MediaUploadState } from "../../../lib/builder/media-client";
+import { editorFetch } from "../../../lib/builder/editor-fetch";
+import { EditorSafetyFrame } from './editor-safety-frame';
 import { createHttpCalendarClient } from "../../../lib/calendar/client";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
 import { createLiveGrowthClient } from "../../../lib/growth/client";
@@ -137,6 +139,8 @@ export function EditorClient({
   );
   const [linkablePosts, setLinkablePosts] = useState(initialLinkablePosts);
   const [mediaAssets, setMediaAssets] = useState<ManagedMediaChoice[]>([]);
+  const [uploadState, setUploadState] = useState<MediaUploadState>({status:'idle'});
+  const [editorTransport, setEditorTransport] = useState<typeof editorFetch>(() => editorFetch);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const [mediaLoading, setMediaLoading] = useState(true);
@@ -167,13 +171,15 @@ export function EditorClient({
     return supabase ? createHttpMediaUploadClient({
       baseUrl: "/api/builder/media",
       getCsrfToken: csrfCookie,
-      storage: supabase.storage.from("builder-media")
+      storage: supabase.storage.from("builder-media"),
+      onUploadState: setUploadState
     }) : null;
   }, []);
   const client = useMemo(() => {
     const attached = withPublicationFeedback(createHttpAttachedSiteEditorClient({
       baseUrl: "/api/builder",
-      getCsrfToken: csrfCookie
+      getCsrfToken: csrfCookie,
+      fetcher: editorTransport
     }),publicationFeedback);
     return {
       ...attached,
@@ -181,7 +187,8 @@ export function EditorClient({
       ...(mediaUpload?{uploadMedia: mediaUpload.uploadMedia}:{}),
       ...(role === "owner" && mediaUpload ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
     };
-  }, [mediaUpload, role, historySource,publicationFeedback]);
+  // Recreate the attached client after sign-in so its gallery/history are refreshed.
+  }, [mediaUpload, role, historySource,publicationFeedback,editorTransport]);
   const refreshMedia = useCallback(async () => {
     setMediaLoading(true);
     try {
@@ -209,10 +216,8 @@ export function EditorClient({
   }, [client]);
   const growth = useMemo(() => createLiveGrowthClient(site.siteId, {
     getCsrfToken: csrfCookie,
-    onAuthenticationRequired: () => {
-      const returnTo = `${window.location.pathname}${window.location.search}`;
-      window.location.replace(`/admin/login?returnTo=${encodeURIComponent(returnTo)}`);
-    }
+    // The shared request adapter opens a recovery prompt without discarding edits.
+    onAuthenticationRequired: () => {}
   }), []);
   const posts = useMemo(() => createHttpPostsClient({
     baseUrl: "/api/builder/posts",
@@ -222,6 +227,7 @@ export function EditorClient({
   const alerts = useMemo(() => new BuilderApiClient({
     baseUrl: "/api/builder",
     getCsrfToken: csrfCookie,
+    fetcher: editorFetch,
   }), []);
   const calendar = useMemo(() => createHttpCalendarClient({ getCsrfToken: csrfCookie }), []);
   const carousel = useMemo(() => createCarouselClient(), []);
@@ -304,6 +310,13 @@ export function EditorClient({
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard")) as BuilderWorkspaceId;
 
   return (
+    <EditorSafetyFrame upload={uploadState} onSessionRestored={() => {
+      setEditorTransport(() => {
+        const transport: typeof editorFetch = (input, init) => editorFetch(input, init);
+        return transport;
+      });
+      setPublicationRevision(value => value + 1);
+    }}>
     <AttachedSiteEditor
       client={client}
       {...editorPageNavigation(currentPath, setCurrentPath)}
@@ -344,5 +357,6 @@ export function EditorClient({
         ? "Private folder import is unavailable until the media service is configured."
         : "Folder import is available to site owners only. Individual uploads remain available for authorized staff."}
     />
+    </EditorSafetyFrame>
   );
 }

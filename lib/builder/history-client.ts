@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from './editor-fetch';
 import type { HistoryQueryV1, HistoryPageV1 } from "@reuben-williams/core";
 // The site adds a carousel source while the published editor package remains unchanged.
 // Server-side query validation and authorization remain authoritative.
@@ -21,7 +22,7 @@ export async function readSiteHistory(
     "action",
   ] as const)
     if (query[key]) search.set(key, query[key]!);
-  const response = await fetch(`/api/builder?${search}`, {
+  const response = await editorFetch(`/api/builder?${search}`, {
     credentials: "same-origin",
     cache: "no-store",
   });

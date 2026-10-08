@@ -1,3 +1,4 @@
+import { editorFetch } from './editor-fetch';
 import type {
   AttachedPostsClient,
   EditablePostDraft,
@@ -34,7 +35,7 @@ async function readResponse<T>(response: Response): Promise<T> {
 }
 
 export async function listLinkablePosts(options: PostsClientOptions): Promise<LinkablePost[]> {
-  const response = await fetch(`${options.baseUrl}?scope=linkable`, {
+  const response = await editorFetch(`${options.baseUrl}?scope=linkable`, {
     method: "GET",
     credentials: "same-origin",
     cache: "no-store",
@@ -53,7 +54,7 @@ export function createHttpPostsClient(options: PostsClientOptions): AttachedPost
       headers["x-builder-csrf"] = csrf;
       headers["x-idempotency-key"] = `post:${crypto.randomUUID()}`;
     }
-    const response = await fetch(`${options.baseUrl}${path}`, {
+    const response = await editorFetch(`${options.baseUrl}${path}`, {
       method: init?.method ?? "GET",
       credentials: "same-origin",
       cache: "no-store",

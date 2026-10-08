@@ -1,11 +1,12 @@
 'use client';
+import { editorFetch } from '../../../lib/builder/editor-fetch';
 import { useEffect,useState } from 'react';
 import type { PagePublicationStatus,PublicationFeedback } from '../../../lib/builder/page-publication-status';
 export function PagePublicationStatusPanel({path,revision,result}:{path:string;revision:number;result:PublicationFeedback|null}) {
   const [status,setStatus]=useState<{path:string;value:PagePublicationStatus|null;loading:boolean}>({path,value:null,loading:true});
   useEffect(()=>{
     const abort=new AbortController();
-    void fetch(`/api/builder?resource=publication-status&path=${encodeURIComponent(path)}`,{credentials:'same-origin',cache:'no-store',signal:abort.signal})
+    void editorFetch(`/api/builder?resource=publication-status&path=${encodeURIComponent(path)}`,{credentials:'same-origin',cache:'no-store',signal:abort.signal})
       .then(async response=>{if(!response.ok) throw new Error('unavailable');return response.json() as Promise<PagePublicationStatus>;})
       .then(value=>{if(!abort.signal.aborted)setStatus({path,value,loading:false});})
       .catch(()=>{if(!abort.signal.aborted)setStatus({path,value:null,loading:false});});

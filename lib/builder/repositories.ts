@@ -269,14 +269,11 @@ export async function listNormalizedMediaAssets(
     .eq("site_id", siteId)
     .in("revision_id", revisions.map((revision) => String(revision.id)));
   if (replicaResult.error) throw replicaResult.error;
-  const objectKeys = [...new Set(revisions.map((revision) => String(revision.object_key)))];
-  const signedUrls = new Map<string, string>();
-  await Promise.all(objectKeys.map(async (objectKey) => {
-    const result = await client.storage.from("builder-media").createSignedUrl(objectKey, 60 * 60);
-    if (result.error) throw result.error;
-    if (result.data?.signedUrl) signedUrls.set(objectKey, result.data.signedUrl);
-  }));
-  return mapNormalizedMediaAssets(assets, revisions, signedUrls, (replicaResult.data ?? []) as MediaReplicaRow[]);
+  // Resolve authorization when the image is requested. Gallery entries can stay
+  // open longer than a Storage grant and must not persist expiring bearer URLs.
+  const galleryUrls = new Map(revisions.map(revision => [String(revision.object_key),
+    `/api/builder/media/${String(revision.id)}?preview=1`]));
+  return mapNormalizedMediaAssets(assets, revisions, galleryUrls, (replicaResult.data ?? []) as MediaReplicaRow[]);
 }
 
 function jsonError(status: number, code: string, message: string, extra?: Record<string, unknown>) {

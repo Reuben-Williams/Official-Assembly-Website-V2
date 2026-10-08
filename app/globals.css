@@ -2557,6 +2557,19 @@ h3 {
   border-left: 4px solid var(--accent);
 }
 
+.editor-upload-feedback { padding: 12px 24px; background: #edf6f3; color: #062343; border-bottom: 1px solid #c8ddd5; font-weight: 600; }
+.editor-upload-feedback.error { background: #fff0f1; color: #9c182a; border-color: #ebbdc4; }
+.editor-safety-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: rgb(3 25 51 / 72%); }
+.editor-safety-dialog { width: min(100%, 520px); max-height: calc(100dvh - 40px); overflow: auto; padding: clamp(24px, 5vw, 36px); border-radius: 18px; background: #fff; color: #062343; box-shadow: 0 24px 70px rgb(0 0 0 / 25%); }
+.editor-safety-dialog h2 { font-size: clamp(24px, 4vw, 30px); line-height: 1.2; margin: 0 0 16px; }
+.editor-safety-dialog p { margin: 0 0 20px; line-height: 1.6; }
+.editor-safety-dialog a, .editor-safety-dialog button { display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; min-height: 48px; padding: 12px 16px; border-radius: 8px; border: 1px solid #b5c3d2; margin: 12px 0 0; font: inherit; font-weight: 700; cursor: pointer; }
+.editor-safety-dialog .editor-safety-primary { background: #062343; color: #fff; border-color: #062343; }
+.editor-safety-dialog button { background: #f4f7fa; color: #062343; }
+.editor-safety-dialog button:disabled { cursor: wait; opacity: .65; }
+.editor-safety-dialog .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.editor-safety-dialog a:focus-visible, .editor-safety-dialog button:focus-visible { outline: 3px solid #ca9b36; outline-offset: 3px; }
+
 @media (max-width: 860px) {
   .news-grid {
     grid-template-columns: 1fr;

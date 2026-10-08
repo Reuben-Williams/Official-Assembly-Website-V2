@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from '../../../lib/builder/editor-fetch';
 
 import type {
   LocalizationBlockerV1,
@@ -261,7 +262,7 @@ export function BilingualReadinessWorkspace({
 
   const loadWorkspace = useCallback(async () => {
     try {
-      const response = await fetch("/api/builder/localization", { headers: { accept: "application/json" } });
+      const response = await editorFetch("/api/builder/localization", { headers: { accept: "application/json" } });
       const body = await response.json() as Partial<BilingualWorkspaceSnapshot> & { error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message ?? "Bilingual readiness could not be loaded.");
       if (!Array.isArray(body.revisions) || !Array.isArray(body.blockers) ||
@@ -292,7 +293,7 @@ export function BilingualReadinessWorkspace({
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/builder/localization", {
+      const response = await editorFetch("/api/builder/localization", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -334,7 +335,7 @@ export function BilingualReadinessWorkspace({
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/builder/localization", {
+      const response = await editorFetch("/api/builder/localization", {
         method: "POST",
         headers: {
           "content-type": "application/json",

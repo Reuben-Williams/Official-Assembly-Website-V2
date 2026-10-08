@@ -17,6 +17,32 @@ const asset: MediaAsset = {
 };
 
 describe("direct private media upload client", () => {
+  it('prepares a PNG before inspection and uploads the converted JPEG bytes, not the original PNG', async () => {
+    const png = new File(['png'], 'community.png', { type: 'image/png' });
+    const jpeg = new File(['jpeg'], 'community.jpg', { type: 'image/jpeg' });
+    const inspectFile = vi.fn(async (file: File) => ({ name: file.name, mimeType: file.type, byteSize: file.size, width: 1, height: 1, sha256: 'a'.repeat(64) }));
+    const uploadToSignedUrl = vi.fn(async () => ({ data: {}, error: null }));
+    const states = vi.fn();
+    const client = createHttpMediaUploadClient({ baseUrl: '/api/builder/media', getCsrfToken: () => 'csrf', storage: { uploadToSignedUrl },
+      prepareFile: async () => jpeg, inspectFile, onUploadState: states,
+      fetcher: vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ outcome: 'upload', planId: 'plan', path: 'photo.jpg', token: 'token' })))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ outcome: 'finalized', asset }))),
+    });
+    await client.uploadMedia(png);
+    expect(inspectFile).toHaveBeenCalledWith(jpeg);
+    expect(uploadToSignedUrl).toHaveBeenCalledWith('photo.jpg', 'token', jpeg, expect.anything());
+    expect(states).toHaveBeenNthCalledWith(1, { status: 'uploading', name: 'community.png' });
+    expect(states).toHaveBeenLastCalledWith({ status: 'selected', name: 'community.png' });
+  });
+
+  it('reports rejected files and leaves the previous selection unchanged instead of silently swallowing the failure', async () => {
+    const states = vi.fn();
+    const client = createHttpMediaUploadClient({ baseUrl: '/api/builder/media', getCsrfToken: () => 'csrf', storage: { uploadToSignedUrl: vi.fn() },
+      inspectFile: async () => { throw new TypeError('Each image must be no larger than 10 MiB.'); }, onUploadState: states,
+    });
+    await expect(client.uploadMedia(new File(['jpeg'], 'large.jpg', { type: 'image/jpeg' }))).rejects.toThrow('10 MiB');
+    expect(states).toHaveBeenLastCalledWith({ status: 'error', name: 'large.jpg', message: 'Each image must be no larger than 10 MiB.' });
+  });
   it("plans, directly uploads, and finalizes one image without sending bytes through the app", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({

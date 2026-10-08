@@ -14,6 +14,7 @@ import {
 } from "../../../../lib/builder/login-completion";
 import { getBuilderAdminClient } from "../../../../lib/supabase/admin";
 import { createRequestSupabaseClient } from "../../../../lib/supabase/server";
+import { authenticateBuilderRequest } from '../../../../lib/builder/request-auth';
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +23,14 @@ const noStore = { "cache-control": "no-store" };
 
 function error(status: number, code: string, message: string) {
   return NextResponse.json({ error: { code, message } }, { status, headers: noStore });
+}
+
+// Read-only health check: requires both the verified member and the existing
+// bounded editor session. It never renews cookies or consumes login proofs.
+export async function GET(request: Request) {
+  const identity = await authenticateBuilderRequest(request);
+  if (!identity) return error(401, 'AUTH_REQUIRED', 'Sign in again to continue editing.');
+  return NextResponse.json({ status: 'active' }, { headers: noStore });
 }
 
 function requestCookie(request: Request, name: string): string | null {

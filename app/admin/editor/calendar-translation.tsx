@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from '../../../lib/builder/editor-fetch';
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { builderSessionCookies } from "../../../lib/builder/session-cookies";
@@ -10,14 +11,14 @@ function httpClient(): CalendarTranslationClient {
   const url = "/api/builder/calendar/translation";
   return {
     async available() {
-      const response = await fetch(url, { cache: "no-store", credentials: "same-origin" });
+      const response = await editorFetch(url, { cache: "no-store", credentials: "same-origin" });
       return response.ok && (await response.json()).available === true;
     },
     async suggest(source) {
       const cookie = document.cookie.split(";").find(item => item.trim().startsWith(`${builderSessionCookies.csrf}=`));
       const token = cookie ? decodeURIComponent(cookie.trim().slice(builderSessionCookies.csrf.length + 1)) : "";
       if (!token) throw new Error("Refresh your editor session.");
-      const response = await fetch(url, {
+      const response = await editorFetch(url, {
         method: "POST", cache: "no-store", credentials: "same-origin",
         headers: { "content-type": "application/json", "x-builder-csrf": token },
         body: JSON.stringify({ confirmed: true, ...source })

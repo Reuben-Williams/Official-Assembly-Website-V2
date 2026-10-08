@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from '../builder/editor-fetch';
 
 export type NewsletterOperationsStatus = {
   readonly version: 1;
@@ -188,7 +189,7 @@ export function createNewsletterOperationsClient(
   async function mutation(path: string, body: Record<string, unknown>) {
     const csrf = getCsrfToken();
     if (!csrf) throw new Error("The editor session must be refreshed.");
-    return responseJson(await fetch(`/api/newsletter/operations/${path}`, {
+    return responseJson(await editorFetch(`/api/newsletter/operations/${path}`, {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",
@@ -211,13 +212,13 @@ export function createNewsletterOperationsClient(
   }
   return {
     async status() {
-      return boundedStatus(await responseJson(await fetch("/api/newsletter/operations/status", {
+      return boundedStatus(await responseJson(await editorFetch("/api/newsletter/operations/status", {
         credentials: "same-origin",
         cache: "no-store"
       })));
     },
     async providerInventory() {
-      const response = await fetch("/api/newsletter/operations/provider-inventory", {
+      const response = await editorFetch("/api/newsletter/operations/provider-inventory", {
         credentials: "same-origin",
         cache: "no-store"
       });

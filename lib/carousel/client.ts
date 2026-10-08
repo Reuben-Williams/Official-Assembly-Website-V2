@@ -1,4 +1,5 @@
 import type { CarouselCommand } from "./handlers";
+import { editorFetch } from '../builder/editor-fetch';
 import type { CarouselState, CarouselReview } from "./service";
 import { builderSessionCookies } from "../builder/session-cookies";
 export type CarouselReply = { state?: CarouselState; review?: CarouselReview };
@@ -24,7 +25,7 @@ export function createCarouselClient(): CarouselClient {
       .find(([name]) => name === builderSessionCookies.csrf)
       ?.slice(1)
       .join("=");
-    const response = await fetch("/api/builder/carousel", {
+    const response = await editorFetch("/api/builder/carousel", {
       method: command ? "POST" : "GET",
       credentials: "same-origin",
       cache: "no-store",
@@ -55,7 +56,7 @@ export function createCarouselClient(): CarouselClient {
         .find(([name]) => name === builderSessionCookies.csrf)
         ?.slice(1)
         .join("=");
-      const response = await fetch("/api/builder/media/inventory", {
+      const response = await editorFetch("/api/builder/media/inventory", {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",

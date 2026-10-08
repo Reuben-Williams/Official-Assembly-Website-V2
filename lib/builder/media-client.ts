@@ -10,8 +10,10 @@ import type {
 import {
   MEDIA_BATCH_MAX_BYTES,
   MEDIA_BATCH_MAX_FILES,
+  MEDIA_FILE_MAX_BYTES,
   validateMediaClaim
 } from "./media-constraints";
+import { editorFetch } from './editor-fetch';
 
 export type InspectedMediaFile = {
   name: string;
@@ -42,11 +44,47 @@ type MediaUploadClientOptions = {
   storage: SignedUploadStorage;
   fetcher?: typeof fetch;
   inspectFile?: (file: File) => Promise<InspectedMediaFile>;
+  prepareFile?: (file: File) => Promise<File>;
+  onUploadState?: (state: MediaUploadState) => void;
 };
+
+export type MediaUploadState = { status: 'idle' } | { status: 'uploading' | 'selected'; name: string } |
+  { status: 'error'; name: string; message: string };
+// The published gallery currently drops its upload rejection. This tagged error
+// is only used after the site has rendered the failure, never for other errors.
+export class ReportedMediaUploadError extends Error { readonly reported = true; }
 
 async function sha256Hex(bytes: BufferSource) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function prepareBrowserMediaUpload(file: File): Promise<File> {
+  if (file.type === 'image/jpeg') return file;
+  if (!['image/png', 'image/webp'].includes(file.type)) {
+    throw new TypeError('Choose a JPEG, PNG or WebP image. Animated GIF uploads are not supported.');
+  }
+  if (!file.size || file.size > MEDIA_FILE_MAX_BYTES) throw new TypeError('Each image must be no larger than 10 MiB.');
+  if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
+    throw new TypeError('This browser cannot prepare the image. Save it as a JPEG and try again.');
+  }
+  const bitmap = await createImageBitmap(file);
+  try {
+    validateMediaClaim({ name: 'prepared.jpg', mimeType: 'image/jpeg', byteSize: file.size, width: bitmap.width, height: bitmap.height });
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new TypeError('The image could not be prepared. Save it as a JPEG and try again.');
+    // Preserve dimensions; only encode for the existing server-verified JPEG
+    // contract. Transparent pixels get an explicit white background.
+    context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0);
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    if (!blob || blob.type !== 'image/jpeg' || blob.size > MEDIA_FILE_MAX_BYTES) {
+      throw new TypeError('The prepared image is too large or could not be encoded. Save a JPEG under 10 MiB and try again.');
+    }
+    return new File([blob], `${file.name.replace(/\.[^.]*$/, '')}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified });
+  } finally { bitmap.close(); }
 }
 
 export async function inspectBrowserMediaFile(file: File): Promise<InspectedMediaFile> {
@@ -81,8 +119,9 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
   uploadMedia(file: File, metadata?: MediaUploadMetadata): Promise<MediaAsset>;
   uploadMediaBatch: MediaBatchUploadHandler;
 } {
-  const fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
+  const fetcher = options.fetcher ?? editorFetch;
   const inspectFile = options.inspectFile ?? inspectBrowserMediaFile;
+  const prepareFile = options.prepareFile ?? prepareBrowserMediaUpload;
   const baseUrl = options.baseUrl.replace(/\/$/, "");
 
   async function request<T>(path: string, body: Record<string, unknown>, status?: number): Promise<T> {
@@ -152,11 +191,23 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
   }
 
   async function uploadMedia(file: File, metadata?: MediaUploadMetadata) {
-    const completed = await uploadOne(file, await inspectFile(file), undefined, metadata);
-    if (!completed.asset || completed.result.status === "archived") {
-      throw new Error(completed.result.message ?? "The selected image matches an archived media asset.");
+    options.onUploadState?.({ status: 'uploading', name: file.name });
+    try {
+      const prepared = await prepareFile(file);
+      const completed = await uploadOne(prepared, await inspectFile(prepared), undefined, metadata);
+      if (!completed.asset || completed.result.status === 'archived') {
+        throw new TypeError('The selected image matches an archived media asset. Restore it or choose a different image.');
+      }
+      options.onUploadState?.({ status: 'selected', name: file.name });
+      return completed.asset;
+    } catch (error) {
+      const message = error instanceof TypeError ? error.message : 'The image could not be uploaded. Check your connection and try again. Your previous photo is unchanged.';
+      options.onUploadState?.({ status: 'error', name: file.name, message });
+      // Keep callers' rejection behavior. Only the gallery's already-reported
+      // unhandled rejection is suppressed by the site error boundary.
+      if (options.onUploadState) throw new ReportedMediaUploadError(message);
+      throw error;
     }
-    return completed.asset;
   }
 
   const uploadMediaBatch: MediaBatchUploadHandler = async (files, onProgress) => {

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   issuePreviewSession: vi.fn(),
   consumeEditorLoginCompletion: vi.fn(),
   requireBuilderMember: vi.fn(),
+  authenticateBuilderRequest: vi.fn(),
   assertRequestOrigin: vi.fn()
 }));
 
@@ -38,7 +39,10 @@ vi.mock("../lib/builder/login-completion", () => ({
   editorLoginCompletionCookie: "builder_login_completion"
 }));
 
-import { DELETE, POST } from "../app/api/builder/session/route";
+vi.mock('../lib/builder/request-auth', () => ({ authenticateBuilderRequest: mocks.authenticateBuilderRequest }));
+
+import * as sessionRoute from "../app/api/builder/session/route";
+const { DELETE, POST } = sessionRoute;
 
 describe("builder session route", () => {
   beforeEach(() => {
@@ -50,6 +54,7 @@ describe("builder session route", () => {
     mocks.consumeEditorLoginCompletion.mockReset();
     mocks.requireBuilderMember.mockReset();
     mocks.assertRequestOrigin.mockReset();
+    mocks.authenticateBuilderRequest.mockReset();
     mocks.requireBuilderMember.mockResolvedValue({
       userId: "34300000-0000-4000-8000-000000000001",
       siteId: "34000000-0000-4000-8000-000000000001",
@@ -60,6 +65,23 @@ describe("builder session route", () => {
     mocks.signOut.mockResolvedValue({ error: null });
     mocks.issuePreviewSession.mockResolvedValue("signed-editor-token");
     mocks.consumeEditorLoginCompletion.mockResolvedValue(false);
+  });
+
+  it('exposes a read-only health check that does not extend or recreate editor sessions', async () => {
+    expect(sessionRoute).toHaveProperty('GET');
+    mocks.authenticateBuilderRequest.mockResolvedValue({ role: 'owner' });
+    const response = await sessionRoute.GET(new Request('https://www.assemblywomanmorales.com/api/builder/session'));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(mocks.issuePreviewSession).not.toHaveBeenCalled();
+    expect(mocks.adminRpc).not.toHaveBeenCalled();
+  });
+  it('returns 401 for expired or revoked editor sessions rather than trusting a remaining Supabase login', async () => {
+    expect(sessionRoute).toHaveProperty('GET');
+    mocks.authenticateBuilderRequest.mockResolvedValue(null);
+    const response = await sessionRoute.GET(new Request('https://www.assemblywomanmorales.com/api/builder/session'));
+    expect(response.status).toBe(401);
   });
 
   it("issues editor and CSRF cookies after consuming a fresh login proof", async () => {

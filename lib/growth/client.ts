@@ -1,4 +1,5 @@
 "use client";
+import { editorFetch } from '../builder/editor-fetch';
 
 import type {
   BaseSubmissionDetail,
@@ -95,7 +96,7 @@ async function post<T>(
   idempotencyKey?: string
 ): Promise<T> {
   const csrfToken = idempotencyKey ? options.getCsrfToken?.() : null;
-  const response = await fetch(`/api/growth/${path}`, {
+  const response = await editorFetch(`/api/growth/${path}`, {
     method: "POST",
     credentials: "same-origin",
     cache: "no-store",
