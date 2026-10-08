@@ -529,32 +529,6 @@ export const pages: PageContent[] = [
     ]
   },
   {
-    href: "/survey",
-    slug: "survey",
-    navLabel: "Survey",
-    title: "Share a District Priority",
-    eyebrow: "Resident Voice",
-    description:
-      "The online survey is not accepting responses. Residents can share priorities directly with the district office by phone or through the official contact form.",
-    imageKey: "outdoorVisit",
-    cards: [
-      {
-        id: "issue-priorities",
-        title: "Legislative Priorities",
-        text: "Share an issue or legislative concern through the district office contact options.",
-        icon: ClipboardList,
-        href: "/contact"
-      },
-      {
-        id: "neighborhood-context",
-        title: "Local Context",
-        text: "Include your municipality and the state matter involved when asking the office for assistance.",
-        icon: MapPin,
-        href: "/contact"
-      }
-    ]
-  },
-  {
     href: "/social",
     slug: "social",
     navLabel: "Social",

@@ -1,0 +1,37 @@
+import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { navigationChildren } from "../app/data/navigation";
+import { searchPublicEntries } from "../lib/public-search";
+import { OfficialProfileSection } from "../app/ui/OfficialProfileSection";
+import config from "../builder.config";
+import { pages } from "../app/data/site";
+describe("public navigation and staff editing", () => {
+  it("provides all primary menu groups and makes orphan public pages reachable", () => {
+    const groups = ["home", "about", "resources", "events", "news", "voting"].flatMap(slug => {
+      const children = navigationChildren(slug, "en"); expect(children?.length).toBeGreaterThan(1); return children!;
+    });
+    for (const href of ["/community", "/newsletter", "/social", "/contact", "/privacy", "/news/press-releases"]) expect(groups.some(item => item.href === href)).toBe(true);
+    expect(groups.some(item => /admin|survey|confirm/.test(item.href))).toBe(false);
+  });
+  it("removes Survey from both public pages and editor registration", () => {
+    expect(pages.some(page => page.href === "/survey")).toBe(false);
+    expect(config.pages.some(page => page.path === "/survey")).toBe(false);
+  });
+  it("renders staff-authored fact lists and action destinations with editing controls", () => {
+    const html = renderToStaticMarkup(<OfficialProfileSection content={{ regions: {
+      "home.official.education.details": { type: "text", value: "First approved qualification\nAdditional qualification" },
+      "home.official.actions.education": { type: "link", href: "/about", label: "Learn more" },
+    } }} />);
+    expect(html).toContain("<li>Additional qualification</li>"); expect(html).toContain('href="/about"');
+    for (const card of ["office", "biography", "education", "committees"]) {
+      expect(html).toContain(`data-builder-region="home.official.${card}.details"`);
+      expect(config.globalRegions.some(region => region.id === `home.official.${card}.details`)).toBe(true);
+    }
+  });
+  it("returns matching text with page and section context, including accent-insensitive Spanish", () => {
+    const entries = [{ title: "Voter registration", page: "Voting", section: "County resources", href: "/voting#features", text: "Find registration forms and orientación." }];
+    expect(searchPublicEntries(entries, "orientacion")[0]).toMatchObject({ page: "Voting", section: "County resources", href: "/voting#features" });
+    expect(searchPublicEntries(entries, "registration forms")).toHaveLength(1);
+    expect(searchPublicEntries(entries, "unmatched")).toHaveLength(0); expect(searchPublicEntries(entries, " ")).toHaveLength(0);
+  });
+});

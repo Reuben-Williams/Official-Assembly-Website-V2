@@ -68,7 +68,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
     ? getImage(page.imageKey)
     : defaultSupportingAsset;
   const formSection = formType ? (
-    <section className="section section-muted editorial-intake" data-builder-item-id="form">
+    <section id="form" className="section section-muted editorial-intake" data-builder-item-id="form">
       <div className="container split">
         <div>
           <p className="eyebrow" data-builder-region={formCopyRegions!.eyebrow} data-builder-kind="text">
@@ -90,7 +90,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
 
   return (
     <div className="editorial-page" data-editorial-page={slug} data-builder-region={`${slug}.sections`} data-builder-kind="sections">
-      <section className="hero" data-builder-item-id="hero">
+      <section id="overview" className="hero" data-builder-item-id="hero">
         <div className="container hero-grid">
           <div>
             <p
@@ -156,7 +156,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
       {slug === "resources" ? <CurrentResourceSection content={content} locale={locale} /> : null}
       {slug === "community" ? <VolunteerPortalSection content={content} locale={locale} /> : null}
 
-      <section className="section" data-builder-item-id="features">
+      <section id="features" className="section" data-builder-item-id="features">
         <div className="container">
           <div className="section-heading">
             <div>
@@ -230,7 +230,7 @@ export async function PageTemplate({ page, content = EMPTY_CONTENT, locale = "en
       </section> : null}
 
       {page.secondaryCards?.length ? (
-        <section className="section" data-builder-item-id="secondary">
+        <section id="secondary" className="section" data-builder-item-id="secondary">
           <div className="container">
             <Cards
               cards={page.secondaryCards}

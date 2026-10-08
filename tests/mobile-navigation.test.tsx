@@ -85,15 +85,15 @@ afterEach(async () => {
 describe("mobile off-canvas navigation", () => {
   it("offers the same News disclosure with keyboard recovery on desktop and mobile", async () => {
     await renderHeader();
-    const desktop = container.querySelector<HTMLButtonElement>('[aria-controls="news-navigation-submenu"]')!;
+    const desktop = container.querySelector<HTMLButtonElement>('[aria-controls="desktop-news-submenu"]')!;
     await click(desktop);
-    expect(container.querySelector('#news-navigation-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
+    expect(container.querySelector('#desktop-news-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
     await act(async () => desktop.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
     expect(desktop.getAttribute('aria-expanded')).toBe('false');expect(document.activeElement).toBe(desktop);
     await click(menuTrigger());
-    const mobile = dialog()!.querySelector<HTMLButtonElement>('[aria-controls="mobile-news-navigation-submenu"]')!;
+    const mobile = dialog()!.querySelector<HTMLButtonElement>('[aria-controls="mobile-news-submenu"]')!;
     await click(mobile);
-    expect(dialog()!.querySelector('#mobile-news-navigation-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
+    expect(dialog()!.querySelector('#mobile-news-submenu a[href="/news/press-releases"]')?.textContent).toBe('Press Releases');
     await act(async () => mobile.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
     expect(mobile.getAttribute('aria-expanded')).toBe('false');expect(menuTrigger()?.getAttribute('aria-expanded')).toBe('true');
     await click(dialog()!.querySelector<HTMLButtonElement>('[data-mobile-menu-close]'));

@@ -381,9 +381,13 @@ export function createSiteKeyResolvingAdapter(input: {
     listMediaAssets: async () => {
       const resolvedSiteId = await siteId();
       const uploads = await listNormalizedMediaAssets(input.client, resolvedSiteId);
+      const library = await input.client.from("builder_media_library_state").select("state").eq("site_id", resolvedSiteId).maybeSingle();
+      if (library.error) throw library.error;
+      const trash = new Set<string>(library.data?.state?.trashed ?? []);
+      const available = uploads.filter(asset => !trash.has(asset.id));
       return approvedBrandAssets
-        ? [...brandBannerSeedAssets(resolvedSiteId, approvedBrandAssets), ...uploads]
-        : uploads;
+        ? [...brandBannerSeedAssets(resolvedSiteId, approvedBrandAssets), ...available]
+        : available;
     }
   };
 }

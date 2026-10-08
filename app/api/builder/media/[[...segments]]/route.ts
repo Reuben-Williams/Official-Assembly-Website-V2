@@ -170,10 +170,10 @@ async function createPlan(request: Request, admin: SupabaseClient, identity: Act
   });
   const expectedSha256 = String(value.expectedSha256 ?? "");
   if (!/^[0-9a-f]{64}$/.test(expectedSha256)) throw new TypeError("A valid media digest is required.");
-  const label = String(value.label ?? claim.name).trim();
-  const alt = String(value.alt ?? label).trim();
+  const label = String(value.label ?? "").trim() || claim.name;
+  const alt = String(value.alt ?? "").trim() || label;
   if (!label || label.length > 200 || !alt || alt.length > 500) {
-    throw new TypeError("Media name and alt text are required and must fit their allowed lengths.");
+    throw new TypeError("Use a name up to 200 characters and an optional image description up to 500 characters.");
   }
   const manifestId = mode === "batch" ? String(value.manifestId ?? "") : null;
   if (mode === "batch" && !manifestId) throw new TypeError("A batch manifest is required.");

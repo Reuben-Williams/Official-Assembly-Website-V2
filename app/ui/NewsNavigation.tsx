@@ -19,7 +19,20 @@ export function NewsNavigation({ children, items, label, id = "news-navigation-s
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); };
   const visible = open && enabled;
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+  useEffect(() => {
+    const otherOpened = (event: Event) => { if ((event as CustomEvent<string>).detail !== id) setOpen(false); };
+    window.addEventListener("public-navigation-open", otherOpened);
+    return () => window.removeEventListener("public-navigation-open", otherOpened);
+  }, [id]);
+  const openMenu = () => {
+    cancelClose();
+    window.dispatchEvent(new CustomEvent("public-navigation-open", { detail: id }));
+    setOpen(true);
+  };
   useEffect(() => {
     if (!visible) return;
     const outside = (event: PointerEvent) => {
@@ -29,8 +42,11 @@ export function NewsNavigation({ children, items, label, id = "news-navigation-s
     return () => document.removeEventListener("pointerdown", outside);
   }, [visible]);
   return <div className={`news-navigation${mobile ? " news-navigation-mobile" : ""}`} ref={root}
+    onPointerEnter={event => { if (!mobile && enabled && event.pointerType === "mouse") openMenu(); }}
+    onPointerLeave={event => { if (!mobile && event.pointerType === "mouse") { cancelClose(); closeTimer.current = setTimeout(() => setOpen(false), 200); } }}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}
     onKeyDown={(event) => {
+      if (event.key === "ArrowDown" && !visible) { event.preventDefault(); openMenu(); }
       if (event.key === "Escape" && visible) {
         event.preventDefault(); event.stopPropagation(); setOpen(false); trigger.current?.focus();
       }
@@ -38,7 +54,7 @@ export function NewsNavigation({ children, items, label, id = "news-navigation-s
     <div className="news-navigation-top">
       {children}
       <button type="button" className="news-navigation-toggle" aria-label={label} aria-expanded={visible}
-        aria-controls={id} ref={trigger} tabIndex={enabled ? 0 : -1} onClick={() => setOpen(!visible)}>
+        aria-controls={id} ref={trigger} tabIndex={enabled ? 0 : -1} onClick={() => visible ? setOpen(false) : openMenu()}>
         <ChevronDown aria-hidden="true" size={17} />
       </button>
     </div>

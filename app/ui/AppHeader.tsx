@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Landmark } from "lucide-react";
+import { Landmark, Search } from "lucide-react";
+import { SiteSearchForm } from "./SiteSearchForm";
 
 import { pages, siteConfig } from "../data/site";
 import { LanguageToggle } from "./LanguageToggle";
@@ -7,6 +8,7 @@ import { localizedNavigationLabel, publicCopy } from "../i18n/catalog.public";
 import type { PublicLocale } from "../i18n/locale";
 import { MobileNavigation, type MobileNavigationItem } from "./MobileNavigation";
 import { NewsNavigation } from "./NewsNavigation";
+import { navigationChildren } from "../data/navigation";
 import {
   builderLink,
   builderSectionIds,
@@ -51,7 +53,7 @@ function NavigationLinks({
           </span>
         </Link>
         );
-        return entry.children ? <NewsNavigation key={entry.slug} items={entry.children} label={entry.disclosureLabel!}>{link}</NewsNavigation> : link;
+        return entry.children ? <NewsNavigation key={entry.slug} id={`desktop-${entry.slug}-submenu`} items={entry.children} label={entry.disclosureLabel!}>{link}</NewsNavigation> : link;
       })}
     </>
   );
@@ -87,13 +89,8 @@ function navigationEntries({
       label: compactNews
         ? publicCopy(locale, "global.header.news", "News")
         : localizedNavigationLabel(locale, slug, label),
-      ...(slug === "news" ? {
-        disclosureLabel: locale === "es" ? "Abrir navegación de Noticias" : "Open News navigation",
-        children: [
-          { href: "/news", label: locale === "es" ? "Todas las noticias" : "All News" },
-          { href: "/news/press-releases", label: locale === "es" ? "Comunicados de prensa" : "Press Releases" },
-        ],
-      } : {}),
+      children: navigationChildren(slug, locale),
+      disclosureLabel: locale === "es" ? `Abrir navegación de ${compactNews ? "Noticias" : localizedNavigationLabel(locale, slug, label)}` : `Open ${compactNews ? "News" : label} navigation`,
     }];
   });
 }
@@ -147,6 +144,11 @@ export function AppHeader({
               </span>
             </Link>
           </div>
+
+          <details className="header-search">
+            <summary aria-label={locale === "es" ? "Buscar en el sitio" : "Search the website"}><Search size={21} aria-hidden="true" /><span>{locale === "es" ? "Buscar" : "Search"}</span></summary>
+            <div className="header-search-panel"><SiteSearchForm locale={locale} id="header-search-input" /></div>
+          </details>
 
           <MobileNavigation
             brandLabel={brandLabel}

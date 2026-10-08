@@ -107,9 +107,9 @@ describe("secured builder route handlers", () => {
     expect(execute).toHaveBeenCalledOnce();
   });
 
-  it("returns a safe actionable error without publishing a substitute official portrait", async () => {
+  it("publishes a staff-selected portrait through the normal content workflow", async () => {
     const base = createInMemoryAdapter();
-    const execute = vi.fn();
+    const execute = vi.fn(async () => ({ commandId: "portrait", operation: "publish" as const, scopes: [], siteGenerationId: 1 }));
     const handlers = createSecuredBuilderHandlers({
       site: { ...site, globalRegions: [{ id: "media.professional.home-official-portrait", kind: "image" }] },
       adapter: { ...base,
@@ -123,10 +123,8 @@ describe("secured builder route handlers", () => {
     const response = await handlers.PUT(new Request("http://localhost:3000/api/builder", {
       method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ pagePath: "/" }),
     }));
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: { code: "PROTECTED_IMAGE_INVALID",
-      message: "Keep the approved single-person portrait for the homepage. Other photos can be changed separately." } });
-    expect(execute).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledOnce();
   });
 
   it("normalizes protected values before saving a V2 draft snapshot", async () => {

@@ -1,7 +1,8 @@
 import type { BuilderSiteConfig } from "@reuben-williams/core";
 import { editorialImageRegions } from "./app/data/editorial-media";
+import { officialProfileRegions } from "./app/data/official-profile-regions";
 
-export default {
+const config = {
   "siteId": "official-assembly-website-v2",
   "adapter": "supabase",
   "editor": {
@@ -9,6 +10,7 @@ export default {
     "protected": true
   },
   "globalRegions": [
+    ...officialProfileRegions,
     ...editorialImageRegions,
     {
       "id": "global.office.name",
@@ -1896,3 +1898,10 @@ export default {
     ]
   }
 } satisfies BuilderSiteConfig;
+
+// Retire the public/editor route without deleting historical submissions or versions.
+export default {
+  ...config,
+  pages: config.pages.filter(page => page.path !== "/survey"),
+  globalRegions: config.globalRegions.filter(region => !region.id.includes(".survey.")),
+};

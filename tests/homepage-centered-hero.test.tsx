@@ -97,7 +97,7 @@ describe("centered homepage banner release", () => {
   it.each([
     "/images/professional/about-primary-desktop.webp",
     "/images/october-editorial/DSC01789-desktop.webp",
-  ])("replaces the previously published portrait %s with the protected official state headshot", async (previousSrc) => {
+  ])("renders the staff-published portrait %s without resetting it on reload", async (previousSrc) => {
     const html = await renderHome("en", {
       regions: {
         "media.professional.home-official-portrait": {
@@ -108,8 +108,8 @@ describe("centered homepage banner release", () => {
       },
     });
 
-    expect(html).toContain("home-official-portrait-mobile.webp");
-    expect(html).not.toContain(previousSrc);
-    expect(html).not.toContain("Previously published incorrect portrait");
+    expect(html).not.toContain("home-official-portrait-mobile.webp");
+    expect(html).toContain(encodeURIComponent(previousSrc));
+    expect(html).toContain("Previously published incorrect portrait");
   });
 });

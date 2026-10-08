@@ -62,7 +62,8 @@ describe("server-owned public locale", () => {
     expect(header).toContain("Acerca de");
     expect(header).toContain("Contactar a la oficina");
     expect(header).toContain("Abrir menú");
-    expect(header).not.toContain("<details");
+    expect(header).toContain('class="header-search"');
+    expect(header).toContain("Buscar en el sitio");
     expect(header).toContain('lang="es"');
     expect(footer).toContain("Secciones del sitio");
     expect(footer).toContain("Portal del personal");

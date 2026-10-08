@@ -208,7 +208,7 @@ export async function HomePageView({
       <PublicEventsSection calendar={calendar} content={content} locale={locale} variant="home" />
       {connections}
 
-      <section className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
+      <section id="guidance" className="section section-muted" data-builder-item-id="workflow" data-home-section="guidance">
         <div className="container split">
           <ImagePanel
             asset={getImage("professional-home-supporting")}

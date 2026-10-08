@@ -29,6 +29,8 @@ export type MediaUploadMetadata = {
   alt: string;
 };
 
+class MediaServiceError extends Error {}
+
 type SignedUploadStorage = {
   uploadToSignedUrl(
     path: string,
@@ -141,7 +143,7 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
     });
     const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
     if (!response.ok || (status !== undefined && response.status !== status)) {
-      throw new Error(payload?.error?.message ?? "The media service is unavailable.");
+      throw new MediaServiceError(payload?.error?.message ?? "The media service is unavailable.");
     }
     return payload as T;
   }
@@ -201,7 +203,7 @@ export function createHttpMediaUploadClient(options: MediaUploadClientOptions): 
       options.onUploadState?.({ status: 'selected', name: file.name });
       return completed.asset;
     } catch (error) {
-      const message = error instanceof TypeError ? error.message : 'The image could not be uploaded. Check your connection and try again. Your previous photo is unchanged.';
+      const message = error instanceof TypeError || error instanceof MediaServiceError ? error.message : 'The image could not be uploaded. Check your connection and try again. Your previous photo is unchanged.';
       options.onUploadState?.({ status: 'error', name: file.name, message });
       // Keep callers' rejection behavior. Only the gallery's already-reported
       // unhandled rejection is suppressed by the site error boundary.

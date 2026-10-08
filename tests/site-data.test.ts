@@ -19,7 +19,6 @@ describe("site data", () => {
       "/voting",
       "/contact",
       "/newsletter",
-      "/survey",
       "/social"
     ]);
   });

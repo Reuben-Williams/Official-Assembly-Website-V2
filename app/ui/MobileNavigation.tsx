@@ -250,7 +250,7 @@ export function MobileNavigation({
                 </span>
               </Link>
             );
-            return item.children ? <NewsNavigation key={item.slug} mobile enabled={open} id="mobile-news-navigation-submenu"
+            return item.children ? <NewsNavigation key={item.slug} mobile enabled={open} id={`mobile-${item.slug}-submenu`}
               items={item.children} label={item.disclosureLabel!} onNavigate={() => closeMenu(false)}>{link}</NewsNavigation> : link;
           })}
         </nav>

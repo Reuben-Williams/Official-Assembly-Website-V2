@@ -22,7 +22,6 @@ const expectedRoutes = [
   "/voting",
   "/contact",
   "/newsletter",
-  "/survey",
   "/social",
   "/404"
 ];
@@ -51,9 +50,9 @@ describe("approved builder mapping", () => {
     expect(configured).not.toContain("newsletter.hero.body");
     expect(configured).not.toContain("newsletter.hero.primary-cta");
     expect(configured).not.toContain("newsletter.hero.secondary-cta");
-    expect(configured).toContain("survey.form.eyebrow");
-    expect(configured).toContain("survey.form.title");
-    expect(configured).toContain("survey.form.body");
+    expect(configured).not.toContain("survey.form.eyebrow");
+    expect(configured).not.toContain("survey.form.title");
+    expect(configured).not.toContain("survey.form.body");
     expect(configured).not.toContain("survey.form");
     expect(site.globalRegions.map((region) => region.id)).not.toEqual(
       expect.arrayContaining([
@@ -171,15 +170,9 @@ describe("approved builder mapping", () => {
     expect(html).toContain('data-builder-instance="contact-supporting"');
   });
 
-  it("keeps the survey unavailable and outside managed form regions", async () => {
+  it("removes the retired survey from public pages and editor navigation", () => {
     const survey = pages.find((page) => page.slug === "survey");
-    expect(survey).toBeDefined();
-
-    const html = renderToStaticMarkup(await PageTemplate({ page: survey! }));
-    expect(html).toContain("This survey is not accepting online responses.");
-    expect(html).toContain('data-builder-region="survey.form.eyebrow"');
-    expect(html).toContain('data-builder-region="survey.form.title"');
-    expect(html).toContain('data-builder-region="survey.form.body"');
-    expect(html).not.toContain('data-builder-region="survey.form"');
+    expect(survey).toBeUndefined();
+    expect(site.pages.some(page => page.path === "/survey")).toBe(false);
   });
 });

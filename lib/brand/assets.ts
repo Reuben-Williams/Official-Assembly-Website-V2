@@ -196,10 +196,12 @@ export function normalizeProtectedBrandValue(
     };
   }
   if (input.regionId === HOME_OFFICIAL_PORTRAIT_REGION_ID) {
-    if (input.pagePath !== "/" || input.value.type !== "image") {
+    if (!["/", "/__builder/global"].includes(input.pagePath) || input.value.type !== "image") {
       invalid("the homepage official portrait is not active.");
     }
-    return HOME_OFFICIAL_PORTRAIT_VALUE;
+    // Keep the official portrait as the default, not a silent override of staff edits.
+    // Media ownership and source validation are enforced by the normal media pipeline.
+    return input.value;
   }
   if (input.regionId === HOME_BRAND_BANNER_REGION_ID) {
     if (input.pagePath !== "/" || !assets) invalid("the homepage brand banner is not active.");
@@ -237,10 +239,9 @@ export function validateProtectedBrandSnapshot(
     if (
       !["/", "/__builder/global"].includes(input.pagePath)
       || portrait.type !== "image"
-      || portrait.src !== HOME_OFFICIAL_PORTRAIT_VALUE.src
     ) {
       throw new BuilderContentValidationError("PROTECTED_IMAGE_INVALID",
-        "Keep the approved single-person portrait for the homepage. Other photos can be changed separately.");
+        "The homepage portrait must be an image in the homepage or shared media scope.");
     }
   }
 }

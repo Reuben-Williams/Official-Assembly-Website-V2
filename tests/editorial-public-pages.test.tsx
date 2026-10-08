@@ -59,7 +59,6 @@ describe("approved editorial public layout", () => {
     ["contact", "office-group"],
     ["community", "parade-selfie"],
     ["voting", "hallway-portrait"],
-    ["survey", "community-greeting"],
     ["social", "community-greeting"],
   ])("uses the reviewed %s supporting photograph without a generic flyer", async (slug, photo) => {
     const doc = await documentFor(slug);
@@ -79,7 +78,6 @@ describe("approved editorial public layout", () => {
 
   it.each([
     ["community", "parade-wave"],
-    ["survey", "outreach-table"],
     ["social", "parade-smiles"],
   ])("uses the reviewed %s hero photograph", async (slug, photo) => {
     const doc = await documentFor(slug);

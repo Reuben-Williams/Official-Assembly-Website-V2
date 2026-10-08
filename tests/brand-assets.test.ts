@@ -206,7 +206,7 @@ describe("approved brand asset contract", () => {
     }, verified)).toThrow(/canonical volunteer form/i);
   });
 
-  it("restricts the homepage official portrait to the approved single-person asset", () => {
+  it("preserves an intentional staff replacement of the homepage portrait", () => {
     const verified = verifyApprovedBrandAssets(definition());
 
     expect(normalizeProtectedBrandValue({
@@ -219,8 +219,8 @@ describe("approved brand asset contract", () => {
       },
     }, verified)).toEqual({
       type: "image",
-      src: "/images/professional/home-official-portrait-desktop.webp",
-      alt: "Official portrait of Assemblywoman Carmen Theresa Morales",
+      src: "/images/professional/home-supporting-desktop.webp",
+      alt: "Wrong multi-person image",
     });
 
     expect(() => validateProtectedBrandSnapshot({
@@ -232,7 +232,7 @@ describe("approved brand asset contract", () => {
           alt: "Wrong multi-person image",
         },
       },
-    }, verified)).toThrow(/approved single-person portrait/i);
+    }, verified)).not.toThrow();
   });
 
   it("accepts the approved official portrait in its registered shared scope", () => {
@@ -242,12 +242,12 @@ describe("approved brand asset contract", () => {
     }, verifyApprovedBrandAssets(definition()))).not.toThrow();
   });
 
-  it("rejects substitute portraits in shared content and portraits in unrelated page scopes", () => {
+  it("accepts staff portraits in shared content but rejects unrelated page scopes", () => {
     const verified = verifyApprovedBrandAssets(definition());
     expect(() => validateProtectedBrandSnapshot({
       pagePath: "/__builder/global",
       regions: { "media.professional.home-official-portrait": { ...HOME_OFFICIAL_PORTRAIT_VALUE, src: "/wrong.webp" } },
-    }, verified)).toThrow(/approved single-person portrait/i);
+    }, verified)).not.toThrow();
     expect(() => validateProtectedBrandSnapshot({
       pagePath: "/news",
       regions: { "media.professional.home-official-portrait": HOME_OFFICIAL_PORTRAIT_VALUE },

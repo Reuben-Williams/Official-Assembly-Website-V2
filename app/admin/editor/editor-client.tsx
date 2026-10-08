@@ -36,6 +36,7 @@ import { createCarouselClient } from '../../../lib/carousel/client';
 import { readSiteHistory } from '../../../lib/builder/history-client';
 const CarouselStudio=dynamic(()=>import('./carousel-studio').then(module=>module.CarouselStudio),{loading:()=> <p>Loading Carousel Studio…</p>});
 import { FormsGuidanceWorkspace } from "./forms-guidance-workspace";
+import { MediaLibraryWorkspace } from "./media-library-workspace";
 import { NewsletterOperationsWorkspace } from "./newsletter-operations-workspace";
 import { resolveEditorPagePath } from "./editor-path";
 import {
@@ -144,6 +145,8 @@ export function EditorClient({
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const [mediaLoading, setMediaLoading] = useState(true);
+  const [libraryRevision, setLibraryRevision] = useState(0);
+  const libraryChanged = useCallback(() => setLibraryRevision(value => value + 1), []);
   const [historySource,setHistorySource]=useState("all");
   const [publicationRevision,setPublicationRevision]=useState(0);
   const [publicationResult,setPublicationResult]=useState<PublicationFeedback|null>(null);
@@ -176,6 +179,8 @@ export function EditorClient({
     }) : null;
   }, []);
   const client = useMemo(() => {
+    // A library change invalidates the attached editor's cached gallery as well.
+    void libraryRevision;
     const attached = withPublicationFeedback(createHttpAttachedSiteEditorClient({
       baseUrl: "/api/builder",
       getCsrfToken: csrfCookie,
@@ -188,7 +193,7 @@ export function EditorClient({
       ...(role === "owner" && mediaUpload ? { uploadMediaBatch: mediaUpload.uploadMediaBatch } : {})
     };
   // Recreate the attached client after sign-in so its gallery/history are refreshed.
-  }, [mediaUpload, role, historySource,publicationFeedback,editorTransport]);
+  }, [mediaUpload, role, historySource,publicationFeedback,editorTransport,libraryRevision]);
   const refreshMedia = useCallback(async () => {
     setMediaLoading(true);
     try {
@@ -244,6 +249,8 @@ export function EditorClient({
   const registration = useMemo<BuilderShellRegistration>(() => {
     const props = { client: growth, memberId, role };
     const workspaces: readonly RegisteredWorkspace[] = [
+      { id: "website.media", label: "Media", group: "website", icon: "images", mobilePriority: 3, status: "active",
+        render: () => <MediaLibraryWorkspace role={role} csrf={csrfCookie} upload={mediaUpload?.uploadMedia} onChanged={libraryChanged} /> },
       {
         id:'website.carousel' as BuilderWorkspaceId,label:'Carousel',group:'website',icon:'images',mobilePriority:2,status:'active',
         render:()=> <CarouselStudio role={role} client={carousel} mediaAssets={mediaAssets} mediaError={mediaError} onRefreshMedia={refreshMedia} onUploadMedia={mediaUpload?uploadCarouselMedia:undefined}/>
@@ -304,7 +311,7 @@ export function EditorClient({
       workspaces,
       globalHeader: <><EditorOperationalHeader />{workspaceShown==='website.pages' ? <PagePublicationStatusPanel path={currentPath} revision={publicationRevision} result={publicationResult} /> : null}{workspaceShown==="website.history" && <div style={{padding:"12px 24px",background:"#f3f6f9",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}><label>History source <select value={historySource} onChange={event=>setHistorySource(event.target.value)} style={{minHeight:44,padding:8,borderRadius:8,marginLeft:8}}><option value="all">All changes</option><option value="carousel">Carousel</option></select></label><span>For image, caption, order and appearance filters or restoration, open Carousel → History.</span></div>}</>
     };
-  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, mediaLoading, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource,publicationRevision,publicationResult]);
+  }, [alerts, calendar, calendarMediaAssets, carousel, mediaAssets, mediaError, mediaLoading, refreshMedia, mediaUpload, uploadCarouselMedia, currentPath, growth, initialAlertCollection, memberId, previewBaseUrl, role,workspaceShown,historySource,publicationRevision,publicationResult,libraryChanged]);
   const initialWorkspace = (initialWorkspaceId ?? (typeof window === "undefined"
     ? "growth.dashboard"
     : new URLSearchParams(window.location.search).get("workspace") ?? "growth.dashboard")) as BuilderWorkspaceId;

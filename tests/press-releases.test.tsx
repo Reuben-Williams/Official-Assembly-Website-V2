@@ -22,7 +22,7 @@ describe('Press Releases publishing boundary', () => {
   it.each(['en','es'] as const)('keeps News navigable and offers its dedicated disclosure in %s', locale => {
     const html=renderToStaticMarkup(<AppHeader locale={locale}/>);
     expect(html).toContain('href="/news"');
-    expect(html).toContain('aria-controls="news-navigation-submenu"');
+    expect(html).toContain('aria-controls="desktop-news-submenu"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain(locale==='es'?'Abrir navegación de Noticias':'Open News navigation');
   });
