@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { BUILDER_SITE_KEY } from "../builder/authorization";
+import type { PageMediaReference } from "../builder/page-media";
 import { listNormalizedMediaAssets } from "../builder/repositories";
 import { getBuilderAdminClient, resolveBuilderSiteId } from "../supabase/admin";
 import { loadPublicCalendar, type CalendarRepository, type PublicCalendarLoad } from "./repository";
@@ -35,7 +36,10 @@ export async function loadOfficialAssemblyPublicCalendar(
     const siteId = await resolveBuilderSiteId(client);
     if (!siteId) return calendar;
     const media = await listNormalizedMediaAssets(client, siteId);
-    const urls = new Map(media.map((asset) => [asset.id, asset.url]));
+    // Gallery URLs require staff authentication. Public events use the same
+    // revision delivery endpoint without preview, authorized below on every read.
+    const urls = new Map(media.filter((asset) => asset.replicaStatus === "ready")
+      .map((asset) => [asset.id, `/api/builder/media/${asset.revisionId}`]));
     return {
       status: "ready",
       events: calendar.events.map((event) => {
@@ -47,4 +51,14 @@ export async function loadOfficialAssemblyPublicCalendar(
     // The image is optional. A media read failure must not hide otherwise valid public events.
     return calendar;
   }
+}
+
+export async function calendarMediaIsPublished(
+  ref: PageMediaReference,
+  dependencies: PublicCalendarDependencies = {},
+): Promise<boolean> {
+  if (!ref.ready || ref.archived) return false;
+  const calendar = await loadOfficialAssemblyPublicCalendar({ limit: 100 }, dependencies);
+  return calendar.status === "ready" && calendar.events.some((event) =>
+    event.mediaAssetId === ref.mediaId && event.mediaUrl === `/api/builder/media/${ref.revisionId}`);
 }

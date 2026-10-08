@@ -98,7 +98,7 @@ export type PublicCalendarEvent = {
   actionLabelEn: string;
   actionLabelEs: string;
   mediaAssetId: string | null;
-  /** Short-lived server-resolved URL for an optional managed-media image. */
+  /** Revision URL authorized against the currently published calendar. */
   mediaUrl?: string;
 };
 

@@ -4,6 +4,7 @@ import site from "../../../../../builder.config";
 import { createPageMediaRepository, pageMediaIsPublished } from "../../../../../lib/builder/page-media-repository";
 import { deliverPageMedia } from "../../../../../lib/builder/page-media-delivery";
 import { PAGE_MEDIA_UUID } from "../../../../../lib/builder/page-media";
+import { calendarMediaIsPublished } from "../../../../../lib/calendar/server";
 
 import {
   BuilderAuthorizationError,
@@ -468,7 +469,9 @@ export async function GET(request: Request, context: { params: Promise<{ segment
     const repo = createPageMediaRepository(admin, siteId);
     return await deliverPageMedia(request, segments[0]!, {
       byRevision: repo.byRevision,
-      isPublished: ref => pageMediaIsPublished(admin, siteId, site, repo, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", ref),
+      isPublished: async ref =>
+        await pageMediaIsPublished(admin, siteId, site, repo, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", ref)
+        || await calendarMediaIsPublished(ref, { client: admin }),
       async authorizePreview() {
         await authorizeBuilderRequest({ request, operation: "content.readDraft",
           allowedOrigins: allowedBuilderOrigins(new URL(request.url).origin),

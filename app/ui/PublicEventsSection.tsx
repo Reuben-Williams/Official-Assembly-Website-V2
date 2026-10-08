@@ -70,7 +70,7 @@ function EventAgenda({ events, locale }: { events: readonly PublicCalendarEvent[
           <li key={event.id}>
             <article id={`event-${event.id}`} className={styles.eventCard} data-public-event-id={event.id}>
               {event.mediaUrl ? (
-                // Managed-media URLs are short-lived and server-resolved; preserving the original host avoids stale copies.
+                // Serve the original flyer through revision delivery, which checks current publication on every request.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   className={styles.eventImage}
