@@ -65,8 +65,11 @@ are included in signed webhook events. Extend the verified webhook path before
 ordinary newsletter classification: bind an otherwise unknown provider email ID
 only when the verified event's correlation tag matches an issued ledger job,
 its exact sender/single recipient/subject and provider scope match the frozen
-policy, no broadcast ID is present, and its provider-created timestamp agrees
-with the recorded send attempt. Never recognize notices from generic subject,
+policy, no broadcast ID is present, and the email's `data.created_at` agrees
+with the recorded send attempt within bounded clock/request latency. Do not
+compare a later delivery-event timestamp to send time. Provider scope comes
+from the verified webhook endpoint's configured account boundary, not an
+unverified or nonexistent payload account field. Never recognize notices from generic subject,
 recipient, sender or purpose tags alone.
 
 Use a service-only, idempotent binding RPC with uniqueness on provider email ID
@@ -88,6 +91,10 @@ login accounting as well as allowing them in the strict transactional inventory.
 Track provider acceptance separately from `email.delivered`, `email.failed`,
 `email.bounced` and suppression receipts. “Delivered” means recipient mail server
 acceptance, not a guarantee that Gmail placed it in the Inbox rather than Spam.
+Duplicate and out-of-order receipts must not downgrade a delivered, bounced,
+failed or suppressed outcome when an older `email.sent` event arrives later.
+Owner recovery is a narrow, recorded investigation action, not a general resend
+console or editable recipient/policy interface.
 
 The existing authenticated cron infrastructure runs the worker in a separate
 bounded route, serialized and below the provider send rate. The private ledger
