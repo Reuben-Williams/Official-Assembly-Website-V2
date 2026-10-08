@@ -17,7 +17,7 @@
 .factCard > svg { color: #275f58; width: 1.5rem; }
 .factCard h3 { font-size: 1.2rem; margin: 0 0 1rem; }
 .factCard p, .factCard li { color: #4c5963; font-size: .94rem; line-height: 1.7; }
-.factCard ul { display: grid; gap: .5rem; padding-left: 1.1rem; margin: 0 0 1rem; }
+.factCard ul, .factCard ol { display: grid; gap: .5rem; padding-left: 1.1rem; margin: 0 0 1rem; }
 .action { display: flex; align-items: center; justify-content: space-between; gap: .75rem; width: fit-content; max-width: 100%; min-height: 44px; padding: .65rem 0; color: #275f58; font-size: .86rem; font-weight: 750; text-decoration: underline; text-underline-offset: .3em; }
 .action svg { width: 1rem; height: 1rem; flex-shrink: 0; }
 .action:hover, .phone:hover { color: #112e49; }

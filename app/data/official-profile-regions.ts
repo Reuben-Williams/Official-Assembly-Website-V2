@@ -3,7 +3,7 @@
 export const officialProfileRegions = [
   ...["office", "biography", "education", "committees"].flatMap(card => [
     { id: `home.official.${card}.heading`, kind: "text" as const, label: `${card} — heading` },
-    { id: `home.official.${card}.details`, kind: "text" as const, label: `${card} — details (one paragraph or list item per line)` },
+    { id: `home.official.${card}.details`, kind: "richText" as const, label: `${card} — formatted details` },
   ]),
   ...["contact", "biography", "education", "sponsored", "votes-bill", "votes-subject"].map(action => ({
     id: `home.official.actions.${action}`, kind: "link" as const, label: `Representative — ${action} link`,

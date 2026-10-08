@@ -17,3 +17,29 @@ if (normalized.includes(after)) {
   await writeFile(file, normalized.replace(before, after));
   console.log('Editor Media workspace compatibility applied.');
 }
+
+// Quick edit must use the same visual editor as the inspector, not expose HTML.
+const richTextSource = (await readFile(file, 'utf8')).replaceAll('\r\n', '\n');
+const plainQuickEdit = '&& !selectedRegion.target && !compact) {';
+const visualQuickEdit = '&& !selectedRegion.target) {';
+if (richTextSource.includes(plainQuickEdit)) {
+  if (richTextSource.split(plainQuickEdit).length !== 2) throw new Error('Review the Quick edit compatibility patch.');
+  await writeFile(file, richTextSource.replace(plainQuickEdit, visualQuickEdit));
+} else if (!richTextSource.includes(visualQuickEdit)) {
+  throw new Error('Editor source changed; visual Quick edit patch was not applied.');
+}
+console.log('Visual Quick edit compatibility verified.');
+
+// Tiptap merges editorProps with its defaults. Passing undefined for block mode
+// replaces those defaults and crashes createView in the pinned runtime.
+const richTextFile = new URL('src/content/RichTextEditor.tsx', root);
+const richText = (await readFile(richTextFile, 'utf8')).replaceAll('\r\n', '\n');
+const missingProps = '      : undefined,\n    onUpdate:';
+const defaultProps = '      : {},\n    onUpdate:';
+if (richText.includes(missingProps)) {
+  if (richText.split(missingProps).length !== 2) throw new Error('Review block editor defaults compatibility.');
+  await writeFile(richTextFile, richText.replace(missingProps, defaultProps));
+} else if (!richText.includes(defaultProps)) {
+  throw new Error('Editor source changed; block editor defaults patch was not applied.');
+}
+console.log('Block editor defaults compatibility verified.');
