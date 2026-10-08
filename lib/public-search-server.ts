@@ -11,6 +11,7 @@ import type { PublicLocale } from "../app/i18n/locale";
 import type { PublicSearchEntry } from "./public-search";
 import { publishedDocumentText } from "./public-search";
 import { editorPlainText } from "./builder/editor-text";
+import { districtConnections } from "../app/data/district-connections";
 
 // Only public, published content is read. Never search drafts, media metadata,
 // staff accounts, form submissions, or newsletter subscribers.
@@ -18,7 +19,10 @@ export async function loadPublicSearchEntries(locale: PublicLocale) {
   const results = await Promise.allSettled(pages.map(async page => {
     const content = await loadBuilderServerContent(page.href);
     const slug = page.slug ?? "home";
-    const text = (key: string, fallback: string) => editorPlainText(localizedBuilderText(locale, key, builderText(content, key, fallback)));
+    const text = (key: string, fallback: string) => {
+      const value = content.regions[key];
+      return editorPlainText(localizedBuilderText(locale, key, value?.type === "richText" ? value.value : builderText(content, key, fallback)));
+    };
     const title = text(`${slug}.hero.title`, page.title);
     const entries: PublicSearchEntry[] = [{ title, page: title, section: locale === "es" ? "Página" : "Page", href: page.href, text: text(`${slug}.hero.body`, page.description) }];
     const sections = builderSectionIds(content, `${slug}.sections`, ["hero", "features", "secondary", "official-profile", "workflow"]);
@@ -33,6 +37,11 @@ export async function loadPublicSearchEntries(locale: PublicLocale) {
       }
     }
     if (slug === "home") {
+      // This approved copy is rendered without a saved region override. Search
+      // the same source used by the public volunteer card, not just overrides.
+      const volunteerTitle = localizedBuilderText(locale, "home.connections.volunteer.title", districtConnections.volunteer.title);
+      entries.push({ title: volunteerTitle, page: title, section: volunteerTitle, href: "/#volunteer",
+        text: locale === "es" ? districtConnections.volunteer.spanish : districtConnections.volunteer.english });
       const defaults: Record<string, string> = {
         office: `${profile.office.address}\nPhone ${profile.office.phoneDisplay}\nFax ${profile.office.fax}`,
         biography: [profile.occupation, ...profile.publicService, ...profile.legislativeService].join("\n"),
@@ -47,7 +56,7 @@ export async function loadPublicSearchEntries(locale: PublicLocale) {
     const sectionNames: Record<string, string> = { hero: "Overview", official: "Your District 34 representative", workflow: "Constituent guidance", connections: "Community connections", features: "Page resources", form: "Resident form", newsletter: "Newsletter", "current-resource": "Current resource", volunteer: "Volunteer" };
     const anchors: Record<string, string> = { hero: "overview", official: "representative", workflow: "guidance", features: "features", form: "form", secondary: "secondary" };
     for (const [key, value] of Object.entries(content.regions)) {
-      if (!key.startsWith(`${slug}.`) || value.type !== "text" || !value.value.trim()) continue;
+      if (!key.startsWith(`${slug}.`) || (value.type !== "text" && value.type !== "richText") || !value.value.trim()) continue;
       const group = key.split(".")[1];
       if (!sectionNames[group] || (group === "features" && !sections.includes("features"))) continue;
       const section = text(`${slug}.${group}.title`, sectionNames[group]);

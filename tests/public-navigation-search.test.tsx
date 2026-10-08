@@ -7,6 +7,15 @@ import config from "../builder.config";
 import { pages } from "../app/data/site";
 import { SiteSearchForm } from "../app/ui/SiteSearchForm";
 describe("public navigation and staff editing", () => {
+  it("server-renders contextual search results for direct links and no-JavaScript use", () => {
+    const html = renderToStaticMarkup(<SiteSearchForm query="volunteer" fullResults initialIndex={{ partial: false, entries: [
+      { title: "Community volunteers", page: "Home", section: "Get involved", href: "/#volunteer", text: "Volunteer with the district." },
+    ] }} />);
+    expect(html).toContain('href="/#volunteer"');
+    expect(html).toContain("Home › Get involved");
+    expect(html).toContain("1 results for");
+    expect(html).toContain('aria-live="polite"');
+  });
   it("keeps the search action named when its visible text is hidden on mobile", () => {
     expect(renderToStaticMarkup(<SiteSearchForm />)).toContain('aria-label="Search"');
     expect(renderToStaticMarkup(<SiteSearchForm locale="es" />)).toContain('aria-label="Buscar"');

@@ -69,7 +69,7 @@ export async function DistrictConnectionsSection({
             <div className={styles.communityPhoto}>
               <ImagePanel asset={volunteerPhoto} content={content} instance="home-community-invitation" caption={volunteerPhoto.caption ?? "Community and district engagement"} locale={locale} />
             </div>
-            <article className={styles.connectionCard}>
+            <article id="volunteer" className={styles.connectionCard}>
               <div className={styles.cardIcon}><Users aria-hidden="true" /></div>
               <p className={styles.kicker}>{locale === "es" ? "Español · English" : "English · Español"}</p>
               <h3>{localizedBuilderText(locale, "home.connections.volunteer.title", districtConnections.volunteer.title)}</h3>

@@ -1257,6 +1257,18 @@ img {
 .search-results h2 { font-size: 1.35rem; margin: .5rem 0; }
 .search-results small { color: #275f58; font-weight: 700; }
 .search-results p { margin: .5rem 0; }
+.header-search-panel { max-height: calc(100dvh - 6rem); overflow-y: auto; overscroll-behavior: contain; }
+.site-search-feedback { font-size: .9rem; }
+.site-search-feedback p { margin: .75rem 0; }
+.site-search-compact .search-results { margin: 0; }
+.site-search-compact .search-results li { padding: 1rem 0; }
+.site-search-compact .search-results h2 { font-size: 1.1rem; }
+.site-search .search-results a { color: #153859; text-decoration: underline; text-underline-offset: .2em; }
+.site-search .search-results small { display: block; line-height: 1.5; }
+.site-search .search-results p { color: #334155; line-height: 1.6; }
+.site-search .search-results { overflow-wrap: anywhere; }
+.search-all-results { display: inline-block; padding: .75rem 0; font-weight: 700; }
+#volunteer { scroll-margin-top: 7rem; }
 [id] { scroll-margin-top: 7rem; }
 @media (max-width: 1450px) { .header-search summary span { display: none; } }
 @media (max-width: 600px) { .header-search summary { width: 44px; } .site-search-form button span { display: none; } }
