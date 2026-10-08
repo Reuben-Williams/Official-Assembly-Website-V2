@@ -38,6 +38,7 @@ describe("direct private media upload client", () => {
   it('reports rejected files and leaves the previous selection unchanged instead of silently swallowing the failure', async () => {
     const states = vi.fn();
     const client = createHttpMediaUploadClient({ baseUrl: '/api/builder/media', getCsrfToken: () => 'csrf', storage: { uploadToSignedUrl: vi.fn() },
+      prepareFile: async file => file,
       inspectFile: async () => { throw new TypeError('Each image must be no larger than 10 MiB.'); }, onUploadState: states,
     });
     await expect(client.uploadMedia(new File(['jpeg'], 'large.jpg', { type: 'image/jpeg' }))).rejects.toThrow('10 MiB');
@@ -57,6 +58,7 @@ describe("direct private media upload client", () => {
       getCsrfToken: () => "csrf-token",
       fetcher,
       storage: { uploadToSignedUrl },
+      prepareFile: async file => file,
       inspectFile: async () => ({
         name: "photo.jpg", mimeType: "image/jpeg", byteSize: 4, width: 1, height: 1,
         sha256: "a".repeat(64)

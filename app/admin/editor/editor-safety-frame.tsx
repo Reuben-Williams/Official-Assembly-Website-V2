@@ -73,7 +73,7 @@ export function EditorSafetyFrame({ children, upload, onSessionRestored }: {
         {resumeMessage && <p role="status">{resumeMessage}</p>}
       </section> : <section className="editor-safety-dialog" role="status">
         <h2>Uploading {upload.status === 'uploading' ? upload.name : 'image'}…</h2>
-        <p>Save is paused until your image is ready. PNG and WebP images are converted to JPEG without resizing or cropping.</p>
+        <p>Save is paused until your image is ready. Large photos are automatically resized to fit the upload limits, without cropping. PNG and WebP images are converted to JPEG. Your original file stays unchanged.</p>
       </section>}
     </div>}
   </>;

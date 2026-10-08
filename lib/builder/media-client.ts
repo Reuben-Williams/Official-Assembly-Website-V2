@@ -11,6 +11,8 @@ import {
   MEDIA_BATCH_MAX_BYTES,
   MEDIA_BATCH_MAX_FILES,
   MEDIA_FILE_MAX_BYTES,
+  MEDIA_SIDE_MAX_PIXELS,
+  MEDIA_MAX_PIXELS,
   validateMediaClaim
 } from "./media-constraints";
 import { editorFetch } from './editor-fetch';
@@ -62,31 +64,53 @@ async function sha256Hex(bytes: BufferSource) {
 }
 
 export async function prepareBrowserMediaUpload(file: File): Promise<File> {
-  if (file.type === 'image/jpeg') return file;
-  if (!['image/png', 'image/webp'].includes(file.type)) {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new TypeError('Choose a JPEG, PNG or WebP image. Animated GIF uploads are not supported.');
   }
-  if (!file.size || file.size > MEDIA_FILE_MAX_BYTES) throw new TypeError('Each image must be no larger than 10 MiB.');
+  // Source-file bounds are separate from the stricter stored-image contract.
+  // Camera originals are prepared locally; server/storage limits stay unchanged.
+  if (!file.size || file.size > 50 * 1024 * 1024) throw new TypeError('Choose a non-empty image up to 50 MiB. Larger originals need a smaller exported copy.');
   if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') {
     throw new TypeError('This browser cannot prepare the image. Save it as a JPEG and try again.');
   }
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file).catch(() => {
+    throw new TypeError('This image could not be opened. Export it as a JPEG, PNG or WebP and try again.');
+  });
+  let canvas: HTMLCanvasElement | undefined;
   try {
-    validateMediaClaim({ name: 'prepared.jpg', mimeType: 'image/jpeg', byteSize: file.size, width: bitmap.width, height: bitmap.height });
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    if (!bitmap.width || !bitmap.height || bitmap.width * bitmap.height > 120_000_000) {
+      throw new TypeError('Choose an image up to 120 megapixels. Export a smaller copy of this original and try again.');
+    }
+    let scale = Math.min(1, MEDIA_SIDE_MAX_PIXELS / bitmap.width, MEDIA_SIDE_MAX_PIXELS / bitmap.height,
+      Math.sqrt(MEDIA_MAX_PIXELS / (bitmap.width * bitmap.height)));
+    if (file.type === 'image/jpeg' && /\.jpe?g$/i.test(file.name) && scale === 1 && file.size <= MEDIA_FILE_MAX_BYTES) return file;
+    canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) throw new TypeError('The image could not be prepared. Save it as a JPEG and try again.');
-    // Preserve dimensions; only encode for the existing server-verified JPEG
-    // contract. Transparent pixels get an explicit white background.
-    context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(bitmap, 0, 0);
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-    if (!blob || blob.type !== 'image/jpeg' || blob.size > MEDIA_FILE_MAX_BYTES) {
-      throw new TypeError('The prepared image is too large or could not be encoded. Save a JPEG under 10 MiB and try again.');
+    // Scale the entire frame proportionally, never crop or enlarge it. Try high
+    // quality first; bounded retries handle detailed photos exceeding 10 MiB.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      canvas.width = Math.max(1, Math.floor(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.floor(bitmap.height * scale));
+      context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.95, 0.85]) {
+        const outputCanvas = canvas;
+        const blob = await new Promise<Blob | null>(resolve => outputCanvas.toBlob(resolve, 'image/jpeg', quality));
+        if (!blob || blob.type !== 'image/jpeg') throw new TypeError('The image could not be encoded. Export a JPEG and try again.');
+        if (blob.size <= MEDIA_FILE_MAX_BYTES) {
+          validateMediaClaim({ name: 'prepared.jpg', mimeType: blob.type, byteSize: blob.size, width: canvas.width, height: canvas.height });
+          return new File([blob], `${file.name.replace(/\.[^.]*$/, '')}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified });
+        }
+      }
+      scale *= 0.75;
     }
-    return new File([blob], `${file.name.replace(/\.[^.]*$/, '')}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified });
-  } finally { bitmap.close(); }
+    throw new TypeError('This image could not be prepared within the upload limit. Export a smaller JPEG and try again.');
+  } finally {
+    bitmap.close();
+    if (canvas) { canvas.width = 0; canvas.height = 0; }
+  }
 }
 
 export async function inspectBrowserMediaFile(file: File): Promise<InspectedMediaFile> {

@@ -65,7 +65,7 @@ export function MediaLibraryWorkspace({ role, csrf, upload, onChanged }: {
         } catch (error) { setError(`${completed} images completed. ${error instanceof Error ? error.message : "Upload failed."}`); }
         finally { await refresh().catch(error => setError(error.message)); onChanged(); setBusy(false); }
       }} /></label>}</header>
-    <p>JPG, PNG, or WebP · up to 10 MB per image. Extra upload details are optional. Trash is recoverable and never erases published photographs.</p>
+    <p>JPG, PNG, or WebP · originals up to 50 MiB. Large photos are resized automatically without cropping; your original stays unchanged. Extra upload details are optional. Trash is recoverable and never erases published photographs.</p>
     {error && <div role="alert" className={styles.error}>{error} <button type="button" disabled={busy} onClick={() => { setError(""); void refresh().catch(error => setError(error.message)); }}>Refresh library</button></div>}
     <p role="status">{notice}</p>
     <div className={styles.layout}><aside aria-label="Media folders">
